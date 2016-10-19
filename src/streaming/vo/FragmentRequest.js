@@ -33,16 +33,16 @@
  * @ignore
  */
 class FragmentRequest {
-    constructor() {
+    constructor(url, type) {
         this.action = FragmentRequest.ACTION_DOWNLOAD;
         this.startTime = NaN;
         this.mediaType = null;
         this.mediaInfo = null;
-        this.type = null;
+        this.type = type || null;
         this.duration = NaN;
         this.timescale = NaN;
         this.range = null;
-        this.url = null;
+        this.url = url || null;
         this.serviceLocation = null;
         this.requestStartDate = null;
         this.firstByteDate = null;
@@ -56,6 +56,14 @@ class FragmentRequest {
         this.bytesTotal = NaN;
         this.delayLoadingTime = NaN;
         this.responseType = 'arraybuffer';
+    }
+
+    setMediaType(mediaType) {
+        this.mediaType = mediaType;
+    }
+
+    setResponseType(responseType) {
+        this.responseType = responseType;
     }
 }
 
