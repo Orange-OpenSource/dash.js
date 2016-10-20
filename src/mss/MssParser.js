@@ -20,13 +20,11 @@ import MediaPlayerModel from '../streaming/models/MediaPlayerModel';
 import MetricsModel from '../streaming/models/MetricsModel';
 import Debug from '../core/Debug';
 import BASE64 from '../../externals/base64';
-import VoWvPssh from './VoWvPssh';
 
 function MssParser() {
 
     const context = this.context;
     const log = Debug(context).getInstance().log;
-    const widevinePssh = VoWvPssh(context).getInstance();
     const TIME_SCALE_100_NANOSECOND_UNIT = 10000000.0;
     const SUPPORTED_CODECS = ['AAC', 'AACL', 'AVC1', 'H264', 'TTML', 'DFXP'];
     const samplingFrequencyIndex = {
@@ -518,11 +516,6 @@ function MssParser() {
             // Create ContentProtection for Widevine (as a CENC protection)
             contentProtection = createWidevineContentProtection(protectionHeader);
             contentProtection['cenc:default_KID'] = KID;
-            /* @if VOWV=true */
-            contentProtection.pssh = {
-                __text: widevinePssh.createVOWidevinePssh(KID, this.debug)
-            };
-            /* @endif */
             contentProtections.push(contentProtection);
 
             mpd.ContentProtection = (contentProtections.length > 1) ? contentProtections : contentProtections[0];
