@@ -36,9 +36,11 @@ import FragmentRequest from './FragmentRequest';
 
 class TextRequest extends FragmentRequest {
     constructor(url, type) {
-        super(url, type);
-        this.setMediaType('stream');
-        this.setResponseType('text');
+        super();
+        this.url = url || null;
+        this.type = type || null;
+        this.mediaType = 'stream';
+        this.responseType = 'text';
     }
 }
 

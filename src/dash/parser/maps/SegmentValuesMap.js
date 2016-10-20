@@ -39,7 +39,7 @@ class SegmentValuesMap extends MapNode {
             'SegmentBase', 'SegmentTemplate', 'SegmentList'
         ];
 
-        super('Period', commonProperties, [
+        return super('Period', commonProperties, [
             new MapNode('AdaptationSet', commonProperties, [
                 new MapNode('Representation', commonProperties)
             ])

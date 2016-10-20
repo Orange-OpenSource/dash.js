@@ -36,7 +36,8 @@ import FragmentRequest from './FragmentRequest';
 
 class HeadRequest extends FragmentRequest {
     constructor(url) {
-        super(url);
+        super();
+        this.url = url || null;
         this.checkForExistenceOnly = true;
     }
 }
