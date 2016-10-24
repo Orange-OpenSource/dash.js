@@ -19,12 +19,15 @@ import DOMParser from '../streaming/utils/DOMParser';
 import MediaPlayerModel from '../streaming/models/MediaPlayerModel';
 import MetricsModel from '../streaming/models/MetricsModel';
 import Debug from '../core/Debug';
+import ErrorHandler from '../streaming/utils/ErrorHandler';
 import BASE64 from '../../externals/base64';
 
 function MssParser() {
 
     const context = this.context;
     const log = Debug(context).getInstance().log;
+    const errorHandler = ErrorHandler(context).getInstance();
+
     const TIME_SCALE_100_NANOSECOND_UNIT = 10000000.0;
     const SUPPORTED_CODECS = ['AAC', 'AACL', 'AVC1', 'H264', 'TTML', 'DFXP'];
     const samplingFrequencyIndex = {
@@ -48,36 +51,31 @@ function MssParser() {
             'text': 'application/ttml+xml+mp4'
         };
 
-    let xmlDoc = null;
     let instance,
         mediaPlayerModel,
-        metricsModel,
-        domParser;
-    let baseURL = null;
+        metricsModel;
+
 
     function setup() {
-        domParser = DOMParser(context).create();
         mediaPlayerModel = MediaPlayerModel(context).getInstance();
         metricsModel = MetricsModel(context).getInstance();
     }
 
-    function mapPeriod() {
+    function mapPeriod(smoothStreamingMedia) {
         let period = {};
         let adaptations = [];
-        let smoothNode = domParser.getChildNode(xmlDoc, 'SmoothStreamingMedia');
-        let adaptation,
-            i;
+        let streams,
+            adaptation;
 
-        period.duration = (parseFloat(domParser.getAttributeValue(smoothNode, 'Duration')) === 0) ? Infinity : parseFloat(domParser.getAttributeValue(smoothNode, 'Duration')) / TIME_SCALE_100_NANOSECOND_UNIT;
-        period.BaseURL = baseURL;
+        period.duration = (parseFloat(smoothStreamingMedia.getAttribute('Duration')) === 0) ? Infinity : parseFloat(smoothStreamingMedia.getAttribute('Duration')) / TIME_SCALE_100_NANOSECOND_UNIT;
+        //period.BaseURL = baseURL;
 
         // For each StreamIndex node, create an AdaptationSet element
-        for (i = 0; i < smoothNode.childNodes.length; i++) {
-            if (smoothNode.childNodes[i].nodeName === 'StreamIndex') {
-                adaptation = mapAdaptationSet(smoothNode.childNodes[i]);
-                if (adaptation !== null) {
-                    adaptations.push(adaptation);
-                }
+        streams = smoothStreamingMedia.getElementsByTagName('StreamIndex');
+        for (let i = 0; i < streams.length; i++) {
+            adaptation = mapAdaptationSet(streams[i]);
+            if (adaptation !== null) {
+                adaptations.push(adaptation);
             }
         }
 
@@ -94,27 +92,27 @@ function MssParser() {
         let adaptationSet = {};
         let representations = [];
         let segmentTemplate = {};
-        let qualityLevels = null;
-        let representation,
+        let qualityLevels,
+            representation,
             segments,
             range,
             i;
 
-        adaptationSet.id = domParser.getAttributeValue(streamIndex, 'Name');
-        adaptationSet.contentType = domParser.getAttributeValue(streamIndex, 'Type');
+        adaptationSet.id = streamIndex.getAttribute('Name');
+        adaptationSet.contentType = streamIndex.getAttribute('Type');
         if (adaptationSet.contentType !== 'video') {
-            adaptationSet.lang = domParser.getAttributeValue(streamIndex, 'Language');
+            adaptationSet.lang = streamIndex.getAttribute('Language');
         }
         adaptationSet.mimeType = mimeTypeMap[adaptationSet.contentType];
-        adaptationSet.subType = domParser.getAttributeValue(streamIndex, 'Subtype');
-        adaptationSet.maxWidth = domParser.getAttributeValue(streamIndex, 'MaxWidth');
-        adaptationSet.maxHeight = domParser.getAttributeValue(streamIndex, 'MaxHeight');
-        adaptationSet.BaseURL = baseURL;
+        adaptationSet.subType = streamIndex.getAttribute('Subtype');
+        adaptationSet.maxWidth = streamIndex.getAttribute('MaxWidth');
+        adaptationSet.maxHeight = streamIndex.getAttribute('MaxHeight');
+        //adaptationSet.BaseURL = baseURL;
 
         // Create a SegmentTemplate with a SegmentTimeline
         segmentTemplate = mapSegmentTemplate(streamIndex);
 
-        qualityLevels = domParser.getChildNodes(streamIndex, 'QualityLevel');
+        qualityLevels = streamIndex.getElementsByTagName('QualityLevel');
         // For each QualityLevel node, create a Representation element
         for (i = 0; i < qualityLevels.length; i++) {
             // Propagate BaseURL and mimeType
@@ -122,7 +120,7 @@ function MssParser() {
             qualityLevels[i].mimeType = adaptationSet.mimeType;
 
             // Set quality level id
-            qualityLevels[i].Id = adaptationSet.id + '_' + domParser.getAttributeValue(qualityLevels[i], 'Index');
+            qualityLevels[i].Id = adaptationSet.id + '_' + qualityLevels[i].getAttribute('Index');
 
             // Map Representation to QualityLevel
             representation = mapRepresentation(qualityLevels[i], streamIndex);
@@ -163,16 +161,16 @@ function MssParser() {
         let fourCCValue = null;
 
         representation.id = qualityLevel.Id;
-        representation.bandwidth = parseInt(domParser.getAttributeValue(qualityLevel, 'Bitrate'), 10);
+        representation.bandwidth = parseInt(qualityLevel.getAttribute('Bitrate'), 10);
         representation.mimeType = qualityLevel.mimeType;
-        representation.width = parseInt(domParser.getAttributeValue(qualityLevel, 'MaxWidth'), 10);
-        representation.height = parseInt(domParser.getAttributeValue(qualityLevel, 'MaxHeight'), 10);
+        representation.width = parseInt(qualityLevel.getAttribute('MaxWidth'), 10);
+        representation.height = parseInt(qualityLevel.getAttribute('MaxHeight'), 10);
 
-        fourCCValue = domParser.getAttributeValue(qualityLevel, 'FourCC');
+        fourCCValue = qualityLevel.getAttribute('FourCC');
 
         // If FourCC not defined at QualityLevel level, then get it from StreamIndex level
         if (fourCCValue === null) {
-            fourCCValue = domParser.getAttributeValue(streamIndex, 'FourCC');
+            fourCCValue = streamIndex.getAttribute('FourCC');
         }
 
         // If still not defined (optionnal for audio stream, see https://msdn.microsoft.com/en-us/library/ff728116%28v=vs.95%29.aspx),
@@ -194,18 +192,18 @@ function MssParser() {
             representation.codecs = getH264Codec(qualityLevel);
         } else if (fourCCValue.indexOf('AAC') >= 0) {
             representation.codecs = getAACCodec(qualityLevel, fourCCValue);
-            representation.audioSamplingRate = parseInt(domParser.getAttributeValue(qualityLevel, 'SamplingRate'), 10);
-            representation.audioChannels = parseInt(domParser.getAttributeValue(qualityLevel, 'Channels'), 10);
+            representation.audioSamplingRate = parseInt(qualityLevel.getAttribute('SamplingRate'), 10);
+            representation.audioChannels = parseInt(qualityLevel.getAttribute('Channels'), 10);
         }
 
-        representation.codecPrivateData = '' + domParser.getAttributeValue(qualityLevel, 'CodecPrivateData');
+        representation.codecPrivateData = '' + qualityLevel.getAttribute('CodecPrivateData');
         representation.BaseURL = qualityLevel.BaseURL;
 
         return representation;
     }
 
     function getH264Codec(qualityLevel) {
-        let codecPrivateData = domParser.getAttributeValue(qualityLevel, 'CodecPrivateData').toString();
+        let codecPrivateData = qualityLevel.getAttribute('CodecPrivateData').toString();
         let nalHeader,
             avcoti;
 
@@ -222,8 +220,8 @@ function MssParser() {
 
     function getAACCodec(qualityLevel, fourCCValue) {
         let objectType = 0;
-        let codecPrivateData = domParser.getAttributeValue(qualityLevel, 'CodecPrivateData').toString();
-        let samplingRate = parseInt(domParser.getAttributeValue(qualityLevel, 'SamplingRate'), 10);
+        let codecPrivateData = qualityLevel.getAttribute('CodecPrivateData').toString();
+        let samplingRate = parseInt(qualityLevel.getAttribute('SamplingRate'), 10);
         let codecPrivateDataHex,
             arr16,
             indexFreq,
@@ -264,7 +262,7 @@ function MssParser() {
                 codecPrivateData = new Uint8Array(2);
                 //Freq Index is present for 3 bits in the first byte, last bit is in the second
                 codecPrivateData[0] = (objectType << 3) | (indexFreq >> 1);
-                codecPrivateData[1] = (indexFreq << 7) | (parseInt(domParser.getAttributeValue(qualityLevel, 'Channels'), 10) << 3);
+                codecPrivateData[1] = (indexFreq << 7) | (parseInt(qualityLevel.getAttribute('Channels'), 10) << 3);
                 // put the 2 bytes in an 16 bits array
                 arr16 = new Uint16Array(1);
                 arr16[0] = (codecPrivateData[0] << 8) + codecPrivateData[1];
@@ -287,7 +285,7 @@ function MssParser() {
         let segmentTemplate = {};
         let mediaUrl;
 
-        mediaUrl = domParser.getAttributeValue(streamIndex, 'Url').replace('{bitrate}', '$Bandwidth$');
+        mediaUrl = streamIndex.getAttribute('Url').replace('{bitrate}', '$Bandwidth$');
         mediaUrl = mediaUrl.replace('{start time}', '$Time$');
 
         segmentTemplate.media = mediaUrl;
@@ -301,15 +299,15 @@ function MssParser() {
     function mapSegmentTimeline(streamIndex) {
 
         let segmentTimeline = {};
-        let chunks = domParser.getChildNodes(streamIndex, 'c');
+        let chunks = streamIndex.getElementsByTagName('c');
         let segments = [];
         let i,
             t, d;
 
         for (i = 0; i < chunks.length; i++) {
             // Get time and duration attributes
-            t = parseFloat(domParser.getAttributeValue(chunks[i], 't'));
-            d = parseFloat(domParser.getAttributeValue(chunks[i], 'd'));
+            t = parseFloat(chunks[i].getAttribute('t'));
+            d = parseFloat(chunks[i].getAttribute('d'));
 
             if ((i === 0) && !t) {
                 t = 0;
@@ -458,11 +456,11 @@ function MssParser() {
     }
     /* @endif */
 
-    function processManifest(manifestLoadedTime) {
+    function processManifest(xmlDoc, manifestLoadedTime) {
         let mpd = {};
         let contentProtections = [];
-        let smoothNode = domParser.getChildNode(xmlDoc, 'SmoothStreamingMedia');
-        let protection = domParser.getChildNode(smoothNode, 'Protection');
+        let smoothStreamingMedia = xmlDoc.getElementsByTagName('SmoothStreamingMedia')[0];
+        let protection = xmlDoc.getElementsByTagName('Protection')[0];
         let protectionHeader = null;
         let period,
             adaptations,
@@ -477,10 +475,10 @@ function MssParser() {
         // Set mpd node properties
         mpd.name = 'MSS';
         mpd.profiles = 'urn:mpeg:dash:profile:isoff-live:2011';
-        mpd.type = Boolean(domParser.getAttributeValue(smoothNode, 'IsLive')) ? 'dynamic' : 'static';
-        mpd.timeShiftBufferDepth = parseFloat(domParser.getAttributeValue(smoothNode, 'DVRWindowLength')) / TIME_SCALE_100_NANOSECOND_UNIT;
-        mpd.mediaPresentationDuration = (parseFloat(domParser.getAttributeValue(smoothNode, 'Duration')) === 0) ? Infinity : parseFloat(domParser.getAttributeValue(smoothNode, 'Duration')) / TIME_SCALE_100_NANOSECOND_UNIT;
-        mpd.BaseURL = baseURL;
+        mpd.type = smoothStreamingMedia.getAttribute('IsLive') === 'TRUE' ? 'dynamic' : 'static';
+        mpd.timeShiftBufferDepth = parseFloat(smoothStreamingMedia.getAttribute('DVRWindowLength')) / TIME_SCALE_100_NANOSECOND_UNIT;
+        mpd.mediaPresentationDuration = (parseFloat(smoothStreamingMedia.getAttribute('Duration')) === 0) ? Infinity : parseFloat(smoothStreamingMedia.getAttribute('Duration')) / TIME_SCALE_100_NANOSECOND_UNIT;
+        //mpd.BaseURL = baseURL;
         mpd.minBufferTime = mediaPlayerModel.getStableBufferTime();
 
         // In case of live streams, set availabilityStartTime property according to DVRWindowLength
@@ -489,7 +487,7 @@ function MssParser() {
         }
 
         // Map period node to manifest root node
-        mpd.Period = mapPeriod();
+        mpd.Period = mapPeriod(smoothStreamingMedia);
         mpd.Period_asArray = [mpd.Period];
 
         // Initialize period start time
@@ -499,7 +497,7 @@ function MssParser() {
         // ContentProtection node
         if (protection !== undefined) {
             /* @if PROTECTION=true */
-            protectionHeader = domParser.getChildNode(protection, 'ProtectionHeader');
+            protectionHeader = xmlDoc.getElementsByTagName('ProtectionHeader')[0];
 
             // Some packagers put newlines into the ProtectionHeader base64 string, which is not good
             // because this cannot be correctly parsed. Let's just filter out any newlines found in there.
@@ -562,27 +560,49 @@ function MssParser() {
         return mpd;
     }
 
-    function internalParse(data, baseUrl) {
-        log('[MssParser]', 'Doing parse.');
-        let start = new Date();
-        let xml = null;
-        let manifest = null;
-        let mss2dash = null;
+    function parseDOM(data) {
 
-        xmlDoc = domParser.createXmlTree(data);
-        xml = new Date();
+        let xmlDoc = null;
+
+        if (window.DOMParser) {
+            try {
+                let parser = new window.DOMParser();
+
+                xmlDoc = parser.parseFromString(data, 'text/xml');
+                if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
+                    throw new Error('Error parsing XML');
+                }
+            } catch (e) {
+                errorHandler.manifestError('parsing the manifest failed', 'parse', data, e);
+                xmlDoc = null;
+            }
+        }
+
+        return xmlDoc;
+    }
+
+
+    function internalParse(data) {
+        let xmlDoc = null;
+        let manifest = null;
+
+        const startTime = window.performance.now();
+
+        // Parse the MSS XML manifest
+        xmlDoc = parseDOM(data);
+
+        const xmlParseTime = window.performance.now();
 
         if (xmlDoc === null) {
             return null;
         }
 
-        baseURL = baseUrl;
-
         // Convert MSS manifest into DASH manifest
-        manifest = processManifest(start);
-        mss2dash = new Date();
+        manifest = processManifest(xmlDoc, new Date());
 
-        log('[MssParser]', 'Parsing complete (xmlParser: ' + (xml.getTime() - start.getTime()) + 'ms, mss2dash: ' + (mss2dash.getTime() - xml.getTime()) + 'ms, total: ' + ((new Date().getTime() - start.getTime()) / 1000) + 's)');
+        const mss2dashTime = window.performance.now();
+
+        log('Parsing complete: (xmlParsing: ' + (xmlParseTime - startTime).toPrecision(3) + 'ms, mss2dash: ' + (mss2dashTime - xmlParseTime).toPrecision(3) + 'ms, total: ' + ((mss2dashTime - startTime) / 1000).toPrecision(3) + 's)');
 
         return manifest;
     }
