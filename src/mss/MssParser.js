@@ -15,7 +15,6 @@
  */
 
 import FactoryMaker from '../core/FactoryMaker';
-import DOMParser from '../streaming/utils/DOMParser';
 import MediaPlayerModel from '../streaming/models/MediaPlayerModel';
 import MetricsModel from '../streaming/models/MetricsModel';
 import Debug from '../core/Debug';
