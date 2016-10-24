@@ -37,6 +37,8 @@ import {HTTPRequest} from './vo/metrics/HTTPRequest';
 import EventBus from '../core/EventBus';
 import Events from '../core/events/Events';
 import FactoryMaker from '../core/FactoryMaker';
+import DashParser from '../dash/parser/DashParser';
+import MssParser from '../mss/MssParser';
 
 const MANIFEST_LOADER_ERROR_PARSING_FAILURE = 1;
 const MANIFEST_LOADER_ERROR_LOADING_FAILURE = 2;
@@ -47,11 +49,11 @@ function ManifestLoader(config) {
     const context = this.context;
     const eventBus = EventBus(context).getInstance();
     const urlUtils = URLUtils(context).getInstance();
-    const parser = config.parser;
 
     let instance,
         xhrLoader,
-        xlinkController;
+        xlinkController,
+        parser;
 
     function setup() {
         eventBus.on(Events.XLINK_READY, onXlinkReady, instance);
@@ -67,6 +69,8 @@ function ManifestLoader(config) {
             metricsModel: config.metricsModel,
             requestModifier: config.requestModifier
         });
+
+        parser = null;
     }
 
     function onXlinkReady(event) {
@@ -75,6 +79,20 @@ function ManifestLoader(config) {
                 manifest: event.manifest
             }
         );
+    }
+
+    function createParser(data) {
+
+        // Analyze manifest content to detect protocol and select appropriate parser
+        if (data.indexOf('SmoothStreamingMedia') > -1) {
+            //do some business to transform it into a Dash Manifest
+            return MssParser(context).create();
+        }
+        else if (data.indexOf('MPD') > -1) {
+            return DashParser(context).create();
+        } else {
+            return null;
+        }
     }
 
     function load (url) {
@@ -100,6 +118,24 @@ function ManifestLoader(config) {
                     }
 
                     baseUri = urlUtils.parseBaseUrl(url);
+                }
+
+                // Create parser according to manifest type
+                if (parser === null) {
+                    parser = createParser(data);
+                }
+
+                if (parser === null) {
+                    eventBus.trigger(
+                        Events.INTERNAL_MANIFEST_LOADED, {
+                            manifest: null,
+                            error: new Error(
+                                MANIFEST_LOADER_ERROR_PARSING_FAILURE,
+                                `Failed detecing manifest type: ${url}`
+                            )
+                        }
+                    );
+                    return;
                 }
 
                 const manifest = parser.parse(data, xlinkController);
