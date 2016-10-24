@@ -67,7 +67,6 @@ function MssParser() {
             adaptation;
 
         period.duration = (parseFloat(smoothStreamingMedia.getAttribute('Duration')) === 0) ? Infinity : parseFloat(smoothStreamingMedia.getAttribute('Duration')) / TIME_SCALE_100_NANOSECOND_UNIT;
-        //period.BaseURL = baseURL;
 
         // For each StreamIndex node, create an AdaptationSet element
         streams = smoothStreamingMedia.getElementsByTagName('StreamIndex');
@@ -106,7 +105,6 @@ function MssParser() {
         adaptationSet.subType = streamIndex.getAttribute('Subtype');
         adaptationSet.maxWidth = streamIndex.getAttribute('MaxWidth');
         adaptationSet.maxHeight = streamIndex.getAttribute('MaxHeight');
-        //adaptationSet.BaseURL = baseURL;
 
         // Create a SegmentTemplate with a SegmentTimeline
         segmentTemplate = mapSegmentTemplate(streamIndex);
@@ -337,7 +335,6 @@ function MssParser() {
         return segmentTimeline;
     }
 
-    /* @if PROTECTION=true */
     function getKIDFromProtectionHeader(protectionHeader) {
         let prHeader,
             wrmHeader,
@@ -453,7 +450,6 @@ function MssParser() {
 
         return contentProtection;
     }
-    /* @endif */
 
     function processManifest(xmlDoc, manifestLoadedTime) {
         let mpd = {};
@@ -477,7 +473,6 @@ function MssParser() {
         mpd.type = smoothStreamingMedia.getAttribute('IsLive') === 'TRUE' ? 'dynamic' : 'static';
         mpd.timeShiftBufferDepth = parseFloat(smoothStreamingMedia.getAttribute('DVRWindowLength')) / TIME_SCALE_100_NANOSECOND_UNIT;
         mpd.mediaPresentationDuration = (parseFloat(smoothStreamingMedia.getAttribute('Duration')) === 0) ? Infinity : parseFloat(smoothStreamingMedia.getAttribute('Duration')) / TIME_SCALE_100_NANOSECOND_UNIT;
-        //mpd.BaseURL = baseURL;
         mpd.minBufferTime = mediaPlayerModel.getStableBufferTime();
 
         // In case of live streams, set availabilityStartTime property according to DVRWindowLength
@@ -495,7 +490,6 @@ function MssParser() {
 
         // ContentProtection node
         if (protection !== undefined) {
-            /* @if PROTECTION=true */
             protectionHeader = xmlDoc.getElementsByTagName('ProtectionHeader')[0];
 
             // Some packagers put newlines into the ProtectionHeader base64 string, which is not good
@@ -505,7 +499,7 @@ function MssParser() {
             // Get KID (in CENC format) from protection header
             KID = getKIDFromProtectionHeader(protectionHeader);
 
-            // Create ContentProtection for PR
+            // Create ContentProtection for PlayReady
             contentProtection = createPRContentProtection(protectionHeader);
             contentProtection['cenc:default_KID'] = KID;
             contentProtections.push(contentProtection);
@@ -517,12 +511,6 @@ function MssParser() {
 
             mpd.ContentProtection = (contentProtections.length > 1) ? contentProtections : contentProtections[0];
             mpd.ContentProtection_asArray = contentProtections;
-            /* @endif */
-
-            /* @if PROTECTION=false */
-            /* @exec sendError('MediaPlayer.dependencies.ErrorHandler.prototype.MEDIA_ERR_ENCRYPTED','"protected content detected but protection module is not included."') */
-            /* @exec reject('"[MssParser] Protected content detected but protection module is not included."') */
-            /* @endif */
         }
 
         adaptations = period.AdaptationSet_asArray;
