@@ -38,7 +38,7 @@ import EventBus from '../core/EventBus';
 import Events from '../core/events/Events';
 import FactoryMaker from '../core/FactoryMaker';
 import DashParser from '../dash/parser/DashParser';
-import MssParser from '../mss/MssParser';
+import MssParser from '../mss/parser/MssParser';
 
 const MANIFEST_LOADER_ERROR_PARSING_FAILURE = 1;
 const MANIFEST_LOADER_ERROR_LOADING_FAILURE = 2;
