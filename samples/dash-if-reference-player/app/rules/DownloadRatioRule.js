@@ -188,7 +188,7 @@ function DownloadRatioRuleClass() {
         getMaxIndex: getMaxIndex
     };
     return instance;
-}
+};
 
 DownloadRatioRuleClass.__dashjs_factory_name = 'DownloadRatioRule';
 DownloadRatioRule = dashjs.FactoryMaker.getClassFactory(DownloadRatioRuleClass);
