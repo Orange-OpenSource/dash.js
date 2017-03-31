@@ -39,20 +39,55 @@ function OrangeDroppedFramesRuleClass() {
     let context = this.context;
 
     let SwitchRequest = factory.getClassFactoryByName('SwitchRequest');
-    let MetricsModel = factory.getSingletonFactoryByName('MetricsModel');
     let OrangeConfig = factory.getSingletonFactoryByName('OrangeConfig');
+    let Debug = factory.getSingletonFactoryByName('Debug');
+    let debug = Debug(context).getInstance();
     let config = OrangeConfig(context).getInstance();
 
     function getMaxIndex(rulesContext) {
 
-        // here you can get some informations aboit metrics for example, to implement the rule
-        // let metricsModel = MetricsModel(context).getInstance();
         var mediaType = rulesContext.getMediaInfo().type;
-        // var metrics = metricsModel.getReadOnlyMetricsFor(mediaType);
 
         var droppedFramesMaxRatio = config.getParamFor(mediaType, "ABR.droppedFramesMaxRatio", "number", 0.30),
-            droppedFramesMinRatio = config.getParamFor(mediaType, "ABR.droppedFramesMinRatio", "number", 0.10)
+            droppedFramesMinRatio = config.getParamFor(mediaType, "ABR.droppedFramesMinRatio", "number", 0.10),
+            current = rulesContext.getCurrentValue(),
+            q = SwitchRequest.NO_CHANGE,
+            ratio;
 
+        if (mediaType !== 'video') {
+            return SwitchRequest(context).create();
+        }
+
+        // use dropped frames history
+        let droppedFramesHistory = rulesContext.getDroppedFramesHistory();
+        if (droppedFramesHistory) {
+            let dfh = droppedFramesHistory.getFrameHistory();
+            let droppedFrames = 0;
+            let totalFrames = 0;
+            for (let i = 1; i < dfh.length; i++) { //No point in measuring dropped frames for the zeroeth index.
+                if (dfh[i]) {
+                    droppedFrames = dfh[i].droppedVideoFrames;
+                    totalFrames = dfh[i].totalVideoFrames;
+
+                    ratio = droppedFrames / totalFrames;
+
+                    debug.log("[DroppedFramesRule]["+mediaType+"] DroppedFrames:" + droppedFrames + ", totalVideoFrames:" + totalFrames + " => ratio = " + ratio);
+
+                    if (ratio > droppedFramesMaxRatio && current > 0) {
+                        // If too much dropped frames, then switch to lower representation
+                        q = current - 1;
+                        // No priority for the moment
+                        // p = MediaPlayer.rules.SwitchRequest.prototype.STRONG;
+                    } else if (ratio > droppedFramesMinRatio) {
+                        // Still some dropped frames, then stay at current quality
+                        q = current;
+                        // No priority for the moment
+                        // p = MediaPlayer.rules.SwitchRequest.prototype.STRONG;
+                    }
+                }
+            }
+            return SwitchRequest(context).create(q, {name:OrangeDroppedFramesRuleClass.__dashjs_factory_name, droppedFrames: droppedFrames});
+        }
         return SwitchRequest(context).create();
     }
 
