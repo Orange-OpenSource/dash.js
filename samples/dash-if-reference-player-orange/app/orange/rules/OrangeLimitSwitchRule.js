@@ -36,20 +36,68 @@ function OrangeLimitSwitchRuleClass() {
     let factory = dashjs.FactoryMaker;
     let SwitchRequest = factory.getClassFactoryByName('SwitchRequest');
     let MetricsModel = factory.getSingletonFactoryByName('MetricsModel');
+    let Debug = factory.getSingletonFactoryByName('Debug');
 
     let context = this.context;
 
+    let debug = Debug(context).getInstance();
+
+    /*
+     * This rule is intended to limit the number of switches that can happen.
+     * We might get into a situation where there quality is bouncing around a ton.
+     * This can create an unpleasant experience, so let the stream settle down.
+     */
+
+    var MAX_SWITCHES = 10,
+        VALIDATION_TIME = 20000,
+        WAIT_COUNT = 5,
+        waiting = 0;
+
     function getMaxIndex(rulesContext) {
 
-        // here you can get some informations aboit metrics for example, to implement the rule
-        let metricsModel = MetricsModel(context).getInstance();
         var mediaType = rulesContext.getMediaInfo().type;
+        var metricsModel = MetricsModel(context).getInstance();
         var metrics = metricsModel.getReadOnlyMetricsFor(mediaType);
+        var current = rulesContext.getCurrentValue();
 
-        // this sample only display metrics in console
-        console.log(metrics);
+        if (waiting > 0) {
+            waiting -= 1;
+            return SwitchRequest(context).create(current /*, MediaPlayer.rules.SwitchRequest.prototype.STRONG*/);
+        }
 
-        return SwitchRequest(context).create();
+        var panic = false,
+            rs,
+            now = new Date().getTime(),
+            delay,
+            i,
+            repSwitchList = metrics.RepSwitchList,
+            numSwitches = repSwitchList.length;
+
+        //debug.log("Checking limit switches rule...");
+
+        for (i = numSwitches - 1; i >= 0; i -= 1) {
+            rs = repSwitchList[i];
+            delay = now - rs.t.getTime();
+
+            if (delay >= VALIDATION_TIME) {
+                debug.log("Reached time limit, bailing.");
+                break;
+            }
+
+            if (i >= MAX_SWITCHES) {
+                debug.log("Found too many switches within validation time, force the stream to not change.");
+                panic = true;
+                break;
+            }
+        }
+
+        if (panic) {
+            debug.log("Wait some time before allowing another switch.");
+            waiting = WAIT_COUNT;
+            return SwitchRequest(context).create(current/*, SwitchRequest.STRONG*/);
+        } else {
+            return SwitchRequest(context).create(SwitchRequest.NO_CHANGE/*, MediaPlayer.rules.SwitchRequest.prototype.STRONG*/);
+        }
     }
 
     const instance = {

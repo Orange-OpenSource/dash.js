@@ -36,26 +36,113 @@ function OrangeInsufficientBufferRuleClass() {
 
     let factory = dashjs.FactoryMaker;
     let SwitchRequest = factory.getClassFactoryByName('SwitchRequest');
+    let OrangeConfig = factory.getSingletonFactoryByName('OrangeConfig');
     let MetricsModel = factory.getSingletonFactoryByName('MetricsModel');
+    let DashMetrics = factory.getSingletonFactoryByName('DashMetrics');
+    let BufferController = factory.getClassFactoryByName('BufferController');
+    let EventBus = factory.getSingletonFactoryByName('EventBus');
+    let Debug = factory.getSingletonFactoryByName('Debug');
 
     let context = this.context;
+    let config = OrangeConfig(context).getInstance();
+    let metricsModel = MetricsModel(context).getInstance();
+    let dashMetrics = DashMetrics(context).getInstance();
+    let debug = Debug(context).getInstance();
+    let eventBus = EventBus(context).getInstance();
+    let instance,
+        bufferStateDict,
+        lastSwitchTime,
+        waitToSwitchTime;
+
+    function setup() {
+        bufferStateDict = {};
+        lastSwitchTime = 0;
+        waitToSwitchTime = 1000;
+        eventBus.on(dashjs.MediaPlayer.events.PLAYBACK_SEEKING, onPlaybackSeeking, instance);
+    }
+
+    function setBufferInfo(type, state) {
+        bufferStateDict[type] = bufferStateDict[type] || {};
+        bufferStateDict[type].state = state;
+        if (state === BufferController.BUFFER_LOADED && !bufferStateDict[type].firstBufferLoadedEvent) {
+            bufferStateDict[type].firstBufferLoadedEvent = true;
+        }
+    }
+
+    function onPlaybackSeeking() {
+        bufferStateDict = {};
+    }
 
     function getMaxIndex(rulesContext) {
 
-        // here you can get some informations aboit metrics for example, to implement the rule
-        let metricsModel = MetricsModel(context).getInstance();
         var mediaType = rulesContext.getMediaInfo().type;
         var metrics = metricsModel.getReadOnlyMetricsFor(mediaType);
 
-        // this sample only display metrics in console
-        console.log(metrics);
+        var bufferLevel = dashMetrics.getCurrentBufferLevel(metrics) ? dashMetrics.getCurrentBufferLevel(metrics) : 0.0,
+            minBufferTime,
+            switchLowerBufferRatio,
+            switchLowerBufferTime,
+            switchDownBufferRatio,
+            switchDownBufferTime,
+            switchUpBufferRatio,
+            switchUpBufferTime,
+            q = rulesContext.getCurrentValue();
+            // No priority for the moment
+            //p = MediaPlayer.rules.SwitchRequest.prototype.DEFAULT;
 
-        return SwitchRequest(context).create();
+        if (bufferLevel === 0.0) {
+            return SwitchRequest(context).create();
+        }
+
+        var lastBufferStateVO = (metrics.BufferState.length > 0) ? metrics.BufferState[metrics.BufferState.length - 1] : null;
+        if(lastBufferStateVO === null) {
+            return SwitchRequest(context).create();
+        }
+
+        setBufferInfo(mediaType, lastBufferStateVO.state);
+
+        // get configuration
+        minBufferTime = config.getParamFor(mediaType, "BufferController.minBufferTime", "number", rulesContext.getManifestInfo().minBufferTime);
+        switchLowerBufferRatio = config.getParamFor(mediaType, "ABR.switchLowerBufferRatio", "number", 0.25);
+        switchLowerBufferTime = config.getParamFor(mediaType, "ABR.switchLowerBufferTime", "number", switchLowerBufferRatio * minBufferTime);
+        switchDownBufferRatio = config.getParamFor(mediaType, "ABR.switchDownBufferRatio", "number", 0.5);
+        switchDownBufferTime = config.getParamFor(mediaType, "ABR.switchDownBufferTime", "number", switchDownBufferRatio * minBufferTime);
+        switchUpBufferRatio = config.getParamFor(mediaType, "ABR.switchUpBufferRatio", "number", 0.75);
+        switchUpBufferTime = config.getParamFor(mediaType, "ABR.switchUpBufferTime", "number", switchUpBufferRatio * minBufferTime);
+
+
+        if ((bufferLevel < switchDownBufferTime) && (!bufferStateDict[mediaType].firstBufferLoadedEvent)) {
+            return SwitchRequest(context).create();
+        } else {
+
+            if (bufferLevel <= switchLowerBufferTime) {
+                q = 0;
+                // No priority for the moment
+                // p = SwitchRequest.STRONG;
+            } else if (bufferLevel <= switchDownBufferTime) {
+                q = (rulesContext.getCurrentValue() > 0) ? (rulesContext.getCurrentValue() - 1) : 0;
+                // No priority for the moment
+                // p = SwitchRequest.DEFAULT;
+            }
+
+            debug.log("[InsufficientBufferRule][" + mediaType + "] SwitchRequest: q=" + q /* + ", p=" + p */);
+            return SwitchRequest(context).create( q, /*p, */{name: OrangeInsufficientBufferRuleClass.__dashjs_factory_name});
+
+        }
     }
 
-    const instance = {
-        getMaxIndex: getMaxIndex
+    function reset() {
+        eventBus.off(dashjs.MediaPlayer.events.PLAYBACK_SEEKING, onPlaybackSeeking, instance);
+        bufferStateDict = {};
+        lastSwitchTime = 0;
+    }
+
+    instance = {
+        getMaxIndex: getMaxIndex,
+        reset: reset
     };
+
+    setup();
     return instance;
 }
 

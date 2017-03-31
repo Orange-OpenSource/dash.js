@@ -55,6 +55,7 @@ function OrangeConfigClass (){
             "ABR.keepBandwidthCondition": -1,
             "ABR.droppedFramesMinRatio": -1,
             "ABR.droppedFramesMaxRatio": -1,
+            "BufferController.minBufferTime" : -1,
             // Video parameters
             "video": {
             },
