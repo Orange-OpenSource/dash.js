@@ -125,7 +125,7 @@ function OrangeDownloadRatioRuleClass() {
         while (i >= 0 && count < 3) {
             currentRequest = requests[i];
 
-            if (currentRequest._tfinish && currentRequest.trequest && currentRequest.tresponse && currentRequest.trace && currentRequest.trace.length > 0) {
+            if (currentRequest.type !== 'MediaSegment' && currentRequest._tfinish && currentRequest.trequest && currentRequest.tresponse && currentRequest.trace && currentRequest.trace.length > 0) {
 
                 var _totalTime = (currentRequest._tfinish.getTime() - currentRequest.trequest.getTime()) / 1000;
                 var _downloadTime = (currentRequest._tfinish.getTime() - currentRequest.tresponse.getTime()) / 1000;
