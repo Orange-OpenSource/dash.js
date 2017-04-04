@@ -86,7 +86,7 @@ function OrangeInsufficientBufferRuleClass() {
             switchDownBufferTime,
             switchUpBufferRatio,
             switchUpBufferTime,
-            q = rulesContext.getCurrentValue();
+            q = SwitchRequest.NO_CHANGE;
             // No priority for the moment
             //p = MediaPlayer.rules.SwitchRequest.prototype.DEFAULT;
 
@@ -125,7 +125,7 @@ function OrangeInsufficientBufferRuleClass() {
                 // p = SwitchRequest.DEFAULT;
             }
 
-            debug.log("[InsufficientBufferRule][" + mediaType + "] SwitchRequest: q=" + q /* + ", p=" + p */);
+            debug.log("[OrangeRules][" + mediaType + "][InsufficientBufferRule] SwitchRequest: q=" + q /* + ", p=" + p */);
             return SwitchRequest(context).create( q, /*p, */{name: OrangeInsufficientBufferRuleClass.__dashjs_factory_name});
 
         }

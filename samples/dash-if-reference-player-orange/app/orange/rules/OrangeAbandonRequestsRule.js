@@ -37,10 +37,12 @@ function OrangeAbandonRequestsRuleClass() {
 
     const ABANDON_MULTIPLIER = 2;
     const GRACE_TIME_THRESHOLD = 0.5;
+    const BANDWITH_SAFETY_FACTOR = 0.9;
 
     const context = this.context;
     let factory = dashjs.FactoryMaker;
 
+    let AbrController = factory.getSingletonFactoryByName('AbrController');
     let SwitchRequest = factory.getClassFactoryByName('SwitchRequest');
     let MediaPlayerModel = factory.getSingletonFactoryByName('MediaPlayerModel');
     let DashMetrics = factory.getSingletonFactoryByName('DashMetrics');
@@ -54,7 +56,8 @@ function OrangeAbandonRequestsRuleClass() {
         throughputArray,
         mediaPlayerModel,
         dashMetrics,
-        metricsModel;
+        metricsModel,
+        abrController;
 
     function setup() {
         fragmentDict = {};
@@ -63,6 +66,7 @@ function OrangeAbandonRequestsRuleClass() {
         mediaPlayerModel = MediaPlayerModel(context).getInstance();
         dashMetrics = DashMetrics(context).getInstance();
         metricsModel = MetricsModel(context).getInstance();
+        abrController = AbrController(context).getInstance();
     }
 
     function shouldAbandon(rulesContext) {
@@ -70,7 +74,7 @@ function OrangeAbandonRequestsRuleClass() {
         const mediaInfo = rulesContext.getMediaInfo();
         const type = mediaInfo.type;
         var request = rulesContext.getCurrentRequest();
-        var switchRequest = SwitchRequest(context).create(SwitchRequest.NO_CHANGE, {name: OrangeAbandonRequestsRuleClass.__dashjs_factory_name});
+        var switchRequest = SwitchRequest(context).create(SwitchRequest.NO_CHANGE, {name: OrangeAbandonRequestsRuleClass.__dashjs_factory_name}/*, SwitchRequest.WEAK*/);
 
         var now = new Date().getTime(),
             elapsedTime,
@@ -78,7 +82,7 @@ function OrangeAbandonRequestsRuleClass() {
             estimatedTimeOfDownload;
 
         if (request.firstByteDate === null || request.aborted) {
-            log("[AbandonRequestsRule][" + type + "] Request has already been aborted.");
+            log("[OrangeRules][" + type + "][AbandonRequestsRule] Request has already been aborted.");
             return switchRequest;
         }
 
@@ -90,8 +94,12 @@ function OrangeAbandonRequestsRuleClass() {
             estimatedTimeOfDownload = request.bytesTotal / measuredBandwidth;
 
             if ((estimatedTimeOfDownload) > (request.duration * ABANDON_MULTIPLIER)) {
-                switchRequest = SwitchRequest(context).create(0, {name: OrangeAbandonRequestsRuleClass.__dashjs_factory_name});
-                log("[AbandonRequestsRule][" + type + "] BW = " + (measuredBandwidth * 8 / 1000).toFixed(3) + " kb/s => switch to lowest quality");
+
+                const measuredBandwidthInKbps = (measuredBandwidth * 8 / 1000).toFixed(3);
+                const newQuality = abrController.getQualityForBitrate(mediaInfo, measuredBandwidthInKbps * BANDWITH_SAFETY_FACTOR);
+
+                log("[OrangeRules][" + type + "][AbandonRequestsRule] BW = " + measuredBandwidthInKbps * BANDWITH_SAFETY_FACTOR + " kb/s => switch quality : " + newQuality);
+                switchRequest = SwitchRequest(context).create(newQuality, {name: OrangeAbandonRequestsRuleClass.__dashjs_factory_name} /*, SwitchRequest.STRONG*/);
             }
         }
         return switchRequest;

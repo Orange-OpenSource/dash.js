@@ -80,22 +80,27 @@ function OrangeLimitSwitchRuleClass() {
             delay = now - rs.t.getTime();
 
             if (delay >= VALIDATION_TIME) {
-                debug.log("Reached time limit, bailing.");
+                debug.log("[OrangeRules][" + mediaType + "][OrangeLimitSwitchRule] Reached time limit, bailing.");
                 break;
             }
 
             if (i >= MAX_SWITCHES) {
-                debug.log("Found too many switches within validation time, force the stream to not change.");
+                debug.log("[OrangeRules][" + mediaType + "][OrangeLimitSwitchRule] Found too many switches within validation time, force the stream to not change.");
                 panic = true;
                 break;
             }
         }
 
         if (panic) {
-            debug.log("Wait some time before allowing another switch.");
+            debug.log("[OrangeRules][" + mediaType + "][OrangeLimitSwitchRule] Wait some time before allowing another switch.");
             waiting = WAIT_COUNT;
+
+            debug.log("[OrangeRules][" + mediaType + "][OrangeLimitSwitchRule] SwitchRequest: q=" + current /* + ", p=" + p */);
+
             return SwitchRequest(context).create(current/*, SwitchRequest.STRONG*/);
         } else {
+
+            debug.log("[OrangeRules][" + mediaType + "][OrangeLimitSwitchRule] SwitchRequest: q=" + SwitchRequest.NO_CHANGE /* + ", p=" + p */);
             return SwitchRequest(context).create(SwitchRequest.NO_CHANGE/*, MediaPlayer.rules.SwitchRequest.prototype.STRONG*/);
         }
     }

@@ -71,7 +71,7 @@ function OrangeDroppedFramesRuleClass() {
 
                     ratio = droppedFrames / totalFrames;
 
-                    debug.log("[DroppedFramesRule]["+mediaType+"] DroppedFrames:" + droppedFrames + ", totalVideoFrames:" + totalFrames + " => ratio = " + ratio);
+                    debug.log("[OrangeRules][" + mediaType + "][OrangeDroppedFramesRule] DroppedFrames:" + droppedFrames + ", totalVideoFrames:" + totalFrames + " => ratio = " + ratio);
 
                     if (ratio > droppedFramesMaxRatio && current > 0) {
                         // If too much dropped frames, then switch to lower representation
@@ -86,6 +86,8 @@ function OrangeDroppedFramesRuleClass() {
                     }
                 }
             }
+
+            debug.log("[OrangeRules][" + mediaType + "][OrangeDroppedFramesRule] SwitchRequest: q=" + q /* + ", p=" + p */);
             return SwitchRequest(context).create(q, {name:OrangeDroppedFramesRuleClass.__dashjs_factory_name, droppedFrames: droppedFrames});
         }
         return SwitchRequest(context).create();
