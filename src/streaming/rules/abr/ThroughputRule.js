@@ -42,9 +42,6 @@ function ThroughputRule(config) {
     const AVERAGE_THROUGHPUT_SAMPLE_AMOUNT_LIVE = 3;
     const AVERAGE_THROUGHPUT_SAMPLE_AMOUNT_VOD = 4;
     const AVERAGE_LATENCY_SAMPLES = AVERAGE_THROUGHPUT_SAMPLE_AMOUNT_VOD;
-    const CACHE_LOAD_THRESHOLD_VIDEO = 50;
-    const CACHE_LOAD_THRESHOLD_AUDIO = 5;
-    const CACHE_LOAD_THRESHOLD_LATENCY = 50;
     const THROUGHPUT_DECREASE_SCALE = 1.3;
     const THROUGHPUT_INCREASE_SCALE = 1.3;
 
@@ -119,19 +116,22 @@ function ThroughputRule(config) {
     }
 
     function isCachedResponse(latency, downloadTime, mediaType) {
+        let cacheLoadThresholdLatency = mediaPlayerModel.getCacheLoadThresholdLatency();
+        let cacheLoadThresholdVideo = mediaPlayerModel.getCacheLoadThresholdVideo();
+        let cacheLoadThresholdAudio = mediaPlayerModel.getCacheLoadThresholdAudio();
         let ret = false;
 
-        if (latency < CACHE_LOAD_THRESHOLD_LATENCY) {
+        if (latency < cacheLoadThresholdLatency) {
             ret = true;
         }
 
         if (!ret) {
             switch (mediaType) {
                 case 'video':
-                    ret = downloadTime < CACHE_LOAD_THRESHOLD_VIDEO;
+                    ret = downloadTime < cacheLoadThresholdVideo;
                     break;
                 case 'audio':
-                    ret = downloadTime < CACHE_LOAD_THRESHOLD_AUDIO;
+                    ret = downloadTime < cacheLoadThresholdAudio;
                     break;
                 default:
                     break;

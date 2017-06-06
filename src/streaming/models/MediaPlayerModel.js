@@ -38,6 +38,9 @@ const DEFAULT_LOCAL_STORAGE_BITRATE_EXPIRATION = 360000;
 const DEFAULT_LOCAL_STORAGE_MEDIA_SETTINGS_EXPIRATION = 360000;
 
 const BANDWIDTH_SAFETY_FACTOR = 0.9;
+const CACHE_LOAD_THRESHOLD_VIDEO = 50;
+const CACHE_LOAD_THRESHOLD_AUDIO = 5;
+const CACHE_LOAD_THRESHOLD_LATENCY = 50;
 const ABANDON_LOAD_TIMEOUT = 10000;
 
 const BUFFER_TO_KEEP = 30;
@@ -82,6 +85,9 @@ function MediaPlayerModel() {
         longFormContentDurationThreshold,
         richBufferThreshold,
         bandwidthSafetyFactor,
+        cacheLoadThresholdLatency,
+        cacheLoadThresholdVideo,
+        cacheLoadThresholdAudio,
         abandonLoadTimeout,
         retryAttempts,
         retryIntervals,
@@ -109,6 +115,9 @@ function MediaPlayerModel() {
         longFormContentDurationThreshold = LONG_FORM_CONTENT_DURATION_THRESHOLD;
         richBufferThreshold = RICH_BUFFER_THRESHOLD;
         bandwidthSafetyFactor = BANDWIDTH_SAFETY_FACTOR;
+        cacheLoadThresholdLatency = CACHE_LOAD_THRESHOLD_LATENCY;
+        cacheLoadThresholdVideo = CACHE_LOAD_THRESHOLD_VIDEO;
+        cacheLoadThresholdAudio = CACHE_LOAD_THRESHOLD_AUDIO;
         abandonLoadTimeout = ABANDON_LOAD_TIMEOUT;
         wallclockTimeUpdateInterval = WALLCLOCK_TIME_UPDATE_INTERVAL;
         xhrWithCredentials = { default: DEFAULT_XHR_WITH_CREDENTIALS };
@@ -150,6 +159,30 @@ function MediaPlayerModel() {
 
     function getBandwidthSafetyFactor() {
         return bandwidthSafetyFactor;
+    }
+
+    function setCacheLoadThresholdLatency(value) {
+        cacheLoadThresholdLatency = value;
+    }
+
+    function getCacheLoadThresholdLatency() {
+        return cacheLoadThresholdLatency;
+    }
+
+    function setCacheLoadThresholdVideo(value) {
+        cacheLoadThresholdVideo = value;
+    }
+
+    function getCacheLoadThresholdVideo() {
+        return cacheLoadThresholdVideo;
+    }
+
+    function setCacheLoadThresholdAudio(value) {
+        cacheLoadThresholdAudio = value;
+    }
+
+    function getCacheLoadThresholdAudio() {
+        return cacheLoadThresholdAudio;
     }
 
     function setAbandonLoadTimeout(value) {
@@ -366,6 +399,12 @@ function MediaPlayerModel() {
         getBufferOccupancyABREnabled: getBufferOccupancyABREnabled,
         setBandwidthSafetyFactor: setBandwidthSafetyFactor,
         getBandwidthSafetyFactor: getBandwidthSafetyFactor,
+        setCacheLoadThresholdLatency: setCacheLoadThresholdLatency,
+        getCacheLoadThresholdLatency: getCacheLoadThresholdLatency,
+        setCacheLoadThresholdVideo: setCacheLoadThresholdVideo,
+        getCacheLoadThresholdVideo: getCacheLoadThresholdVideo,
+        setCacheLoadThresholdAudio: setCacheLoadThresholdAudio,
+        getCacheLoadThresholdAudio: getCacheLoadThresholdAudio,
         setAbandonLoadTimeout: setAbandonLoadTimeout,
         getAbandonLoadTimeout: getAbandonLoadTimeout,
         setLastBitrateCachingInfo: setLastBitrateCachingInfo,

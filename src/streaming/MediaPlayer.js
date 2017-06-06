@@ -1565,6 +1565,78 @@ function MediaPlayer() {
     }
 
     /**
+     * Latency threshold in ms under which we that a segment request came back from cache
+     *
+     * @default 50ms
+     * @param {int} value
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function setCacheLoadThresholdLatency(value) {
+        mediaPlayerModel.setCacheLoadThresholdLatency(value);
+    }
+
+    /**
+     * Returns the number of the current CacheLoadThresholdLatency
+     *
+     * @return {number} value
+     * @see {@link module:MediaPlayer#setCacheLoadThresholdLatency setCacheLoadThresholdLatency()}
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function getCacheLoadThresholdLatency() {
+        return mediaPlayerModel.getCacheLoadThresholdLatency();
+    }
+
+    /**
+     * Download time threshold in ms under which we that a video segment request came back from cache
+     *
+     * @default 50ms
+     * @param {int} value
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function setCacheLoadThresholdVideo(value) {
+        mediaPlayerModel.setCacheLoadThresholdVideo(value);
+    }
+
+    /**
+     * Returns the number of the current CacheLoadThresholdVideo
+     *
+     * @return {number} value
+     * @see {@link module:MediaPlayer#setCacheLoadThresholdVideo setCacheLoadThresholdVideo()}
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function getCacheLoadThresholdVideo() {
+        return mediaPlayerModel.getCacheLoadThresholdVideo();
+    }
+
+    /**
+     * Download time threshold in ms under which we that an audio segment request came back from cache
+     *
+     * @default 5ms
+     * @param {int} value
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function setCacheLoadThresholdAudio(value) {
+        mediaPlayerModel.setCacheLoadThresholdAudio(value);
+    }
+
+    /**
+     * Returns the number of the current CacheLoadThresholdAudio
+     *
+     * @return {number} value
+     * @see {@link module:MediaPlayer#setCacheLoadThresholdAudio setCacheLoadThresholdAudio()}
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function getCacheLoadThresholdAudio() {
+        return mediaPlayerModel.getCacheLoadThresholdAudio();
+    }
+
+    /**
      * A timeout value in seconds, which during the ABRController will block switch-up events.
      * This will only take effect after an abandoned fragment event occurs.
      *
@@ -2084,6 +2156,12 @@ function MediaPlayer() {
         enableBufferOccupancyABR: enableBufferOccupancyABR,
         setBandwidthSafetyFactor: setBandwidthSafetyFactor,
         getBandwidthSafetyFactor: getBandwidthSafetyFactor,
+        setCacheLoadThresholdLatency: setCacheLoadThresholdLatency,
+        getCacheLoadThresholdLatency: getCacheLoadThresholdLatency,
+        setCacheLoadThresholdVideo: setCacheLoadThresholdVideo,
+        getCacheLoadThresholdVideo: getCacheLoadThresholdVideo,
+        setCacheLoadThresholdAudio: setCacheLoadThresholdAudio,
+        getCacheLoadThresholdAudio: getCacheLoadThresholdAudio,
         setAbandonLoadTimeout: setAbandonLoadTimeout,
         retrieveManifest: retrieveManifest,
         addUTCTimingSource: addUTCTimingSource,
