@@ -280,7 +280,7 @@ function AbrController() {
     function setUseDeadTimeLatency(value) {
         useDeadTimeLatency = value;
     }
-    
+
     function getPlaybackQuality(streamProcessor) {
         const type = streamProcessor.getType();
         const streamInfo = streamProcessor.getStreamInfo();
