@@ -62,7 +62,7 @@ function OrangeLimitSwitchRuleClass() {
 
         if (waiting > 0) {
             waiting -= 1;
-            return SwitchRequest(context).create(current /*, MediaPlayer.rules.SwitchRequest.prototype.STRONG*/);
+            return SwitchRequest(context).create(current, {name : OrangeLimitSwitchRuleClass.__dashjs_factory_name }, SwitchRequest.PRIORITY.STRONG);
         }
 
         var panic = false,
@@ -71,7 +71,8 @@ function OrangeLimitSwitchRuleClass() {
             delay,
             i,
             repSwitchList = metrics.RepSwitchList,
-            numSwitches = repSwitchList.length;
+            numSwitches = repSwitchList.length,
+            p = SwitchRequest.PRIORITY.DEFAULT;
 
         //debug.log("Checking limit switches rule...");
 
@@ -93,15 +94,15 @@ function OrangeLimitSwitchRuleClass() {
 
         if (panic) {
             debug.log("[OrangeRules][" + mediaType + "][OrangeLimitSwitchRule] Wait some time before allowing another switch.");
-            waiting = WAIT_COUNT;
+            waiting =   WAIT_COUNT;
+            p = SwitchRequest.PRIORITY.STRONG;
+            debug.log("[OrangeRules][" + mediaType + "][OrangeLimitSwitchRule] SwitchRequest: q=" + current + ", p=" + p);
 
-            debug.log("[OrangeRules][" + mediaType + "][OrangeLimitSwitchRule] SwitchRequest: q=" + current /* + ", p=" + p */);
-
-            return SwitchRequest(context).create(current/*, SwitchRequest.STRONG*/);
+            return SwitchRequest(context).create(current, {name : OrangeLimitSwitchRuleClass.__dashjs_factory_name }, p);
         } else {
-
-            debug.log("[OrangeRules][" + mediaType + "][OrangeLimitSwitchRule] SwitchRequest: q=" + SwitchRequest.NO_CHANGE /* + ", p=" + p */);
-            return SwitchRequest(context).create(SwitchRequest.NO_CHANGE/*, MediaPlayer.rules.SwitchRequest.prototype.STRONG*/);
+            p = SwitchRequest.PRIORITY.STRONG;
+            debug.log("[OrangeRules][" + mediaType + "][OrangeLimitSwitchRule] SwitchRequest: q=" + SwitchRequest.NO_CHANGE  + ", p=" + p);
+            return SwitchRequest(context).create(SwitchRequest.NO_CHANGE, {name : OrangeLimitSwitchRuleClass.__dashjs_factory_name }, p);
         }
     }
 

@@ -86,9 +86,8 @@ function OrangeInsufficientBufferRuleClass() {
             switchDownBufferTime,
             switchUpBufferRatio,
             switchUpBufferTime,
-            q = SwitchRequest.NO_CHANGE;
-            // No priority for the moment
-            //p = MediaPlayer.rules.SwitchRequest.prototype.DEFAULT;
+            q = SwitchRequest.NO_CHANGE,
+            p = SwitchRequest.PRIORITY.DEFAULT;
 
         if (bufferLevel === 0.0) {
             return SwitchRequest(context).create();
@@ -117,16 +116,14 @@ function OrangeInsufficientBufferRuleClass() {
 
             if (bufferLevel <= switchLowerBufferTime) {
                 q = 0;
-                // No priority for the moment
-                // p = SwitchRequest.STRONG;
+                p = SwitchRequest.PRIORITY.STRONG;
             } else if (bufferLevel <= switchDownBufferTime) {
                 q = (rulesContext.getCurrentValue() > 0) ? (rulesContext.getCurrentValue() - 1) : 0;
-                // No priority for the moment
-                // p = SwitchRequest.DEFAULT;
+                p = SwitchRequest.PRIORITY.DEFAULT;
             }
 
-            debug.log("[OrangeRules][" + mediaType + "][InsufficientBufferRule] SwitchRequest: q=" + q /* + ", p=" + p */);
-            return SwitchRequest(context).create( q, /*p, */{name: OrangeInsufficientBufferRuleClass.__dashjs_factory_name});
+            debug.log("[OrangeRules][" + mediaType + "][InsufficientBufferRule] SwitchRequest: q=" + q  + ", p=" + p);
+            return SwitchRequest(context).create( q, /*p, */{name: OrangeInsufficientBufferRuleClass.__dashjs_factory_name}, p);
 
         }
     }

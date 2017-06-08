@@ -74,7 +74,7 @@ function OrangeAbandonRequestsRuleClass() {
         const mediaInfo = rulesContext.getMediaInfo();
         const type = mediaInfo.type;
         var request = rulesContext.getCurrentRequest();
-        var switchRequest = SwitchRequest(context).create(SwitchRequest.NO_CHANGE, {name: OrangeAbandonRequestsRuleClass.__dashjs_factory_name}/*, SwitchRequest.WEAK*/);
+        var switchRequest = SwitchRequest(context).create(SwitchRequest.NO_CHANGE, {name: OrangeAbandonRequestsRuleClass.__dashjs_factory_name}, SwitchRequest.PRIORITY.WEAK);
 
         var now = new Date().getTime(),
             elapsedTime,
@@ -99,7 +99,7 @@ function OrangeAbandonRequestsRuleClass() {
                 const newQuality = abrController.getQualityForBitrate(mediaInfo, measuredBandwidthInKbps * BANDWITH_SAFETY_FACTOR);
 
                 log("[OrangeRules][" + type + "][AbandonRequestsRule] BW = " + measuredBandwidthInKbps * BANDWITH_SAFETY_FACTOR + " kb/s => switch quality : " + newQuality);
-                switchRequest = SwitchRequest(context).create(newQuality, {name: OrangeAbandonRequestsRuleClass.__dashjs_factory_name} /*, SwitchRequest.STRONG*/);
+                switchRequest = SwitchRequest(context).create(newQuality, {name: OrangeAbandonRequestsRuleClass.__dashjs_factory_name} , SwitchRequest.PRIORITY.STRONG);
             }
         }
         return switchRequest;

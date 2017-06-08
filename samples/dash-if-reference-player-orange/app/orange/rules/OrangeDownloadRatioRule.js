@@ -75,7 +75,7 @@ function OrangeDownloadRatioRuleClass() {
             bandwidths = [],
             i,
             q = SwitchRequest.NO_CHANGE,
-            // No priority for the moment p = SwitchRequest.DEFAULT,
+            p = SwitchRequest.PRIORITY.DEFAULT,
             totalBytesLength = 0;
 
         latencyInBandwidth = config.getParamFor(mediaType, "ABR.latencyInBandwidth", "boolean", true);
@@ -163,11 +163,10 @@ function OrangeDownloadRatioRuleClass() {
                 }
             }
             q = i;
-            // No priority for the moment
-            // p = SwitchRequest.WEAK;
+            p = SwitchRequest.PRIORITY.WEAK;
 
-            debug.log("[OrangeRules][" + mediaType + "][DownloadRatioRule] SwitchRequest: q=" + q + "/" + (count - 1) + " (" + bandwidths[q] + ")"/* + ", p=" + p*/);
-            return SwitchRequest(context).create(q, {name : OrangeDownloadRatioRuleClass.__dashjs_factory_name}/*,  p*/);
+            debug.log("[OrangeRules][" + mediaType + "][DownloadRatioRule] SwitchRequest: q=" + q + "/" + (count - 1) + " (" + bandwidths[q] + ")" + ", p=" + p);
+            return SwitchRequest(context).create(q, {name : OrangeDownloadRatioRuleClass.__dashjs_factory_name},  p);
         } else {
             for (i = count - 1; i > current; i -= 1) {
                 if (calculatedBandwidth > (bandwidths[i] * switchUpRatioSafetyFactor)) {
@@ -177,11 +176,10 @@ function OrangeDownloadRatioRuleClass() {
             }
 
             q = i;
-            // not priority for the moment
-            // p = SwitchRequest.STRONG;
+            p = SwitchRequest.PRIORITY.STRONG;
 
-            debug.log("[OrangeRules][" + mediaType + "][DownloadRatioRule] SwitchRequest: q=" + q + "/" + (count - 1) + " (" + bandwidths[q] + ")"/* + ", p=" + p*/);
-            return SwitchRequest(context).create(q, {name : OrangeDownloadRatioRuleClass.__dashjs_factory_name}/*,  p*/);
+            debug.log("[OrangeRules][" + mediaType + "][DownloadRatioRule] SwitchRequest: q=" + q + "/" + (count - 1) + " (" + bandwidths[q] + ")" + ", p=" + p);
+            return SwitchRequest(context).create(q, {name : OrangeDownloadRatioRuleClass.__dashjs_factory_name},  p);
         }
     }
 

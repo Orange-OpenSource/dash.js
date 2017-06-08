@@ -52,6 +52,7 @@ function OrangeDroppedFramesRuleClass() {
             droppedFramesMinRatio = config.getParamFor(mediaType, "ABR.droppedFramesMinRatio", "number", 0.10),
             current = rulesContext.getCurrentValue(),
             q = SwitchRequest.NO_CHANGE,
+            p = SwitchRequest.PRIORITY.DEFAULT,
             ratio;
 
         if (mediaType !== 'video') {
@@ -76,19 +77,17 @@ function OrangeDroppedFramesRuleClass() {
                     if (ratio > droppedFramesMaxRatio && current > 0) {
                         // If too much dropped frames, then switch to lower representation
                         q = current - 1;
-                        // No priority for the moment
-                        // p = MediaPlayer.rules.SwitchRequest.prototype.STRONG;
+                        p = SwitchRequest.PRIORITY.STRONG;
                     } else if (ratio > droppedFramesMinRatio) {
                         // Still some dropped frames, then stay at current quality
                         q = current;
-                        // No priority for the moment
-                        // p = MediaPlayer.rules.SwitchRequest.prototype.STRONG;
+                        p = SwitchRequest.PRIORITY.STRONG;
                     }
                 }
             }
 
-            debug.log("[OrangeRules][" + mediaType + "][OrangeDroppedFramesRule] SwitchRequest: q=" + q /* + ", p=" + p */);
-            return SwitchRequest(context).create(q, {name:OrangeDroppedFramesRuleClass.__dashjs_factory_name, droppedFrames: droppedFrames});
+            debug.log("[OrangeRules][" + mediaType + "][OrangeDroppedFramesRule] SwitchRequest: q=" + q  + ", p=" + p );
+            return SwitchRequest(context).create(q, {name:OrangeDroppedFramesRuleClass.__dashjs_factory_name, droppedFrames: droppedFrames}, p);
         }
         return SwitchRequest(context).create();
     }
