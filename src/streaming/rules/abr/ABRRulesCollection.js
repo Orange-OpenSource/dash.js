@@ -100,14 +100,18 @@ function ABRRulesCollection() {
     }
 
     function getActiveRules(srArray) {
-        return srArray.filter(sr => sr.value > SwitchRequest.NO_CHANGE);
+        return srArray.filter(sr => sr && (sr.value > SwitchRequest.NO_CHANGE));
     }
 
     function getMinSwitchRequest(srArray) {
         if (srArray.length === 0) {
             return;
         }
-        return srArray.reduce((a, b) => { return a.value < b.value ? a : b; });
+        return srArray.reduce((a, b) => {
+            return a && b ?
+                (a.value < b.value ? a : b) :
+                (a || b || window.undefined);
+        });
     }
 
     function getMaxQuality(rulesContext) {
