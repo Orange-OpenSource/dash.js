@@ -218,7 +218,7 @@ function BufferController(config) {
             return;
         }
 
-        if (!isNaN(appendedBytesInfo.index)) {
+        if (appendedBytesInfo && !isNaN(appendedBytesInfo.index)) {
             maxAppendedIndex = Math.max(appendedBytesInfo.index, maxAppendedIndex);
             checkIfBufferingCompleted();
         }
