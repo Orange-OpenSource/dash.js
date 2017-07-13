@@ -1,4 +1,4 @@
-const VERSION = '2.4.1-abr-3';
+const VERSION = '2.4.1-abr-4';
 export function getVersionString() {
     return VERSION;
 }
