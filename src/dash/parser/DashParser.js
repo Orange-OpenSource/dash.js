@@ -106,8 +106,19 @@ function DashParser(/*config*/) {
         return manifest;
     }
 
+    function parseXML(data) {
+        return converter.xml_str2json(data);
+    }
+
+    function setXlinkObjectIron(xlinkController) {
+        xlinkController.setMatchers(matchers);
+        xlinkController.setIron(objectIron);
+    }
+
     instance = {
-        parse: parse
+        parse: parse,
+        parseXML: parseXML,
+        setXlinkObjectIron: setXlinkObjectIron,
     };
 
     setup();

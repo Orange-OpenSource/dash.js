@@ -50,8 +50,11 @@ function ManifestLoader(config) {
     const parser = config.parser;
 
     let instance,
+        actualUrl,
+        baseUri,
         xhrLoader,
-        xlinkController;
+        xlinkController,
+        worker;
 
     function setup() {
         eventBus.on(Events.XLINK_READY, onXlinkReady, instance);
@@ -67,6 +70,11 @@ function ManifestLoader(config) {
             metricsModel: config.metricsModel,
             requestModifier: config.requestModifier
         });
+
+        if (window.Worker) {
+            worker = new Worker('dash.worker.js');
+            worker.onmessage = onManifestParsed;
+        }
     }
 
     function onXlinkReady(event) {
@@ -77,15 +85,42 @@ function ManifestLoader(config) {
         );
     }
 
-    function load (url) {
+    function onManifestParsed(e) {
+        const { manifest } = e && e.data;
+
+        if (xlinkController) {
+            parser.setXlinkObjectIron(xlinkController);
+        }
+
+        if (manifest) {
+            manifest.url = actualUrl;
+
+            // URL from which the MPD was originally retrieved (MPD updates will not change this value)
+            if (!manifest.originalUrl) {
+                manifest.originalUrl = manifest.url;
+            }
+            manifest.baseUri = baseUri;
+            manifest.loadedTime = new Date();
+            xlinkController.resolveManifestOnLoad(manifest);
+        } else {
+            eventBus.trigger(
+                Events.INTERNAL_MANIFEST_LOADED, {
+                    manifest: null,
+                    error: new Error(
+                        MANIFEST_LOADER_ERROR_PARSING_FAILURE,
+                        MANIFEST_LOADER_MESSAGE_PARSING_FAILURE
+                    )
+                }
+            );
+        }
+    }
+
+    function load(url) {
         const request = new TextRequest(url, HTTPRequest.MPD_TYPE);
 
         xhrLoader.load({
             request: request,
             success: function (data, textStatus, xhr) {
-                var actualUrl;
-                var baseUri;
-
                 // Handle redirects for the MPD - as per RFC3986 Section 5.1.3
                 // also handily resolves relative MPD URLs to absolute
                 if (xhr.responseURL && xhr.responseURL !== url) {
@@ -99,32 +134,24 @@ function ManifestLoader(config) {
                         url = urlUtils.resolve(url, window.location.href);
                     }
 
+                    actualUrl = url;
                     baseUri = urlUtils.parseBaseUrl(url);
                 }
 
-                const manifest = parser.parse(data, xlinkController);
-
-                if (manifest) {
-                    manifest.url = actualUrl || url;
-
-                    // URL from which the MPD was originally retrieved (MPD updates will not change this value)
-                    if (!manifest.originalUrl) {
-                        manifest.originalUrl = manifest.url;
-                    }
-
-                    manifest.baseUri = baseUri;
-                    manifest.loadedTime = new Date();
-                    xlinkController.resolveManifestOnLoad(manifest);
-                } else {
+                if (parser === null) {
                     eventBus.trigger(
                         Events.INTERNAL_MANIFEST_LOADED, {
                             manifest: null,
                             error: new Error(
-                                MANIFEST_LOADER_ERROR_PARSING_FAILURE,
-                                MANIFEST_LOADER_MESSAGE_PARSING_FAILURE
+                                MANIFEST_LOADER_ERROR_PARSING_FAILURE
                             )
                         }
                     );
+                    return;
+                }
+
+                if (worker) {
+                    worker.postMessage(parser.parseXML(data));
                 }
             },
             error: function (xhr, statusText, errorText) {

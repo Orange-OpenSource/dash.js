@@ -201,7 +201,8 @@ module.exports = function (grunt) {
 
             watch: {
                 files: {
-                    'build/temp/dash.all.debug.js': ['index.js']
+                    'build/temp/dash.all.debug.js': ['index.js'],
+                    'build/temp/dash.worker.debug.js': ['src/workers/index.js']
                 },
                 options: {
                     watch: true,
