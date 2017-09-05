@@ -114,7 +114,8 @@ module.exports = function (grunt) {
             all: {
                 options: {},
                 files: {
-                    'build/temp/dash.all.debug.js.map': ['build/temp/dash.all.debug.js']
+                    'build/temp/dash.all.debug.js.map': ['build/temp/dash.all.debug.js'],
+                    'build/temp/dash.worker.debug.js.map': ['build/temp/dash.worker.debug.js']
                 }
             },
             reporting: {
@@ -255,7 +256,7 @@ module.exports = function (grunt) {
     grunt.registerTask('dist',      ['clean', 'jshint', 'jscs', 'browserify:mediaplayer' , 'browserify:protection', 'browserify:reporting', 'browserify:all', 'babel:es5', 'minimize', 'copy:dist']);
     grunt.registerTask('minimize',  ['exorcise', 'githash', 'uglify']);
     grunt.registerTask('test',      ['mocha_istanbul:test']);
-    grunt.registerTask('watch',     ['browserify:watch']);
+    grunt.registerTask('watch',     ['exorcise:all', 'browserify:watch']);
     grunt.registerTask('release',   ['default', 'jsdoc']);
     grunt.registerTask('debug',     ['clean', 'browserify:all', 'exorcise:all', 'copy:dist']);
     grunt.registerTask('lint',      ['jshint', 'jscs']);

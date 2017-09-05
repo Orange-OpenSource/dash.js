@@ -46,6 +46,7 @@
   },
   "dependencies": {
     "codem-isoboxer": "0.2.7",
+    "fast-deep-equal": "^1.0.0",
     "round10": "^1.0.3"
   },
   "repository": {
