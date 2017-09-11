@@ -131,7 +131,12 @@ function DashAdapter() {
         mediaInfo.roles = dashManifestModel.getRolesForAdaptation(a).map(function (role) {
             return role.value;
         });
-        mediaInfo.codec = dashManifestModel.getCodec(a);
+        // TODO: Is that wrong ?
+        // Why storing codec for all representation since they have
+        // maybe not the same codec.
+        // Should representation with different codecs maybe seperate
+        // in multiple adaption sets ?
+        mediaInfo.codec = dashManifestModel.getCodec(a.Representation_asArray[0]);
         mediaInfo.mimeType = dashManifestModel.getMimeType(a);
         mediaInfo.contentProtection = dashManifestModel.getContentProtectionData(a);
         mediaInfo.bitrateList = dashManifestModel.getBitrateListForAdaptation(a);

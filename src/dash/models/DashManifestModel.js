@@ -36,6 +36,8 @@ import Mpd from '../vo/Mpd';
 import UTCTiming from '../vo/UTCTiming';
 import TimelineConverter from '../utils/TimelineConverter';
 import MediaController from '../../streaming/controllers/MediaController';
+import VideoModel from '../../streaming/models/VideoModel';
+import Capabilities from '../../streaming/utils/Capabilities';
 import DashAdapter from '../DashAdapter';
 import Event from '../vo/Event';
 import BaseURL from '../vo/BaseURL';
@@ -249,8 +251,7 @@ function DashManifestModel() {
         return adaptations[0];
     }
 
-    function getCodec(adaptation) {
-        var representation = adaptation.Representation_asArray[0];
+    function getCodec(representation) {
         return (representation.mimeType + ';codecs="' + representation.codecs + '"');
     }
 
@@ -341,17 +342,22 @@ function DashManifestModel() {
     function getBitrateListForAdaptation(adaptation) {
         if (!adaptation || !adaptation.Representation_asArray || !adaptation.Representation_asArray.length) return null;
 
+        const capabilities = Capabilities(context).getInstance();
+
         var a = processAdaptation(adaptation);
         var reps = a.Representation_asArray;
         var ln = reps.length;
         var bitrateList = [];
 
         for (var i = 0; i < ln; i++) {
-            bitrateList.push({
-                bandwidth: reps[i].bandwidth,
-                width: reps[i].width || 0,
-                height: reps[i].height || 0
-            });
+            const codec = getCodec(reps[i]);
+            if (capabilities.supportsCodec(VideoModel(context).getInstance().getElement(), codec)) {
+                bitrateList.push({
+                    bandwidth: reps[i].bandwidth,
+                    width: reps[i].width || 0,
+                    height: reps[i].height || 0
+                });
+            }
         }
 
         return bitrateList;
