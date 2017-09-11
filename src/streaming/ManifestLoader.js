@@ -37,6 +37,7 @@ import {HTTPRequest} from './vo/metrics/HTTPRequest';
 import EventBus from '../core/EventBus';
 import Events from '../core/events/Events';
 import FactoryMaker from '../core/FactoryMaker';
+import Debug from '../core/Debug';
 
 const MANIFEST_LOADER_ERROR_PARSING_FAILURE = 1;
 const MANIFEST_LOADER_ERROR_LOADING_FAILURE = 2;
@@ -48,6 +49,7 @@ function ManifestLoader(config) {
     const eventBus = EventBus(context).getInstance();
     const urlUtils = URLUtils(context).getInstance();
     const parser = config.parser;
+    const log = Debug(context).getInstance().log;
 
     let instance,
         actualUrl,
@@ -71,9 +73,11 @@ function ManifestLoader(config) {
             requestModifier: config.requestModifier
         });
 
-        if (window.Worker) {
+        try {
             worker = new Worker('dash.worker.js');
             worker.onmessage = onManifestParsed;
+        } catch (e) {
+            log(`Failed to load worker. Manifest will be parsed on main thread.`, e);
         }
     }
 
@@ -151,7 +155,13 @@ function ManifestLoader(config) {
                 }
 
                 if (worker) {
+                    // Using worker to objectiron
+                    // data structures.
                     worker.postMessage(parser.parseXML(data));
+                } else {
+                    // Fallback to main thread parsing
+                    const manifest = parser.parse(data, xlinkController);
+                    onManifestParsed({ data: { manifest }});
                 }
             },
             error: function (xhr, statusText, errorText) {
