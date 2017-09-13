@@ -38,6 +38,7 @@ import EventBus from '../core/EventBus';
 import Events from '../core/events/Events';
 import FactoryMaker from '../core/FactoryMaker';
 import Debug from '../core/Debug';
+import work from 'webworkify';
 
 const MANIFEST_LOADER_ERROR_PARSING_FAILURE = 1;
 const MANIFEST_LOADER_ERROR_LOADING_FAILURE = 2;
@@ -74,8 +75,8 @@ function ManifestLoader(config) {
         });
 
         try {
-            worker = new Worker('dash.worker.js');
-            worker.onmessage = onManifestParsed;
+            worker = work(require('../workers/index.js'));
+            worker.addEventListener('message', onManifestParsed);
         } catch (e) {
             log(`Failed to load worker. Manifest will be parsed on main thread.`, e);
         }
@@ -189,6 +190,10 @@ function ManifestLoader(config) {
         if (xhrLoader) {
             xhrLoader.abort();
             xhrLoader = null;
+        }
+
+        if (worker) {
+            worker.removeEventListener('message', onManifestParsed);
         }
     }
 
