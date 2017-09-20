@@ -199,7 +199,7 @@ function DashManifestModel() {
 
     function getIndexForAdaptation(realAdaptation, manifest, periodIndex) {
         if (realAdaptation) {
-            const realAdaId = realAdaptation && realAdaptation.Representation && realAdaptation.Representation.id;
+            const realAdaId = realAdaptation.Representation && realAdaptation.Representation.id;
             const adaptations = manifest.Period_asArray[periodIndex].AdaptationSet_asArray;
             for (let i = 0; i < adaptations.length; i++) {
                 const currentAda = adaptations[i];

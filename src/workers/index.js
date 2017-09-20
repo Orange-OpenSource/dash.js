@@ -1,4 +1,4 @@
-/* global onmessage:true, postMessage:false */
+/* global postMessage:false */
 import ObjectIron from '../../externals/objectiron';
 
 import RepresentationBaseValuesMap from '../dash/parser/maps/RepresentationBaseValuesMap';
@@ -9,14 +9,28 @@ const objectIron = new ObjectIron([
     new SegmentValuesMap()
 ]);
 
-onmessage = function (e) {
-    let manifest = e.data;
+// onmessage = function (e) {
+//     let manifest = e.data;
+//
+//     if (!manifest) {
+//         throw new Error('parser error');
+//     }
+//
+//     objectIron.run(manifest);
+//
+//     postMessage({ manifest: manifest });
+// };
 
-    if (!manifest) {
-        throw new Error('parser error');
-    }
+module.exports = function (self) {
+    self.addEventListener('message', function (e) {
+        let manifest = e.data;
 
-    objectIron.run(manifest);
+        if (!manifest) {
+            throw new Error('parser error');
+        }
 
-    postMessage({ manifest: manifest });
+        objectIron.run(manifest);
+
+        postMessage({ manifest: manifest });
+    });
 };
