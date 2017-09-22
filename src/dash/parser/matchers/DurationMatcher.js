@@ -43,27 +43,23 @@ const SECONDS_IN_MIN = 60;
 
 class DurationMatcher extends BaseMatcher {
     constructor() {
+
+        const attributeList = [
+            'minBufferTime', 'mediaPresentationDuration',
+            'minimumUpdatePeriod', 'timeShiftBufferDepth', 'maxSegmentDuration',
+            'maxSubsegmentDuration', 'suggestedPresentationDelay', 'start',
+            'starttime', 'duration'
+        ];
+
+        let match;
+
         super(
             attr => {
-                const attributeList = [
-                    'minBufferTime', 'mediaPresentationDuration',
-                    'minimumUpdatePeriod', 'timeShiftBufferDepth', 'maxSegmentDuration',
-                    'maxSubsegmentDuration', 'suggestedPresentationDelay', 'start',
-                    'starttime', 'duration'
-                ];
-                const len = attributeList.length;
-
-                for (let i = 0; i < len; i++) {
-                    if (attr.nodeName === attributeList[i]) {
-                        return durationRegex.test(attr.value);
-                    }
-                }
-
-                return false;
+                match = attributeList.includes(attr.nodeName) ? durationRegex.exec(attr.value) : null;
+                return match !== null;
             },
-            str => {
+            () => {
                 //str = "P10Y10M10DT10H10M10.1S";
-                const match = durationRegex.exec(str);
                 let result = (parseFloat(match[2] || 0) * SECONDS_IN_YEAR +
                     parseFloat(match[4] || 0) * SECONDS_IN_MONTH +
                     parseFloat(match[6] || 0) * SECONDS_IN_DAY +
@@ -71,11 +67,7 @@ class DurationMatcher extends BaseMatcher {
                     parseFloat(match[10] || 0) * SECONDS_IN_MIN +
                     parseFloat(match[12] || 0));
 
-                if (match[1] !== undefined) {
-                    result = -result;
-                }
-
-                return result;
+                return match[1] !== undefined ? -result : result;
             }
         );
     }

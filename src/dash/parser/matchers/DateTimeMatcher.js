@@ -41,8 +41,14 @@ const datetimeRegex = /^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2})(?
 
 class DateTimeMatcher extends BaseMatcher {
     constructor() {
+
+        const attributeList = [
+            'availabilityStartTime', 'publishTime',
+        ];
+
+
         super(
-            attr => datetimeRegex.test(attr.value),
+            attr => attributeList.includes(attr.nodeName),
             str => {
                 const match = datetimeRegex.exec(str);
                 let utcDate;

@@ -32,7 +32,7 @@ import ErrorHandler from '../../streaming/utils/ErrorHandler';
 import FactoryMaker from '../../core/FactoryMaker';
 import Debug from '../../core/Debug';
 import ObjectIron from '../../../externals/objectiron';
-import X2JS from '../../../externals/xml2json';
+import X2JS from '../../../externals/molotovtv/xml2json';
 import StringMatcher from './matchers/StringMatcher';
 import DurationMatcher from './matchers/DurationMatcher';
 import DateTimeMatcher from './matchers/DateTimeMatcher';
@@ -60,13 +60,13 @@ function DashParser(/*config*/) {
         ];
 
         converter = new X2JS({
-            escapeMode:         false,
-            attributePrefix:    '',
-            arrayAccessForm:    'property',
-            emptyNodeForm:      'object',
-            stripWhitespaces:   false,
-            enableToStringFunc: false,
-            ignoreRoot:         true,
+            // escapeMode:         false,
+            // attributePrefix:    '',
+            // arrayAccessForm:    'property',
+            // emptyNodeForm:      'object',
+            // stripWhitespaces:   false,
+            // enableToStringFunc: false,
+            // ignoreRoot:         true,
             matchers:           matchers
         });
 

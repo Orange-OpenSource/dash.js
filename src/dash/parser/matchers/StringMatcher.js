@@ -35,47 +35,41 @@ import BaseMatcher from './BaseMatcher';
 
 class StringMatcher extends BaseMatcher {
     constructor() {
+
+        const stringAttrsInElements = {
+            'MPD':                        [ 'id', 'profiles' ],
+            'Period':                     [ 'id', ],
+            'BaseURL':                    [ 'serviceLocation', 'byteRange' ],
+            'SegmentBase':                [ 'indexRange' ],
+            'Initialization':             [ 'range' ],
+            'RepresentationIndex':        [ 'range' ],
+            'SegmentList':                [ 'indexRange' ],
+            'BitstreamSwitching':         [ 'range' ],
+            'SegmentURL':                 [ 'mediaRange', 'indexRange' ],
+            'SegmentTemplate':            [ 'indexRange', 'media', 'index', 'initialization', 'bitstreamSwitching' ],
+            'AssetIdentifier':            [ 'value', 'id' ],
+            'EventStream':                [ 'value' ],
+            'AdaptationSet':              [ 'profiles', 'mimeType', 'segmentProfiles', 'codecs', 'contentType' ],
+            'FramePacking':               [ 'value', 'id' ],
+            'AudioChannelConfiguration':  [ 'value', 'id' ],
+            'ContentProtection':          [ 'value', 'id' ],
+            'EssentialProperty':          [ 'value', 'id' ],
+            'SupplementalProperty':       [ 'value', 'id' ],
+            'InbandEventStream':          [ 'value', 'id' ],
+            'Accessibility':              [ 'value', 'id' ],
+            'Role':                       [ 'value', 'id' ],
+            'Rating':                     [ 'value', 'id' ],
+            'Viewpoint':                  [ 'value', 'id' ],
+            'ContentComponent':           [ 'contentType' ],
+            'Representation':             [ 'id', 'dependencyId', 'mediaStreamStructureId' ],
+            'Subset':                     [ 'id' ],
+            'Metrics':                    [ 'metrics' ],
+            'Reporting':                  [ 'value', 'id' ]
+        };
+
         super(
             (attr, nodeName) => {
-                const stringAttrsInElements = {
-                    'MPD':                        [ 'id', 'profiles' ],
-                    'Period':                     [ 'id', ],
-                    'BaseURL':                    [ 'serviceLocation', 'byteRange' ],
-                    'SegmentBase':                [ 'indexRange' ],
-                    'Initialization':             [ 'range' ],
-                    'RepresentationIndex':        [ 'range' ],
-                    'SegmentList':                [ 'indexRange' ],
-                    'BitstreamSwitching':         [ 'range' ],
-                    'SegmentURL':                 [ 'mediaRange', 'indexRange' ],
-                    'SegmentTemplate':            [ 'indexRange', 'media', 'index', 'initialization', 'bitstreamSwitching' ],
-                    'AssetIdentifier':            [ 'value', 'id' ],
-                    'EventStream':                [ 'value' ],
-                    'AdaptationSet':              [ 'profiles', 'mimeType', 'segmentProfiles', 'codecs', 'contentType' ],
-                    'FramePacking':               [ 'value', 'id' ],
-                    'AudioChannelConfiguration':  [ 'value', 'id' ],
-                    'ContentProtection':          [ 'value', 'id' ],
-                    'EssentialProperty':          [ 'value', 'id' ],
-                    'SupplementalProperty':       [ 'value', 'id' ],
-                    'InbandEventStream':          [ 'value', 'id' ],
-                    'Accessibility':              [ 'value', 'id' ],
-                    'Role':                       [ 'value', 'id' ],
-                    'Rating':                     [ 'value', 'id' ],
-                    'Viewpoint':                  [ 'value', 'id' ],
-                    'ContentComponent':           [ 'contentType' ],
-                    'Representation':             [ 'id', 'dependencyId', 'mediaStreamStructureId' ],
-                    'Subset':                     [ 'id' ],
-                    'Metrics':                    [ 'metrics' ],
-                    'Reporting':                  [ 'value', 'id' ]
-                };
-                if (stringAttrsInElements.hasOwnProperty(nodeName)) {
-                    var attrNames = stringAttrsInElements[nodeName];
-                    if (attrNames !== undefined) {
-                        return attrNames.indexOf(attr.name) >= 0;
-                    } else {
-                        return false;
-                    }
-                }
-                return false;
+                return stringAttrsInElements[nodeName] && stringAttrsInElements[nodeName].includes(attr.name);
             },
             str => String(str)
         );
