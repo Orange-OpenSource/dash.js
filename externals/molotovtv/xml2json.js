@@ -25,35 +25,16 @@
   - remove explicit RequireJS support
 */
 
+const emptyTextNodeOrComment = /\>\s+(<!--.+--\>\s+)?</g;
+
 function X2JS(config) {
     'use strict';
 
     var VERSION = '1.2.0';
 
     config = config || {};
-    initConfigDefaults();
 
-    function initConfigDefaults() {
-        if (config.escapeMode === undefined) {
-            config.escapeMode = true;
-        }
-
-        if (config.skipEmptyTextNodesForObj === undefined) {
-            config.skipEmptyTextNodesForObj = true;
-        }
-
-        if (config.useDoubleQuotes === undefined) {
-            config.useDoubleQuotes = false;
-        }
-
-        config.jsonPropertiesFilter = config.jsonPropertiesFilter || [];
-
-        if (config.keepCData === undefined) {
-            config.keepCData = false;
-        }
-    }
-
-    var DOMNodeTypes = {
+    const DOMNodeTypes = {
         ELEMENT_NODE: 1,
         TEXT_NODE: 3,
         CDATA_SECTION_NODE: 4,
@@ -61,119 +42,94 @@ function X2JS(config) {
         DOCUMENT_NODE: 9
     };
 
+    initConfigDefaults();
+
+    function initConfigDefaults() {
+        if (config.ignoreRoot === undefined) {
+            config.ignoreRoot = false;
+        }
+    }
+
     function toArrayAccessForm(obj, childName) {
         obj[childName + '_asArray'] = obj[childName] instanceof Array ? obj[childName] : [obj[childName]];
     }
 
     function parseDOMChildren(node) {
 
-        let nodeChildren;
         let result;
 
         switch (node.nodeType) {
 
             case DOMNodeTypes.DOCUMENT_NODE:
 
-                nodeChildren = node.childNodes;
-                // Alternative for firstElementChild which is not supported in some environments
-                for (let cidx = 0, len = nodeChildren.length; cidx < len; ++cidx) {
-                    let child = nodeChildren.item(cidx);
-                    if (child.nodeType === DOMNodeTypes.ELEMENT_NODE) {
-                        result = parseDOMChildren(child);
-                    }
-                }
-                return result;
+                return config.ignoreRoot ? parseDOMChildren(node.firstChild) : { [node.firstChild.nodeName]: parseDOMChildren(node.firstChild) };
 
             case DOMNodeTypes.ELEMENT_NODE:
 
                 result = {};
-                let __cnt = 0;
 
-                let children = [];
-                nodeChildren = node.childNodes;
+                // Children nodes of the current node
+                let child = node.firstChild;
+                if (child) {
 
-                // Children nodes
-                let childName;
-                for (let cidx = 0, len = nodeChildren.length; cidx < len; ++cidx) {
-                    let child = nodeChildren[cidx];
-                    childName = child.nodeName;
+                    const len = node.childNodes.length;
+                    let children = new Array(len);
 
-                    if (child.nodeType != DOMNodeTypes.COMMENT_NODE) {
-                        ++__cnt;
-                        if (!result[childName]) {
+                    for (let cidx = 0; cidx < len; ++cidx) {
+
+                        let childName = child.nodeName;
+
+                        let childNode = result[childName];
+                        if (!childNode) {
                             let c = parseDOMChildren(child);
-                            if (childName != '#text' || /[^\s]/.test(c)) { // Don't add white-space text nodes
-                                children[children.length] = { [childName]: c };
-                            }
+                            children[cidx] = { [childName]: c };
                             result[childName] = c;
                             toArrayAccessForm(result, childName);
                         }
                         else {
-                            if (result[childName]) {
-                                if ( !(result[childName] instanceof Array)) {
-                                    result[childName] = [result[childName]];
-                                    toArrayAccessForm(result, childName);
-                                }
+                            if (childNode && !(childNode instanceof Array)) {
+                                childNode = result[childName] = [result[childName]];
+                                toArrayAccessForm(result, childName);
                             }
 
                             let c = parseDOMChildren(child);
-                            if (childName != '#text' || /[^\s]/.test(c)) { // Don't add white-space text nodes
-                                children[children.length] = { [childName]: c };
-                            }
-                            result[childName][result[childName].length] = c;
+                            children[cidx] = { [childName]: c };
+                            childNode[result[childName].length] = c;
                         }
+                        child = child.nextSibling;
                     }
+
+                    result.__children = children;
                 }
 
-                result.__children = children;
 
-                // Attributes
+                // Attributes of the current node
                 let nodeLocalName = node.nodeName;
-                for (let aidx = 0, len = node.attributes.length; aidx < len; aidx++) {
-                    let attr = node.attributes[aidx];
-                    ++__cnt;
+                const nodeAttributes = node.attributes;
+                for (let aidx = 0, len = nodeAttributes.length; aidx < len; ++aidx) {
+                    let attr = nodeAttributes[aidx];
 
-                    let value2 = attr.value;
+                    let value = attr.value;
                     for (let m = 0, ml = config.matchers.length; m < ml; ++m) {
                         let matchobj = config.matchers[m];
                         if (matchobj.test(attr, nodeLocalName)) {
-                            value2 = matchobj.converter(attr.value);
+                            value = matchobj.converter(attr.value);
                         }
                     }
 
-                    result[attr.name] = value2;
+                    result[attr.name] = value;
                 }
 
+                // Dash.js does not need prefix?
                 // Node namespace prefix
-                let nodePrefix = node.prefix;
-                if (nodePrefix != null && nodePrefix != '') {
-                    ++__cnt;
-                    result.__prefix = nodePrefix;
-                }
-
-                if (result['#text'] != null) {
-                    result.__text = result['#text'];
-                    if (result.__text instanceof Array) {
-                        result.__text = result.__text.join("\n");
-                    }
-                    delete result['#text'];
-                    delete result['#text_asArray'];
-                }
-
-                if ( __cnt == 1 && result.__text != null  ) {
-                    result = result.__text;
-                }
-                else
-                if ( __cnt > 1 && result.__text != null && config.skipEmptyTextNodesForObj) {
-                    if ( result.__text.trim() == '') {
-                        delete result.__text;
-                    }
-                }
+                // let nodePrefix = node.prefix;
+                // if (nodePrefix != null && nodePrefix != '') {
+                //     result.__prefix = nodePrefix;
+                // }
 
                 return result;
 
             case DOMNodeTypes.TEXT_NODE:
-            case DOMNodeTypes.CDATA_SECTION_NODE:
 
                 return node.nodeValue;
         }
@@ -201,7 +157,11 @@ function X2JS(config) {
     };
 
     this.xml_str2json = function (xmlDocStr) {
-        var xmlDoc = this.parseXmlString(xmlDocStr);
+        // The regex:
+        // - removes sequences of space-like characters between elements (including newlines)
+        // - removes XML comments
+        // - replaces sequences of space-like characters by a single space
+        var xmlDoc = this.parseXmlString(xmlDocStr.replace(emptyTextNodeOrComment, '><').replace(/\s+/g, ' '));
         return xmlDoc ? parseDOMChildren(xmlDoc) : null;
     };
 

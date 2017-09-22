@@ -66,7 +66,7 @@ function DashParser(/*config*/) {
             // emptyNodeForm:      'object',
             // stripWhitespaces:   false,
             // enableToStringFunc: false,
-            // ignoreRoot:         true,
+            ignoreRoot:         true,
             matchers:           matchers
         });
 
