@@ -91,6 +91,7 @@ function ManifestLoader(config) {
     }
 
     function onManifestParsed(e) {
+        console.timeEnd('call worker');
         const { manifest } = e && e.data;
 
         if (xlinkController) {
@@ -155,10 +156,12 @@ function ManifestLoader(config) {
                     return;
                 }
 
-                if (worker) {
+                if (false) {
                     // Using worker to objectiron
                     // data structures.
-                    worker.postMessage(parser.parseXML(data));
+                    const manifest = parser.parseXML(data);
+                    console.time('call worker');
+                    worker.postMessage(manifest);
                 } else {
                     // Fallback to main thread parsing
                     const manifest = parser.parse(data, xlinkController);

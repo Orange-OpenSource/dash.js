@@ -1,5 +1,5 @@
 /* global postMessage:false */
-import ObjectIron from '../../externals/objectiron';
+import ObjectIron from '../../externals/molotovtv/objectiron';
 
 import RepresentationBaseValuesMap from '../dash/parser/maps/RepresentationBaseValuesMap';
 import SegmentValuesMap from '../dash/parser/maps/SegmentValuesMap';
@@ -29,7 +29,9 @@ module.exports = function (self) {
             throw new Error('parser error');
         }
 
+        console.time('Object iron');
         objectIron.run(manifest);
+        console.timeEnd('Object iron');
 
         postMessage({ manifest: manifest });
     });
