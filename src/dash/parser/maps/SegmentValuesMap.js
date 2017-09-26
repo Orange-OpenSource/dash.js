@@ -33,6 +33,29 @@
  */
 import MapNode from './MapNode';
 
+/*
+ * As described in chapter 5.3.9.1, Representations are assigned Segment
+ * Information through the presence of the elements BaseURL, SegmentBase,
+ * SegmentTemplate and/or SegmentList.
+ *
+ * The elements SegmetnBase, SegmentTemplate and SegmentList may be present in
+ * the Representation element itself. In addition, to expresse default values,
+ * they may be present in the Period and AdaptationSet element. At each level at
+ * mot one of the three, SegmentBase, SegmentTemplate and SegmentList shall be
+ * present. Further, if SegmentTemplate or SegmentList is present on one level
+ * of the hierarchy, then the other one shall not be present on any lower
+ * hierarchy level.
+ *
+ * SegmentBase, SegmentTemplate and SegmentList shall inherit attributes and
+ * elements from the same element on a higher level. If the same attribute or
+ * element is present on both levels, the one on the lower level shall take
+ * precedence over the one on the higher level.
+ *
+ * As the Period element is a parent of the AdaptationSet element, which is
+ * itself a parent of the Representation element, this class is used by the
+ * ObjectIron class to map SegmentBase, SegmentTemplate and/or SegmetnList
+ * elements of the parent element to the children elements recursively.
+ */
 class SegmentValuesMap extends MapNode {
     constructor() {
         const commonProperties = [

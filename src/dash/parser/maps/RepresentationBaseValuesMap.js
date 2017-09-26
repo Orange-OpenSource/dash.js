@@ -33,10 +33,32 @@
  */
 import MapNode from './MapNode';
 
+/*
+ * As described in chapter 5.3.7 of the DASH standard, the elements
+ * AdaptationSet, Representation and SubRepresentation have common attributes
+ * and sub-elements. The attributes and elements listed in the commonProperties
+ * variable below may be present in all three elements.
+ *
+ * Chapter 5.3.3.1 indicates that any of the common attributes shall only be
+ * present either in the AdaptationSet element or in the Representation element,
+ * not in both.
+ *
+ * Note also that Representation ans SubRepresentation elements are optional.
+ *
+ * As the AdaptationSet element is a parent of the Representation element, which
+ * is itself a parent of the SubRepresentation element, this class is used by
+ * the ObjectIron class to map the common properties of the parent element to
+ * the children elements recursively.
+ */
 class RepresentationBaseValuesMap extends MapNode {
     constructor() {
         const commonProperties = [
-            'profiles', 'width', 'height', 'sar', 'frameRate', 'audioSamplingRate', 'mimeType','segmentProfiles', 'codecs', 'maximumSAPPeriod', 'startWithSAP', 'maxPlayoutRate', 'codingDependency', 'scanType', 'FramePacking', 'AudioChannelConfiguration', 'ContentProtection', 'EssentialProperty', 'SupplementalProperty', 'InbandEventStream'
+            'profiles', 'width', 'height', 'sar', 'frameRate',
+            'audioSamplingRate', 'mimeType','segmentProfiles', 'codecs',
+            'maximumSAPPeriod', 'startWithSAP', 'maxPlayoutRate',
+            'codingDependency', 'scanType', 'FramePacking',
+            'AudioChannelConfiguration', 'ContentProtection',
+            'EssentialProperty', 'SupplementalProperty', 'InbandEventStream'
         ];
 
         super('AdaptationSet', commonProperties, [
