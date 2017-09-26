@@ -26,6 +26,7 @@
 */
 
 const emptyTextNodeOrComment = /\>\s+(<!--.+--\>\s+)?</g;
+const spaceSequence = /\s+/g;
 const segmentRepeat = /(<S d="(\d+)" \/><S d="(\d+)" \/><S d="(\d+)" \/>)+/;
 const DOMNodeTypes = {
     ELEMENT_NODE: 1,
@@ -189,7 +190,7 @@ export default class X2JS {
         // - removes sequences of space-like characters between elements (including newlines)
         // - removes XML comments
         // - replaces sequences of space-like characters by a single space
-        let xmlDocStrClean = xmlDocStr.replace(emptyTextNodeOrComment, '><').replace(/\s+/g, ' ');
+        let xmlDocStrClean = xmlDocStr.replace(emptyTextNodeOrComment, '><').replace(spaceSequence, ' ');
 
         let segmentMatches = xmlDocStrClean.match(segmentRepeat);
         if (segmentMatches) {
