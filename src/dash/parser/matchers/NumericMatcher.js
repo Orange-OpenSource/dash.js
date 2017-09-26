@@ -50,10 +50,18 @@ class NumericMatcher extends BaseMatcher {
             'width', 'height', 'maxWidth', 'maxHeight'
         ];
 
+        let value;
+
         super(
-            attr => attributeList.includes(attr.nodeName),
+            attr => {
+                if (attributeList.includes(attr.nodeName)) {
+                    value = parseFloat(attr.value);
+                    return !isNaN(value);
+                }
+                return false;
+            },
             // attr => numericRegex.test(attr.value),
-            str => parseFloat(str)
+            () => value
         );
     }
 }
