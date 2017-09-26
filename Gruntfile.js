@@ -70,18 +70,9 @@ module.exports = function (grunt) {
                 }
             },
 
-            build_workers: {
-                options: {
-                    sourceMapIn: 'build/temp/dash.worker.debug.js.map'
-                },
-                files: {
-                    'build/temp/dash.worker.min.js': 'build/temp/dash.worker.debug.js'
-                }
-            },
-
             build_all: {
                 options: {
-                    sourceMapIn: 'build/temp/dash.all.debug.js.map'
+                    sourceMapIn: 'build/temp/dash.all.debug.js.map',
                 },
                 files: {
                     'build/temp/dash.all.min.js': 'build/temp/dash.all.debug.js',
@@ -102,8 +93,6 @@ module.exports = function (grunt) {
                     'dash.mediaplayer.debug.js', 'dash.mediaplayer.debug.js.map',
                     'dash.protection.debug.js', 'dash.protection.debug.js.map',
                     'dash.reporting.debug.js', 'dash.reporting.debug.js.map',
-                    'dash.worker.debug.js', 'dash.worker.debug.js.map',
-                    'dash.worker.min.js', 'dash.worker.min.js.map',
                 ],
                 dest: 'dist/',
                 filter: 'isFile'
@@ -120,12 +109,6 @@ module.exports = function (grunt) {
                 options: {},
                 files: {
                     'build/temp/dash.protection.debug.js.map': ['build/temp/dash.protection.debug.js']
-                }
-            },
-            workers: {
-                options: {},
-                files: {
-                    'build/temp/dash.worker.debug.js.map': ['build/temp/dash.worker.debug.js']
                 }
             },
             all: {
@@ -201,20 +184,6 @@ module.exports = function (grunt) {
                     transform: ['babelify']
                 }
             },
-            workers: {
-                files: {
-                    'build/temp/dash.worker.debug.js': ['src/workers/index.js']
-                },
-                options: {
-                    browserifyOptions: {
-                        debug: true
-                    },
-                    plugin: [
-                        'browserify-derequire', 'bundle-collapser/plugin'
-                    ],
-                    transform: ['babelify']
-                }
-            },
             all: {
                 files: {
                     'build/temp/dash.all.debug.js': ['index.js'],
@@ -232,8 +201,7 @@ module.exports = function (grunt) {
 
             watch: {
                 files: {
-                    'build/temp/dash.all.debug.js': ['index.js'],
-                    'build/temp/dash.worker.debug.js': ['src/workers/index.js']
+                    'build/temp/dash.all.debug.js': ['index.js']
                 },
                 options: {
                     watch: true,
@@ -283,7 +251,7 @@ module.exports = function (grunt) {
 
     require('load-grunt-tasks')(grunt);
     grunt.registerTask('default',   ['dist', 'test']);
-    grunt.registerTask('dist',      ['clean', 'jshint', 'jscs', 'browserify:mediaplayer' , 'browserify:protection', 'browserify:reporting', 'browserify:workers', 'browserify:all', 'babel:es5', 'minimize', 'copy:dist']);
+    grunt.registerTask('dist',      ['clean', 'jshint', 'jscs', 'browserify:mediaplayer' , 'browserify:protection', 'browserify:reporting', 'browserify:all', 'babel:es5', 'minimize', 'copy:dist']);
     grunt.registerTask('minimize',  ['exorcise', 'githash', 'uglify']);
     grunt.registerTask('test',      ['mocha_istanbul:test']);
     grunt.registerTask('watch',     ['exorcise:all', 'browserify:watch']);
