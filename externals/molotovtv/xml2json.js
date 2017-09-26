@@ -37,6 +37,8 @@ const DOMNodeTypes = {
 };
 const VERSION = '1.2.0';
 
+const parser = new window.DOMParser();
+
 export default class X2JS {
 
 
@@ -169,7 +171,6 @@ export default class X2JS {
         if (xmlDocStr === undefined) { return null; }
 
         var xmlDoc;
-        var parser = new window.DOMParser();
         var parsererrorNS = null;
 
         try {
