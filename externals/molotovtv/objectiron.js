@@ -43,21 +43,13 @@
  *
  */
 
-function ObjectIron(map) {
+export default class ObjectIron {
 
-    // create a list of top level items to search for
-    var lookup = [];
-    for (var i = 0, len = map.length; i < len; ++i) {
-        const item = map[i];
-        if (item.isRoot) {
-            lookup.push('root');
-        } else {
-            lookup.push(item.name);
-        }
+    constructor(map) {
+        this.map = map;
     }
 
-
-    var mergeValues = function (parentItem, childItem) {
+    mergeValues(parentItem, childItem) {
         var name;
 
         if (parentItem === null || childItem === null) {
@@ -65,42 +57,37 @@ function ObjectIron(map) {
         }
 
         for (name in parentItem) {
-            if (parentItem.hasOwnProperty(name)) {
-                if (!childItem.hasOwnProperty(name)) {
+            if (parentItem[name]) {
+                if (!childItem[name]) {
                     childItem[name] = parentItem[name];
                 }
             }
         }
-    };
+    }
 
-    var mapProperties = function (properties, parent, child) {
-        var i,
-            len,
-            property,
-            parentValue,
-            childValue;
+    mapProperties(properties, parent, child) {
 
         if (properties === null || properties.length === 0) {
             return;
         }
 
-        for (i = 0, len = properties.length; i < len; i += 1) {
-            property = properties[i];
+        for (let i = 0, len = properties.length; i < len; i += 1) {
+            let property = properties[i];
 
-            if (parent.hasOwnProperty(property.name)) {
-                if (child.hasOwnProperty(property.name)) {
+            if (parent[property.name]) {
+                if (child[property.name]) {
                     // check to see if we should merge
                     if (property.merge) {
-                        parentValue = parent[property.name];
-                        childValue = child[property.name];
+                        let parentValue = parent[property.name];
+                        let childValue = child[property.name];
 
                         // complex objects; merge properties
                         if (typeof parentValue === 'object' && typeof childValue === 'object') {
-                            mergeValues(parentValue, childValue);
+                            this.mergeValues(parentValue, childValue);
                         }
                         // simple objects; merge them together
                         else {
-                            if (property.mergeFunction != null) {
+                            if (property.mergeFunction) {
                                 child[property.name] = property.mergeFunction(parentValue, childValue);
                             } else {
                                 child[property.name] = parentValue + childValue;
@@ -113,9 +100,9 @@ function ObjectIron(map) {
                 }
             }
         }
-    };
+    }
 
-    var mapItem = function (item, node) {
+    mapItem(item, node) {
 
         if (item.children === null || item.children.length === 0) {
             return;
@@ -129,69 +116,37 @@ function ObjectIron(map) {
                     let array = node[childItem.name + '_asArray'];
                     for (let v = 0, len2 = array.length; v < len2; v += 1) {
                         let childNode = array[v];
-                        mapProperties(item.properties, node, childNode);
-                        mapItem(childItem, childNode);
+                        this.mapProperties(item.properties, node, childNode);
+                        this.mapItem(childItem, childNode);
                     }
                 } else {
                     let childNode = node[childItem.name];
-                    mapProperties(item.properties, node, childNode);
-                    mapItem(childItem, childNode);
+                    this.mapProperties(item.properties, node, childNode);
+                    this.mapItem(childItem, childNode);
                 }
             }
         }
-    };
+    }
 
-    var performMapping = function (source) {
+    run(source) {
 
         if (source === null || typeof source !== 'object') {
             return source;
         }
 
-        // first look to see if anything cares about the root node
-        // for (i = 0, len = lookup.length; i < len; i += 1) {
-        //     if (lookup[i] === 'root') {
-        //         item = map[i];
-        //         node = source;
-        //         mapItem(item, node);
-        //     }
-        // }
+        let periods = source.Period_asArray;
+        for (let i = 0, len = periods.length; i < len; ++i) {
+            const period = periods[i];
+            this.mapItem(this.map[1], period);
 
-        let array = source.Period_asArray;
-        for (let i = 0, len = array.length; i < len; i += 1) {
-            mapItem(map[1], array[i]);
+            const adaptationSet = period.AdaptationSet_asArray;
+            if (adaptationSet) {
+                for (let i = 0, len = adaptationSet.length; i < len; ++i) {
+                    this.mapItem(this.map[0], adaptationSet[i]);
+                }
+            }
         }
-        array = source.Period.AdaptationSet_asArray;
-        for (let i = 0, len = array.length; i < len; i += 1) {
-            mapItem(map[0], array[i]);
-        }
-
-        // iterate over the objects and look for any of the items we care about
-        // for (let pp in source) {
-        //     if ( pp != '__children' && source[pp] ) {
-        //         let pi = lookup.indexOf(pp);
-        //         if (pi !== -1) {
-        //             let item = map[pi];
-        //
-        //             if (item.isArray) {
-        //                 let array = source[pp + '_asArray'];
-        //                 for (let i = 0, len = array.length; i < len; i += 1) {
-        //                     mapItem(item, array[i]);
-        //                 }
-        //             } else {
-        //                 mapItem(item, source[pp]);
-        //             }
-        //         }
-        //         // now check this to see if he has any of the properties we care about
-        //         performMapping(source[pp]);
-        //     }
-        // }
 
         return source;
-    };
-
-    return {
-        run: performMapping
-    };
+    }
 }
-
-export default ObjectIron;
