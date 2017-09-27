@@ -25,9 +25,9 @@
   - remove explicit RequireJS support
 */
 
-const emptyTextNodeOrComment = /\>\s+(<!--.+--\>\s+)?</g;
-const spaceSequence = /\s+/g;
-const segmentRepeat = /(<S d="(\d+)" \/><S d="(\d+)" \/><S d="(\d+)" \/>)+/;
+const emptyTextNodeOrComment = /\>\s+?(?:<!--[^>]+?\>\s+?)?</g;
+const segmentRepeat = /(<S d="(\d+?)"(?: r="\d+?")? \/>(?:<S d="(?!\2)\d+?"(?: r="\d+?")? \/>)+?)\1+/;
+const attributeRegex = /(d|r)="(\d+?)"/g;
 const DOMNodeTypes = {
     ELEMENT_NODE: 1,
     TEXT_NODE: 3,
@@ -49,15 +49,18 @@ export default class X2JS {
         if (config.ignoreRoot === undefined) {
             this.config.ignoreRoot = false;
         }
-    }
 
-    toArrayAccessForm(obj, childName) {
-        obj[childName + '_asArray'] = obj[childName] instanceof Array ? obj[childName] : [obj[childName]];
+        this.segments = [];
+        this.children = [];
     }
 
     parseDOMChildren(node) {
 
         let result;
+
+        const segments = this.segments;
+        const segmentCount = segments.length;
+        const childSegments = this.children;
 
         switch (node.nodeType) {
 
@@ -83,23 +86,21 @@ export default class X2JS {
                         if (childName === 'repeat') {
 
                             // number of segments to add
-                            let count = parseInt(child.attributes.count.value, 10) * 3;
+                            let count = parseInt(child.attributes.count.value, 10) * segmentCount;
                             len += count - 1;
+                            children.length = len;
 
                             let segmentList;
-                            segmentList = new Array(count + 1);
+                            segmentList = result.S_asArray = new Array(count + 1);
                             segmentList[0] = result.S;
-                            result.S = result.S_asArray = segmentList;
+                            result.S = segmentList;
 
                             // starting at index 1 for the segmentList array
-                            let index = 1;
-                            while (index < count) {
-                                segmentList[index++] = this.segment1;
-                                segmentList[index++] = this.segment2;
-                                segmentList[index++] = this.segment3;
-                                children[cidx++] = this.child1;
-                                children[cidx++] = this.child2;
-                                children[cidx++] = this.child3;
+                            let sidx;
+                            for (let index = 1; index <= count; ++index) {
+                                sidx = (index - 1) % segmentCount;
+                                segmentList[index] = segments[sidx];
+                                children[cidx++] = childSegments[sidx];
                             }
 
                             --cidx; // have to go backward because cidx will be incremented in the for loop
@@ -111,14 +112,11 @@ export default class X2JS {
                                 let c = this.parseDOMChildren(child);
                                 children[cidx] = { [childName]: c };
                                 result[childName] = c;
-                                // FIXME: change this call by direct code
-                                this.toArrayAccessForm(result, childName);
+                                result[childName + '_asArray'] = [c];
                             }
                             else {
                                 if (childNode && !(childNode instanceof Array)) {
-                                    childNode = result[childName] = [result[childName]];
-                                    // FIXME: change this call by direct code
-                                    this.toArrayAccessForm(result, childName);
+                                    childNode = result[childName] = result[childName + '_asArray'];
                                 }
 
                                 let c = this.parseDOMChildren(child);
@@ -191,23 +189,31 @@ export default class X2JS {
         // - removes sequences of space-like characters between elements (including newlines)
         // - removes XML comments
         // - replaces sequences of space-like characters by a single space
-        let xmlDocStrClean = xmlDocStr.replace(emptyTextNodeOrComment, '><').replace(spaceSequence, ' ');
+        var xmlDocStrClean = xmlDocStr.replace(emptyTextNodeOrComment, '><');
 
-        let segmentMatches = xmlDocStrClean.match(segmentRepeat);
+        var segmentMatches = xmlDocStrClean.match(segmentRepeat);
         if (segmentMatches) {
 
-            this.segment1 = {d: parseFloat(segmentMatches[2])};
-            this.segment2 = {d: parseFloat(segmentMatches[3])};
-            this.segment3 = {d: parseFloat(segmentMatches[4])};
-            this.child1 = {S: this.segment1};
-            this.child2 = {S: this.segment2};
-            this.child3 = {S: this.segment3};
+            const segmentSequence = segmentMatches[1];
+            var index = -1;
+            var attribute;
+            var segments = this.segments;
+            var children = this.children;
+            while ( (attribute = attributeRegex.exec(segmentSequence)) ) {
+                var name = attribute[1];
+                if ( name === 'd' ) {
+                    segments[++index] = {d: parseFloat(attribute[2])};
+                    children[index] = {S: segments[index]};
+                } else {
+                    segments[index][name] = parseFloat(attribute[2]);
+                }
+            }
 
-            const match = segmentMatches[0];
+            var match = segmentMatches[0];
             xmlDocStrClean = xmlDocStrClean.split(match).join(`<repeat count="${match.length / segmentMatches[1].length}"/>`);
         }
 
-        const xmlDoc = this.parseXmlString(xmlDocStrClean);
+        var xmlDoc = this.parseXmlString(xmlDocStrClean);
         return xmlDoc ? this.parseDOMChildren(xmlDoc) : null;
     }
 
