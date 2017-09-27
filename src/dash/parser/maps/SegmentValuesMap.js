@@ -38,7 +38,7 @@ import MapNode from './MapNode';
  * Information through the presence of the elements BaseURL, SegmentBase,
  * SegmentTemplate and/or SegmentList.
  *
- * The elements SegmetnBase, SegmentTemplate and SegmentList may be present in
+ * The elements SegmentBase, SegmentTemplate and SegmentList may be present in
  * the Representation element itself. In addition, to expresse default values,
  * they may be present in the Period and AdaptationSet element. At each level at
  * mot one of the three, SegmentBase, SegmentTemplate and SegmentList shall be
