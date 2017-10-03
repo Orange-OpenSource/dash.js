@@ -25,7 +25,7 @@
   - remove explicit RequireJS support
 */
 
-const emptyTextNodeOrComment = /\>\n *?(?:<!--[^>]+?\>\n *?)?</g;
+const emptyTextNodeOrComment = /\>[\n\t ]*?(?:<!--[^>]+?\>[\n\t ]*?)?</g;
 const segmentRepeat = /(<S d="(\d+?)"(?: r="\d+?")? \/>(?:<S d="(?!\2)\d+?"(?: r="\d+?")? \/>)+?)\1+/;
 const attributeRegex = /(d|r)="(\d+?)"/g;
 const DOMNodeTypes = {
