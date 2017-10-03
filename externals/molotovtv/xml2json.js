@@ -107,10 +107,18 @@ export default class X2JS {
 
                         } else {
 
+                            // Parse the descendant nodes of the current child node if any
+                            let c = child.nodeName === '#text' ? child.nodeValue :
+                                child.childNodes.length !== 0 || child.attributes.length !== 0 ? this.parseDOMChildren(child) : {};
+
+                            if (child.nodeName === '#text' && len === 1) {
+                                result = new String(c);
+                            }
+
+                            children[cidx] = { [childName]: c };
+
                             let childNode = result[childName];
                             if (!childNode) {
-                                let c = this.parseDOMChildren(child);
-                                children[cidx] = { [childName]: c };
                                 result[childName] = c;
                                 result[childName + '_asArray'] = [c];
                             }
@@ -119,8 +127,6 @@ export default class X2JS {
                                     childNode = result[childName] = result[childName + '_asArray'];
                                 }
 
-                                let c = this.parseDOMChildren(child);
-                                children[cidx] = { [childName]: c };
                                 childNode[childNode.length] = c;
                             }
                         }
@@ -157,10 +163,6 @@ export default class X2JS {
                 // }
 
                 return result;
-
-            case DOMNodeTypes.TEXT_NODE:
-
-                return node.nodeValue;
         }
     }
 
