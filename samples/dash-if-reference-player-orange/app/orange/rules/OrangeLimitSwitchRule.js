@@ -58,7 +58,9 @@ function OrangeLimitSwitchRuleClass() {
         var mediaType = rulesContext.getMediaInfo().type;
         var metricsModel = MetricsModel(context).getInstance();
         var metrics = metricsModel.getReadOnlyMetricsFor(mediaType);
-        var current = rulesContext.getCurrentValue();
+        let streamProcessor = rulesContext.getStreamProcessor();
+        let abrController = rulesContext.getAbrController();
+        let current = abrController.getQualityFor(mediaType, streamProcessor.getStreamInfo());
 
         if (waiting > 0) {
             waiting -= 1;

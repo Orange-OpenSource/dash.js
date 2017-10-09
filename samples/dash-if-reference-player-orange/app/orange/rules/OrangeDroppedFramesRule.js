@@ -50,10 +50,13 @@ function OrangeDroppedFramesRuleClass() {
 
         var droppedFramesMaxRatio = config.getParamFor(mediaType, "ABR.droppedFramesMaxRatio", "number", 0.30),
             droppedFramesMinRatio = config.getParamFor(mediaType, "ABR.droppedFramesMinRatio", "number", 0.10),
-            current = rulesContext.getCurrentValue(),
             q = SwitchRequest.NO_CHANGE,
             p = SwitchRequest.PRIORITY.DEFAULT,
             ratio;
+
+        let streamProcessor = rulesContext.getStreamProcessor();
+        let abrController = rulesContext.getAbrController();
+        let current = abrController.getQualityFor(mediaType, streamProcessor.getStreamInfo());
 
         if (mediaType !== 'video') {
             return SwitchRequest(context).create();

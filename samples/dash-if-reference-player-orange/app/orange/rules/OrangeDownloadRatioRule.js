@@ -54,7 +54,9 @@ function OrangeDownloadRatioRuleClass() {
     function getMaxIndex(rulesContext) {
 
         var mediaType = rulesContext.getMediaInfo().type;
-        var current = rulesContext.getCurrentValue();
+        let streamProcessor = rulesContext.getStreamProcessor();
+        let abrController = rulesContext.getAbrController();
+        let current = abrController.getQualityFor(mediaType, streamProcessor.getStreamInfo());
 
         let metricsModel = MetricsModel(context).getInstance();
         let dashMetrics = DashMetrics(context).getInstance();
@@ -151,7 +153,7 @@ function OrangeDownloadRatioRuleClass() {
         }
 
         count = rulesContext.getMediaInfo().representationCount;
-        currentRepresentation = rulesContext.getTrackInfo();
+        currentRepresentation = rulesContext.getRepresentationInfo();
         currentBandwidth = dashManifest.getBandwidth(currentRepresentation);
         for (i = 0; i < count; i += 1) {
             bandwidths.push(rulesContext.getMediaInfo().bitrateList[i].bandwidth);

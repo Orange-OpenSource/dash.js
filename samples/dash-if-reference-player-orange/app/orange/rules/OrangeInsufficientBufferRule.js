@@ -89,6 +89,13 @@ function OrangeInsufficientBufferRuleClass() {
             q = SwitchRequest.NO_CHANGE,
             p = SwitchRequest.PRIORITY.DEFAULT;
 
+        let streamProcessor = rulesContext.getStreamProcessor();
+        let abrController = rulesContext.getAbrController();
+        let current = abrController.getQualityFor(mediaType, streamProcessor.getStreamInfo());
+
+        let representationInfo = rulesContext.getRepresentationInfo();
+        let manifestInfo = representationInfo.mediaInfo.streamInfo.manifestInfo;
+
         if (bufferLevel === 0.0) {
             return SwitchRequest(context).create();
         }
@@ -101,7 +108,7 @@ function OrangeInsufficientBufferRuleClass() {
         setBufferInfo(mediaType, lastBufferStateVO.state);
 
         // get configuration
-        minBufferTime = config.getParamFor(mediaType, "BufferController.minBufferTime", "number", rulesContext.getManifestInfo().minBufferTime);
+        minBufferTime = config.getParamFor(mediaType, "BufferController.minBufferTime", "number", manifestInfo.minBufferTime);
         switchLowerBufferRatio = config.getParamFor(mediaType, "ABR.switchLowerBufferRatio", "number", 0.25);
         switchLowerBufferTime = config.getParamFor(mediaType, "ABR.switchLowerBufferTime", "number", switchLowerBufferRatio * minBufferTime);
         switchDownBufferRatio = config.getParamFor(mediaType, "ABR.switchDownBufferRatio", "number", 0.5);
@@ -118,7 +125,7 @@ function OrangeInsufficientBufferRuleClass() {
                 q = 0;
                 p = SwitchRequest.PRIORITY.STRONG;
             } else if (bufferLevel <= switchDownBufferTime) {
-                q = (rulesContext.getCurrentValue() > 0) ? (rulesContext.getCurrentValue() - 1) : 0;
+                q = (current > 0) ? (current - 1) : 0;
                 p = SwitchRequest.PRIORITY.DEFAULT;
             }
 
