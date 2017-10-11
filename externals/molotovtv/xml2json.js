@@ -91,15 +91,20 @@ export default class X2JS {
                             children.length = len;
 
                             let segmentList;
-                            segmentList = result.S_asArray = new Array(count + 1);
-                            segmentList[0] = result.S;
-                            result.S = segmentList;
+                            if ( result.S instanceof Array ) {
+                                segmentList = result.S;
+                                segmentList.length += count;
+                            } else {
+                                segmentList = result.S_asArray = new Array(count + 1);
+                                segmentList[0] = result.S;
+                                result.S = segmentList;
+                            }
 
                             // starting at index 1 for the segmentList array
                             let sidx;
-                            for (let index = 1; index <= count; ++index) {
-                                sidx = (index - 1) % segmentCount;
-                                segmentList[index] = segments[sidx];
+                            for (let index = 0; index < count; ++index) {
+                                sidx = index % segmentCount;
+                                segmentList[cidx] = segments[sidx];
                                 children[cidx++] = childSegments[sidx];
                             }
 
