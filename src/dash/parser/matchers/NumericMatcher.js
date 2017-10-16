@@ -33,35 +33,15 @@
  */
 import BaseMatcher from './BaseMatcher';
 
-// const numericRegex = /^[-+]?[0-9]+[.]?[0-9]*([eE][-+]?[0-9]+)?$/;
+const numericRegex = /^[-+]?[0-9]+[.]?[0-9]*(?:[eE][-+]?[0-9]+)?$/;
 
 class NumericMatcher extends BaseMatcher {
     constructor() {
-
-        const attributeList = [
-            'id',
-            'd', 'r', 't',
-            'audioSamplingRate',
-            'frameRate',
-            'bandwidth', 'maxBandwidth', 'minBandwidth',
-            'group',
-            'startWithSAP', 'timescale',
-            'value',
-            'width', 'height', 'maxWidth', 'maxHeight'
-        ];
-
-        let value;
-
         super(
             attr => {
-                if (attributeList.includes(attr.nodeName)) {
-                    value = parseFloat(attr.value);
-                    return !isNaN(value);
-                }
-                return false;
+                return numericRegex.test(attr.value);
             },
-            // attr => numericRegex.test(attr.value),
-            () => value
+            str => parseFloat(str)
         );
     }
 }
