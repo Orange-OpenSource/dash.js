@@ -3167,7 +3167,7 @@ Object.defineProperty(exports, '__esModule', {
     value: true
 });
 exports.getVersionString = getVersionString;
-var VERSION = '2.4.1-abr-3';
+var VERSION = '2.4.1-abr-4';
 
 function getVersionString() {
     return VERSION;
@@ -17098,7 +17098,7 @@ function BufferController(config) {
             return;
         }
 
-        if (!isNaN(appendedBytesInfo.index)) {
+        if (appendedBytesInfo && !isNaN(appendedBytesInfo.index)) {
             maxAppendedIndex = Math.max(appendedBytesInfo.index, maxAppendedIndex);
             checkIfBufferingCompleted();
         }
