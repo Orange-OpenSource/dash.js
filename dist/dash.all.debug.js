@@ -3412,7 +3412,7 @@ Object.defineProperty(exports, '__esModule', {
     value: true
 });
 exports.getVersionString = getVersionString;
-var VERSION = '2.4.1-abr-2';
+var VERSION = '2.4.1-abr-3';
 
 function getVersionString() {
     return VERSION;
@@ -31437,7 +31437,7 @@ function ABRRulesCollection() {
 
     function getActiveRules(srArray) {
         return srArray.filter(function (sr) {
-            return sr.value > _SwitchRequestJs2['default'].NO_CHANGE;
+            return sr && sr.value > _SwitchRequestJs2['default'].NO_CHANGE;
         });
     }
 
@@ -31446,7 +31446,7 @@ function ABRRulesCollection() {
             return;
         }
         return srArray.reduce(function (a, b) {
-            return a.value < b.value ? a : b;
+            return a && b ? a.value < b.value ? a : b : a || b || window.undefined;
         });
     }
 
