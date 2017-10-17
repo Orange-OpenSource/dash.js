@@ -8420,7 +8420,7 @@ var _BaseMatcher2 = _dereq_(30);
 
 var _BaseMatcher3 = _interopRequireDefault(_BaseMatcher2);
 
-// const numericRegex = /^[-+]?[0-9]+[.]?[0-9]*([eE][-+]?[0-9]+)?$/;
+var numericRegex = /^[-+]?[0-9]+[.]?[0-9]*(?:[eE][-+]?[0-9]+)?$/;
 
 var NumericMatcher = (function (_BaseMatcher) {
     _inherits(NumericMatcher, _BaseMatcher);
@@ -8428,20 +8428,10 @@ var NumericMatcher = (function (_BaseMatcher) {
     function NumericMatcher() {
         _classCallCheck(this, NumericMatcher);
 
-        var attributeList = ['id', 'd', 'r', 't', 'audioSamplingRate', 'frameRate', 'bandwidth', 'maxBandwidth', 'minBandwidth', 'group', 'startWithSAP', 'timescale', 'value', 'width', 'height', 'maxWidth', 'maxHeight'];
-
-        var value = undefined;
-
         _get(Object.getPrototypeOf(NumericMatcher.prototype), 'constructor', this).call(this, function (attr) {
-            if (attributeList.includes(attr.nodeName)) {
-                value = parseFloat(attr.value);
-                return !isNaN(value);
-            }
-            return false;
-        },
-        // attr => numericRegex.test(attr.value),
-        function () {
-            return value;
+            return numericRegex.test(attr.value);
+        }, function (str) {
+            return parseFloat(str);
         });
     }
 
