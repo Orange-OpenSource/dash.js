@@ -3167,7 +3167,7 @@ Object.defineProperty(exports, '__esModule', {
     value: true
 });
 exports.getVersionString = getVersionString;
-var VERSION = '2.4.1-abr';
+var VERSION = '2.4.1-abr-2';
 
 function getVersionString() {
     return VERSION;
@@ -6470,7 +6470,7 @@ function DashManifestModel() {
         if (manifest.hasOwnProperty('mediaPresentationDuration')) {
             mpdDuration = manifest.mediaPresentationDuration;
         } else {
-            mpdDuration = Number.MAX_VALUE;
+            mpdDuration = Number.MAX_SAFE_INTEGER || Number.MAX_VALUE;
         }
 
         return mpdDuration;
