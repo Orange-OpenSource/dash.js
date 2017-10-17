@@ -3167,7 +3167,7 @@ Object.defineProperty(exports, '__esModule', {
     value: true
 });
 exports.getVersionString = getVersionString;
-var VERSION = '2.4.1';
+var VERSION = '2.4.1-abr';
 
 function getVersionString() {
     return VERSION;
@@ -8361,7 +8361,6 @@ exports.replaceTokenForTemplate = replaceTokenForTemplate;
 exports.getIndexBasedSegment = getIndexBasedSegment;
 exports.getTimeBasedSegment = getTimeBasedSegment;
 exports.getSegmentByIndex = getSegmentByIndex;
-exports.decideSegmentListRangeForTimeline = decideSegmentListRangeForTimeline;
 exports.decideSegmentListRangeForTemplate = decideSegmentListRangeForTemplate;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
@@ -8548,30 +8547,6 @@ function getSegmentByIndex(index, representation) {
     }
 
     return null;
-}
-
-function decideSegmentListRangeForTimeline(timelineConverter, isDynamic, requestedTime, index, givenAvailabilityUpperLimit) {
-    var availabilityLowerLimit = 2;
-    var availabilityUpperLimit = givenAvailabilityUpperLimit || 10;
-    var firstIdx = 0;
-    var lastIdx = Number.POSITIVE_INFINITY;
-
-    var start, end, range;
-
-    if (isDynamic && !timelineConverter.isTimeSyncCompleted()) {
-        range = { start: firstIdx, end: lastIdx };
-        return range;
-    }
-
-    if (!isDynamic && requestedTime || index < 0) return null;
-
-    // segment list should not be out of the availability window range
-    start = Math.max(index - availabilityLowerLimit, firstIdx);
-    end = Math.min(index + availabilityUpperLimit, lastIdx);
-
-    range = { start: start, end: end };
-
-    return range;
 }
 
 function decideSegmentListRangeForTemplate(timelineConverter, isDynamic, representation, requestedTime, index, givenAvailabilityUpperLimit) {
@@ -9032,19 +9007,30 @@ function TimelineSegmentsGetter(config, isDynamic) {
     var instance = undefined;
 
     function getSegmentsFromTimeline(representation, requestedTime, index, availabilityUpperLimit) {
+
+        if (requestedTime === undefined) {
+            requestedTime = null;
+        }
+
         var base = representation.adaptation.period.mpd.manifest.Period_asArray[representation.adaptation.period.index].AdaptationSet_asArray[representation.adaptation.index].Representation_asArray[representation.index].SegmentTemplate || representation.adaptation.period.mpd.manifest.Period_asArray[representation.adaptation.period.index].AdaptationSet_asArray[representation.adaptation.index].Representation_asArray[representation.index].SegmentList;
         var timeline = base.SegmentTimeline;
         var list = base.SegmentURL_asArray;
         var isAvailableSegmentNumberCalculated = representation.availableSegmentsNumber > 0;
 
-        var maxSegmentsAhead = 10;
+        var maxSegmentsAhead = undefined;
+        if (availabilityUpperLimit) {
+            maxSegmentsAhead = availabilityUpperLimit;
+        } else {
+            maxSegmentsAhead = index > -1 || requestedTime !== null ? 10 : Infinity;
+        }
+
         var time = 0;
         var scaledTime = 0;
         var availabilityIdx = -1;
         var segments = [];
-        var isStartSegmentForRequestedTimeFound = false;
+        var requiredMediaTime = null;
 
-        var fragments, frag, i, len, j, repeat, repeatEndTime, nextFrag, calculatedRange, hasEnoughSegments, requiredMediaTime, startIdx, endIdx, fTimescale;
+        var fragments, frag, i, len, j, repeat, repeatEndTime, nextFrag, hasEnoughSegments, startIdx, fTimescale;
 
         var createSegment = function createSegment(s, i) {
             var media = base.media;
@@ -9062,15 +9048,10 @@ function TimelineSegmentsGetter(config, isDynamic) {
 
         fragments = timeline.S_asArray;
 
-        calculatedRange = (0, _SegmentsUtils.decideSegmentListRangeForTimeline)(timelineConverter, isDynamic, requestedTime, index, availabilityUpperLimit);
+        startIdx = index;
 
-        // if calculatedRange exists we should generate segments that belong to this range.
-        // Otherwise generate maxSegmentsAhead segments ahead of the requested time
-        if (calculatedRange) {
-            startIdx = calculatedRange.start;
-            endIdx = calculatedRange.end;
-        } else {
-            requiredMediaTime = timelineConverter.calcMediaTimeFromPresentationTime(requestedTime || 0, representation);
+        if (requestedTime !== null) {
+            requiredMediaTime = timelineConverter.calcMediaTimeFromPresentationTime(requestedTime, representation);
         }
 
         for (i = 0, len = fragments.length; i < len; i++) {
@@ -9113,34 +9094,23 @@ function TimelineSegmentsGetter(config, isDynamic) {
             for (j = 0; j <= repeat; j++) {
                 availabilityIdx++;
 
-                if (calculatedRange) {
-                    if (availabilityIdx > endIdx) {
-                        hasEnoughSegments = true;
-                        if (isAvailableSegmentNumberCalculated) break;
-                        continue;
-                    }
+                if (segments.length > maxSegmentsAhead) {
+                    hasEnoughSegments = true;
+                    if (isAvailableSegmentNumberCalculated) break;
+                    continue;
+                }
 
-                    if (availabilityIdx >= startIdx) {
-                        segments.push(createSegment(frag, availabilityIdx));
-                    }
-                } else {
-                    if (segments.length > maxSegmentsAhead) {
-                        hasEnoughSegments = true;
-                        if (isAvailableSegmentNumberCalculated) break;
-                        continue;
-                    }
-
+                if (requiredMediaTime !== null) {
                     // In some cases when requiredMediaTime = actual end time of the last segment
                     // it is possible that this time a bit exceeds the declared end time of the last segment.
                     // in this case we still need to include the last segment in the segment list. to do this we
                     // use a correction factor = 1.5. This number is used because the largest possible deviation is
                     // is 50% of segment duration.
-                    if (isStartSegmentForRequestedTimeFound) {
-                        segments.push(createSegment(frag, availabilityIdx));
-                    } else if (scaledTime >= requiredMediaTime - frag.d / fTimescale * 1.5) {
-                        isStartSegmentForRequestedTimeFound = true;
+                    if (scaledTime >= requiredMediaTime - frag.d / fTimescale * 1.5) {
                         segments.push(createSegment(frag, availabilityIdx));
                     }
+                } else if (availabilityIdx >= startIdx) {
+                    segments.push(createSegment(frag, availabilityIdx));
                 }
 
                 time += frag.d;
@@ -11980,6 +11950,78 @@ function MediaPlayer() {
     }
 
     /**
+     * Latency threshold in ms under which we assume that a segment request came back from cache
+     *
+     * @default 50ms
+     * @param {int} value
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function setCacheLoadThresholdLatency(value) {
+        mediaPlayerModel.setCacheLoadThresholdLatency(value);
+    }
+
+    /**
+     * Returns the number of the current CacheLoadThresholdLatency
+     *
+     * @return {number} value
+     * @see {@link module:MediaPlayer#setCacheLoadThresholdLatency setCacheLoadThresholdLatency()}
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function getCacheLoadThresholdLatency() {
+        return mediaPlayerModel.getCacheLoadThresholdLatency();
+    }
+
+    /**
+     * Download time threshold in ms under which we assume that a video segment request came back from cache
+     *
+     * @default 50ms
+     * @param {int} value
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function setCacheLoadThresholdVideo(value) {
+        mediaPlayerModel.setCacheLoadThresholdVideo(value);
+    }
+
+    /**
+     * Returns the number of the current CacheLoadThresholdVideo
+     *
+     * @return {number} value
+     * @see {@link module:MediaPlayer#setCacheLoadThresholdVideo setCacheLoadThresholdVideo()}
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function getCacheLoadThresholdVideo() {
+        return mediaPlayerModel.getCacheLoadThresholdVideo();
+    }
+
+    /**
+     * Download time threshold in ms under which we assume that an audio segment request came back from cache
+     *
+     * @default 5ms
+     * @param {int} value
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function setCacheLoadThresholdAudio(value) {
+        mediaPlayerModel.setCacheLoadThresholdAudio(value);
+    }
+
+    /**
+     * Returns the number of the current CacheLoadThresholdAudio
+     *
+     * @return {number} value
+     * @see {@link module:MediaPlayer#setCacheLoadThresholdAudio setCacheLoadThresholdAudio()}
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function getCacheLoadThresholdAudio() {
+        return mediaPlayerModel.getCacheLoadThresholdAudio();
+    }
+
+    /**
      * A timeout value in seconds, which during the ABRController will block switch-up events.
      * This will only take effect after an abandoned fragment event occurs.
      *
@@ -12226,6 +12268,33 @@ function MediaPlayer() {
         }
 
         resetAndInitializePlayback();
+    }
+
+    /**
+     * Get the value of useDeadTimeLatency in AbrController. @see setUseDeadTimeLatencyForAbr
+     *
+     * @returns {boolean=}
+     *
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function getUseDeadTimeLatencyForAbr() {
+        return abrController.getUseDeadTimeLatency();
+    }
+
+    /**
+     * Set the value of useDeadTimeLatency in AbrController. If true, only the download
+     * portion will be considered part of the download bitrate and latency will be
+     * regarded as static. If false, the reciprocal of the whole transfer time will be used.
+     * Defaults to true.
+     *
+     * @param {boolean=} useDeadTimeLatency - True or false flag.
+     *
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function setUseDeadTimeLatencyForAbr(useDeadTimeLatency) {
+        abrController.setUseDeadTimeLatency(useDeadTimeLatency);
     }
 
     /**
@@ -12500,6 +12569,12 @@ function MediaPlayer() {
         enableBufferOccupancyABR: enableBufferOccupancyABR,
         setBandwidthSafetyFactor: setBandwidthSafetyFactor,
         getBandwidthSafetyFactor: getBandwidthSafetyFactor,
+        setCacheLoadThresholdLatency: setCacheLoadThresholdLatency,
+        getCacheLoadThresholdLatency: getCacheLoadThresholdLatency,
+        setCacheLoadThresholdVideo: setCacheLoadThresholdVideo,
+        getCacheLoadThresholdVideo: getCacheLoadThresholdVideo,
+        setCacheLoadThresholdAudio: setCacheLoadThresholdAudio,
+        getCacheLoadThresholdAudio: getCacheLoadThresholdAudio,
         setAbandonLoadTimeout: setAbandonLoadTimeout,
         retrieveManifest: retrieveManifest,
         addUTCTimingSource: addUTCTimingSource,
@@ -12526,6 +12601,8 @@ function MediaPlayer() {
         attachVideoContainer: attachVideoContainer,
         attachTTMLRenderingDiv: attachTTMLRenderingDiv,
         getCurrentTextTrackIndex: getCurrentTextTrackIndex,
+        getUseDeadTimeLatencyForAbr: getUseDeadTimeLatencyForAbr,
+        setUseDeadTimeLatencyForAbr: setUseDeadTimeLatencyForAbr,
         reset: reset
     };
 
@@ -15964,7 +16041,8 @@ function AbrController() {
         droppedFramesHistory = undefined,
         metricsModel = undefined,
         dashMetrics = undefined,
-        lastSwitchTime = undefined;
+        lastSwitchTime = undefined,
+        useDeadTimeLatency = undefined;
 
     function setup() {
         autoSwitchBitrate = { video: true, audio: true };
@@ -15977,6 +16055,7 @@ function AbrController() {
         streamProcessorDict = {};
         switchHistoryDict = {};
         limitBitrateByPortal = false;
+        useDeadTimeLatency = true;
         usePixelRatioInLimitBitrateByPortal = false;
         if (windowResizeEventCalled === undefined) {
             windowResizeEventCalled = false;
@@ -16147,6 +16226,14 @@ function AbrController() {
         usePixelRatioInLimitBitrateByPortal = value;
     }
 
+    function getUseDeadTimeLatency() {
+        return useDeadTimeLatency;
+    }
+
+    function setUseDeadTimeLatency(value) {
+        useDeadTimeLatency = value;
+    }
+
     function getPlaybackQuality(streamProcessor) {
         var type = streamProcessor.getType();
         var streamInfo = streamProcessor.getStreamInfo();
@@ -16224,7 +16311,7 @@ function AbrController() {
      * @memberof AbrController#
      */
     function getQualityForBitrate(mediaInfo, bitrate, latency) {
-        if (latency && streamProcessorDict[mediaInfo.type].getCurrentRepresentationInfo() && streamProcessorDict[mediaInfo.type].getCurrentRepresentationInfo().fragmentDuration) {
+        if (useDeadTimeLatency && latency && streamProcessorDict[mediaInfo.type].getCurrentRepresentationInfo() && streamProcessorDict[mediaInfo.type].getCurrentRepresentationInfo().fragmentDuration) {
             latency = latency / 1000;
             var fragmentDuration = streamProcessorDict[mediaInfo.type].getCurrentRepresentationInfo().fragmentDuration;
             if (latency > fragmentDuration) {
@@ -16457,6 +16544,8 @@ function AbrController() {
         setInitialRepresentationRatioFor: setInitialRepresentationRatioFor,
         setAutoSwitchBitrateFor: setAutoSwitchBitrateFor,
         getAutoSwitchBitrateFor: getAutoSwitchBitrateFor,
+        getUseDeadTimeLatency: getUseDeadTimeLatency,
+        setUseDeadTimeLatency: setUseDeadTimeLatency,
         setLimitBitrateByPortal: setLimitBitrateByPortal,
         getLimitBitrateByPortal: getLimitBitrateByPortal,
         getUsePixelRatioInLimitBitrateByPortal: getUsePixelRatioInLimitBitrateByPortal,
@@ -22227,6 +22316,9 @@ var DEFAULT_LOCAL_STORAGE_BITRATE_EXPIRATION = 360000;
 var DEFAULT_LOCAL_STORAGE_MEDIA_SETTINGS_EXPIRATION = 360000;
 
 var BANDWIDTH_SAFETY_FACTOR = 0.9;
+var CACHE_LOAD_THRESHOLD_VIDEO = 50;
+var CACHE_LOAD_THRESHOLD_AUDIO = 5;
+var CACHE_LOAD_THRESHOLD_LATENCY = 50;
 var ABANDON_LOAD_TIMEOUT = 10000;
 
 var BUFFER_TO_KEEP = 30;
@@ -22271,6 +22363,9 @@ function MediaPlayerModel() {
         longFormContentDurationThreshold = undefined,
         richBufferThreshold = undefined,
         bandwidthSafetyFactor = undefined,
+        cacheLoadThresholdLatency = undefined,
+        cacheLoadThresholdVideo = undefined,
+        cacheLoadThresholdAudio = undefined,
         abandonLoadTimeout = undefined,
         retryAttempts = undefined,
         retryIntervals = undefined,
@@ -22300,6 +22395,9 @@ function MediaPlayerModel() {
         longFormContentDurationThreshold = LONG_FORM_CONTENT_DURATION_THRESHOLD;
         richBufferThreshold = RICH_BUFFER_THRESHOLD;
         bandwidthSafetyFactor = BANDWIDTH_SAFETY_FACTOR;
+        cacheLoadThresholdLatency = CACHE_LOAD_THRESHOLD_LATENCY;
+        cacheLoadThresholdVideo = CACHE_LOAD_THRESHOLD_VIDEO;
+        cacheLoadThresholdAudio = CACHE_LOAD_THRESHOLD_AUDIO;
         abandonLoadTimeout = ABANDON_LOAD_TIMEOUT;
         wallclockTimeUpdateInterval = WALLCLOCK_TIME_UPDATE_INTERVAL;
         xhrWithCredentials = { 'default': DEFAULT_XHR_WITH_CREDENTIALS };
@@ -22324,6 +22422,30 @@ function MediaPlayerModel() {
 
     function getBandwidthSafetyFactor() {
         return bandwidthSafetyFactor;
+    }
+
+    function setCacheLoadThresholdLatency(value) {
+        cacheLoadThresholdLatency = value;
+    }
+
+    function getCacheLoadThresholdLatency() {
+        return cacheLoadThresholdLatency;
+    }
+
+    function setCacheLoadThresholdVideo(value) {
+        cacheLoadThresholdVideo = value;
+    }
+
+    function getCacheLoadThresholdVideo() {
+        return cacheLoadThresholdVideo;
+    }
+
+    function setCacheLoadThresholdAudio(value) {
+        cacheLoadThresholdAudio = value;
+    }
+
+    function getCacheLoadThresholdAudio() {
+        return cacheLoadThresholdAudio;
     }
 
     function setAbandonLoadTimeout(value) {
@@ -22538,6 +22660,12 @@ function MediaPlayerModel() {
         getBufferOccupancyABREnabled: getBufferOccupancyABREnabled,
         setBandwidthSafetyFactor: setBandwidthSafetyFactor,
         getBandwidthSafetyFactor: getBandwidthSafetyFactor,
+        setCacheLoadThresholdLatency: setCacheLoadThresholdLatency,
+        getCacheLoadThresholdLatency: getCacheLoadThresholdLatency,
+        setCacheLoadThresholdVideo: setCacheLoadThresholdVideo,
+        getCacheLoadThresholdVideo: getCacheLoadThresholdVideo,
+        setCacheLoadThresholdAudio: setCacheLoadThresholdAudio,
+        getCacheLoadThresholdAudio: getCacheLoadThresholdAudio,
         setAbandonLoadTimeout: setAbandonLoadTimeout,
         getAbandonLoadTimeout: getAbandonLoadTimeout,
         setLastBitrateCachingInfo: setLastBitrateCachingInfo,
@@ -25546,9 +25674,6 @@ function ThroughputRule(config) {
     var AVERAGE_THROUGHPUT_SAMPLE_AMOUNT_LIVE = 3;
     var AVERAGE_THROUGHPUT_SAMPLE_AMOUNT_VOD = 4;
     var AVERAGE_LATENCY_SAMPLES = AVERAGE_THROUGHPUT_SAMPLE_AMOUNT_VOD;
-    var CACHE_LOAD_THRESHOLD_VIDEO = 50;
-    var CACHE_LOAD_THRESHOLD_AUDIO = 5;
-    var CACHE_LOAD_THRESHOLD_LATENCY = 50;
     var THROUGHPUT_DECREASE_SCALE = 1.3;
     var THROUGHPUT_INCREASE_SCALE = 1.3;
 
@@ -25627,19 +25752,22 @@ function ThroughputRule(config) {
     }
 
     function isCachedResponse(latency, downloadTime, mediaType) {
+        var cacheLoadThresholdLatency = mediaPlayerModel.getCacheLoadThresholdLatency();
+        var cacheLoadThresholdVideo = mediaPlayerModel.getCacheLoadThresholdVideo();
+        var cacheLoadThresholdAudio = mediaPlayerModel.getCacheLoadThresholdAudio();
         var ret = false;
 
-        if (latency < CACHE_LOAD_THRESHOLD_LATENCY) {
+        if (latency < cacheLoadThresholdLatency) {
             ret = true;
         }
 
         if (!ret) {
             switch (mediaType) {
                 case 'video':
-                    ret = downloadTime < CACHE_LOAD_THRESHOLD_VIDEO;
+                    ret = downloadTime < cacheLoadThresholdVideo;
                     break;
                 case 'audio':
-                    ret = downloadTime < CACHE_LOAD_THRESHOLD_AUDIO;
+                    ret = downloadTime < cacheLoadThresholdAudio;
                     break;
                 default:
                     break;
@@ -25669,7 +25797,7 @@ function ThroughputRule(config) {
         var latencyTimeInMilliseconds = undefined;
 
         if (lastRequest.trace && lastRequest.trace.length) {
-
+            var useDeadTimeLatency = abrController.getUseDeadTimeLatency();
             latencyTimeInMilliseconds = lastRequest.tresponse.getTime() - lastRequest.trequest.getTime() || 1;
             downloadTimeInMilliseconds = lastRequest._tfinish.getTime() - lastRequest.tresponse.getTime() || 1; //Make sure never 0 we divide by this value. Avoid infinity!
 
@@ -25677,7 +25805,8 @@ function ThroughputRule(config) {
                 return a + b.b[0];
             }, 0);
 
-            var lastRequestThroughput = Math.round(bytes * 8 / (downloadTimeInMilliseconds / 1000));
+            var throughputMeasureTime = useDeadTimeLatency ? downloadTimeInMilliseconds : latencyTimeInMilliseconds + downloadTimeInMilliseconds;
+            var lastRequestThroughput = Math.round(bytes * 8 / (throughputMeasureTime / 1000));
 
             var throughput = undefined;
             var latency = undefined;
@@ -25702,7 +25831,11 @@ function ThroughputRule(config) {
             if (abrController.getAbandonmentStateFor(mediaType) !== _controllersAbrController2['default'].ABANDON_LOAD) {
 
                 if (bufferStateVO.state === _controllersBufferController2['default'].BUFFER_LOADED || isDynamic) {
-                    switchRequest.value = abrController.getQualityForBitrate(mediaInfo, throughput, latency);
+                    if (useDeadTimeLatency) {
+                        switchRequest.value = abrController.getQualityForBitrate(mediaInfo, throughput, latency);
+                    } else {
+                        switchRequest.value = abrController.getQualityForBitrate(mediaInfo, throughput);
+                    }
                     streamProcessor.getScheduleController().setTimeToLoadDelay(0);
                     log('ThroughputRule requesting switch to index: ', switchRequest.value, 'type: ', mediaType, 'Average throughput', Math.round(throughput), 'kbps');
                     switchRequest.reason = { throughput: throughput, latency: latency };
