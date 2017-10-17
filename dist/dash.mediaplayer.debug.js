@@ -3167,7 +3167,7 @@ Object.defineProperty(exports, '__esModule', {
     value: true
 });
 exports.getVersionString = getVersionString;
-var VERSION = '2.4.1-abr-4';
+var VERSION = '2.4.1-abr-5';
 
 function getVersionString() {
     return VERSION;
@@ -6429,7 +6429,7 @@ function DashManifestModel() {
 
     function getIsDynamic(manifest) {
         var isDynamic = false;
-        if (manifest.hasOwnProperty('type')) {
+        if (manifest && manifest.hasOwnProperty('type')) {
             isDynamic = manifest.type === 'dynamic';
         }
         return isDynamic;
