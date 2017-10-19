@@ -2220,34 +2220,55 @@ exports["default"] = X2JS;
 module.exports = exports["default"];
 
 },{}],5:[function(_dereq_,module,exports){
-/*! codem-isoboxer v0.2.7 https://github.com/madebyhiro/codem-isoboxer/blob/master/LICENSE.txt */
+/*! codem-isoboxer v0.3.4 https://github.com/madebyhiro/codem-isoboxer/blob/master/LICENSE.txt */
 var ISOBoxer = {};
 
 ISOBoxer.parseBuffer = function(arrayBuffer) {
   return new ISOFile(arrayBuffer).parse();
 };
 
-ISOBoxer.addBoxParser = function(type, parser) {
+ISOBoxer.addBoxProcessor = function(type, parser) {
   if (typeof type !== 'string' || typeof parser !== 'function') {
     return;
   }
-  ISOBox.prototype._boxParsers[type] = parser;
+  ISOBox.prototype._boxProcessors[type] = parser;
+};
+
+ISOBoxer.createFile = function() {
+  return new ISOFile();
+};
+
+// See ISOBoxer.append() for 'pos' parameter syntax
+ISOBoxer.createBox = function(type, parent, pos) {
+  var newBox = ISOBox.create(type);
+  if (parent) {
+    parent.append(newBox, pos);
+  }
+  return newBox;
+};
+
+// See ISOBoxer.append() for 'pos' parameter syntax
+ISOBoxer.createFullBox = function(type, parent, pos) {
+  var newBox = ISOBoxer.createBox(type, parent, pos);
+  newBox.version = 0;
+  newBox.flags = 0;
+  return newBox;
 };
 
 ISOBoxer.Utils = {};
 ISOBoxer.Utils.dataViewToString = function(dataView, encoding) {
-  var impliedEncoding = encoding || 'utf-8'
+  var impliedEncoding = encoding || 'utf-8';
   if (typeof TextDecoder !== 'undefined') {
     return new TextDecoder(impliedEncoding).decode(dataView);
   }
   var a = [];
   var i = 0;
-  
+
   if (impliedEncoding === 'utf-8') {
-    /* The following algorithm is essentially a rewrite of the UTF8.decode at 
+    /* The following algorithm is essentially a rewrite of the UTF8.decode at
     http://bannister.us/weblog/2007/simple-base64-encodedecode-javascript/
     */
-  
+
     while (i < dataView.byteLength) {
       var c = dataView.getUint8(i++);
       if (c < 0x80) {
@@ -2275,33 +2296,116 @@ ISOBoxer.Utils.dataViewToString = function(dataView, encoding) {
       a.push(String.fromCharCode(dataView.getUint8(i++)));
     }
   }
-  return a.join('');  
+  return a.join('');
+};
+
+ISOBoxer.Utils.utf8ToByteArray = function(string) {
+  // Only UTF-8 encoding is supported by TextEncoder
+  var u, i;
+  if (typeof TextEncoder !== 'undefined') {
+    u = new TextEncoder().encode(string);
+  } else {
+    u = [];
+    for (i = 0; i < string.length; ++i) {
+      var c = string.charCodeAt(i);
+      if (c < 0x80) {
+        u.push(c);
+      } else if (c < 0x800) {
+        u.push(0xC0 | (c >> 6));
+        u.push(0x80 | (63 & c));
+      } else if (c < 0x10000) {
+        u.push(0xE0 | (c >> 12));
+        u.push(0x80 | (63 & (c >> 6)));
+        u.push(0x80 | (63 & c));
+      } else {
+        u.push(0xF0 | (c >> 18));
+        u.push(0x80 | (63 & (c >> 12)));
+        u.push(0x80 | (63 & (c >> 6)));
+        u.push(0x80 | (63 & c));
+      }
+    }
+  }
+  return u;
+};
+
+// Method to append a box in the list of child boxes
+// The 'pos' parameter can be either:
+//   - (number) a position index at which to insert the new box
+//   - (string) the type of the box after which to insert the new box
+//   - (object) the box after which to insert the new box
+ISOBoxer.Utils.appendBox = function(parent, box, pos) {
+  box._offset = parent._cursor.offset;
+  box._root = (parent._root ? parent._root : parent);
+  box._raw = parent._raw;
+  box._parent = parent;
+
+  if (pos === -1) {
+    // The new box is a sub-box of the parent but not added in boxes array,
+    // for example when the new box is set as an entry (see dref and stsd for example)
+    return;
+  }
+
+  if (pos === undefined || pos === null) {
+    parent.boxes.push(box);
+    return;
+  }
+
+  var index = -1,
+      type;
+
+  if (typeof pos === "number") {
+    index = pos;
+  } else {
+    if (typeof pos === "string") {
+      type = pos;
+    } else if (typeof pos === "object" && pos.type) {
+      type = pos.type;
+    } else {
+      parent.boxes.push(box);
+      return;
+    }
+
+    for (var i = 0; i < parent.boxes.length; i++) {
+      if (type === parent.boxes[i].type) {
+        index = i + 1;
+        break;
+      }
+    }
+  }
+  parent.boxes.splice(index, 0, box);
 };
 
 if (typeof exports !== 'undefined') {
-  exports.parseBuffer  = ISOBoxer.parseBuffer;
-  exports.addBoxParser = ISOBoxer.addBoxParser;
-  exports.Utils        = ISOBoxer.Utils;
-};
+  exports.parseBuffer     = ISOBoxer.parseBuffer;
+  exports.addBoxProcessor = ISOBoxer.addBoxProcessor;
+  exports.createFile      = ISOBoxer.createFile;
+  exports.createBox       = ISOBoxer.createBox;
+  exports.createFullBox   = ISOBoxer.createFullBox;
+  exports.Utils           = ISOBoxer.Utils;
+}
+
 ISOBoxer.Cursor = function(initialOffset) {
   this.offset = (typeof initialOffset == 'undefined' ? 0 : initialOffset);
 };
+
 var ISOFile = function(arrayBuffer) {
-  this._raw = new DataView(arrayBuffer);
   this._cursor = new ISOBoxer.Cursor();
   this.boxes = [];
-}
+  if (arrayBuffer) {
+    this._raw = new DataView(arrayBuffer);
+  }
+};
 
 ISOFile.prototype.fetch = function(type) {
   var result = this.fetchAll(type, true);
   return (result.length ? result[0] : null);
-}
+};
 
 ISOFile.prototype.fetchAll = function(type, returnEarly) {
   var result = [];
   ISOFile._sweep.call(this, type, result, returnEarly);
   return result;
-}
+};
 
 ISOFile.prototype.parse = function() {
   this._cursor.offset = 0;
@@ -2315,7 +2419,7 @@ ISOFile.prototype.parse = function() {
     this.boxes.push(box);
   }
   return this;
-}
+};
 
 ISOFile._sweep = function(type, result, returnEarly) {
   if (this.type && this.type == type) result.push(this);
@@ -2324,9 +2428,34 @@ ISOFile._sweep = function(type, result, returnEarly) {
     ISOFile._sweep.call(this.boxes[box], type, result, returnEarly);
   }
 };
+
+ISOFile.prototype.write = function() {
+
+  var length = 0,
+      i;
+
+  for (i = 0; i < this.boxes.length; i++) {
+    length += this.boxes[i].getLength(false);
+  }
+
+  var bytes = new Uint8Array(length);
+  this._rawo = new DataView(bytes.buffer);
+  this.bytes = bytes;
+  this._cursor.offset = 0;
+
+  for (i = 0; i < this.boxes.length; i++) {
+    this.boxes[i].write();
+  }
+
+  return bytes.buffer;
+};
+
+ISOFile.prototype.append = function(box, pos) {
+  ISOBoxer.Utils.appendBox(this, box, pos);
+};
 var ISOBox = function() {
   this._cursor = new ISOBoxer.Cursor();
-}
+};
 
 ISOBox.parse = function(parent) {
   var newBox = new ISOBox();
@@ -2337,60 +2466,188 @@ ISOBox.parse = function(parent) {
   newBox._parseBox();
   parent._cursor.offset = newBox._raw.byteOffset + newBox._raw.byteLength;
   return newBox;
-}
+};
+
+ISOBox.create = function(type) {
+  var newBox = new ISOBox();
+  newBox.type = type;
+  newBox.boxes = [];
+  return newBox;
+};
+
+ISOBox.prototype._boxContainers = ['dinf', 'edts', 'mdia', 'meco', 'mfra', 'minf', 'moof', 'moov', 'mvex', 'stbl', 'strk', 'traf', 'trak', 'tref', 'udta', 'vttc', 'sinf', 'schi', 'encv', 'enca'];
+
+ISOBox.prototype._boxProcessors = {};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Generic read/write functions
+
+ISOBox.prototype._procField = function (name, type, size) {
+  if (this._parsing) {
+    this[name] = this._readField(type, size);
+  }
+  else {
+    this._writeField(type, size, this[name]);
+  }
+};
+
+ISOBox.prototype._procFieldArray = function (name, length, type, size) {
+  var i;
+  if (this._parsing) {
+    this[name] = [];
+    for (i = 0; i < length; i++) {
+      this[name][i] = this._readField(type, size);
+    }
+  }
+  else {
+    for (i = 0; i < this[name].length; i++) {
+      this._writeField(type, size, this[name][i]);
+    }
+  }
+};
+
+ISOBox.prototype._procFullBox = function() {
+  this._procField('version', 'uint', 8);
+  this._procField('flags', 'uint', 24);
+};
+
+ISOBox.prototype._procEntries = function(name, length, fn) {
+  var i;
+  if (this._parsing) {
+    this[name] = [];
+    for (i = 0; i < length; i++) {
+      this[name].push({});
+      fn.call(this, this[name][i]);
+    }
+  }
+  else {
+    for (i = 0; i < length; i++) {
+      fn.call(this, this[name][i]);
+    }
+  }
+};
+
+ISOBox.prototype._procSubEntries = function(entry, name, length, fn) {
+  var i;
+  if (this._parsing) {
+    entry[name] = [];
+    for (i = 0; i < length; i++) {
+      entry[name].push({});
+      fn.call(this, entry[name][i]);
+    }
+  }
+  else {
+    for (i = 0; i < length; i++) {
+      fn.call(this, entry[name][i]);
+    }
+  }
+};
+
+ISOBox.prototype._procEntryField = function (entry, name, type, size) {
+  if (this._parsing) {
+    entry[name] = this._readField(type, size);
+  }
+  else {
+    this._writeField(type, size, entry[name]);
+  }
+};
+
+ISOBox.prototype._procSubBoxes = function(name, length) {
+  var i;
+  if (this._parsing) {
+    this[name] = [];
+    for (i = 0; i < length; i++) {
+      this[name].push(ISOBox.parse(this));
+    }
+  }
+  else {
+    for (i = 0; i < length; i++) {
+      if (this._rawo) {
+        this[name][i].write();
+      } else {
+        this.size += this[name][i].getLength();
+      }
+    }
+  }
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Read/parse functions
+
+ISOBox.prototype._readField = function(type, size) {
+  switch (type) {
+    case 'uint':
+      return this._readUint(size);
+    case 'int':
+      return this._readInt(size);
+    case 'template':
+      return this._readTemplate(size);
+    case 'string':
+      return (size === -1) ? this._readTerminatedString() : this._readString(size);
+    case 'data':
+      return this._readData(size);
+    case 'utf8':
+      return this._readUTF8String();
+    default:
+      return -1;
+  }
+};
 
 ISOBox.prototype._readInt = function(size) {
-  var result = null;
+  var result = null,
+      offset = this._cursor.offset - this._raw.byteOffset;
   switch(size) {
   case 8:
-    result = this._raw.getInt8(this._cursor.offset - this._raw.byteOffset);
+    result = this._raw.getInt8(offset);
     break;
   case 16:
-    result = this._raw.getInt16(this._cursor.offset - this._raw.byteOffset);
+    result = this._raw.getInt16(offset);
     break;
   case 32:
-    result = this._raw.getInt32(this._cursor.offset - this._raw.byteOffset);
+    result = this._raw.getInt32(offset);
     break;
   case 64:
     // Warning: JavaScript cannot handle 64-bit integers natively.
     // This will give unexpected results for integers >= 2^53
-    var s1 = this._raw.getInt32(this._cursor.offset - this._raw.byteOffset);
-    var s2 = this._raw.getInt32(this._cursor.offset - this._raw.byteOffset + 4);
+    var s1 = this._raw.getInt32(offset);
+    var s2 = this._raw.getInt32(offset + 4);
     result = (s1 * Math.pow(2,32)) + s2;
     break;
   }
   this._cursor.offset += (size >> 3);
-  return result;        
-}
+  return result;
+};
 
 ISOBox.prototype._readUint = function(size) {
-  var result = null;
+  var result = null,
+      offset = this._cursor.offset - this._raw.byteOffset,
+      s1, s2;
   switch(size) {
   case 8:
-    result = this._raw.getUint8(this._cursor.offset - this._raw.byteOffset);
+    result = this._raw.getUint8(offset);
     break;
   case 16:
-    result = this._raw.getUint16(this._cursor.offset - this._raw.byteOffset);
+    result = this._raw.getUint16(offset);
     break;
   case 24:
-    var s1 = this._raw.getUint16(this._cursor.offset - this._raw.byteOffset);
-    var s2 = this._raw.getUint8(this._cursor.offset - this._raw.byteOffset + 2);
+    s1 = this._raw.getUint16(offset);
+    s2 = this._raw.getUint8(offset + 2);
     result = (s1 << 8) + s2;
     break;
   case 32:
-    result = this._raw.getUint32(this._cursor.offset - this._raw.byteOffset);
+    result = this._raw.getUint32(offset);
     break;
   case 64:
     // Warning: JavaScript cannot handle 64-bit integers natively.
     // This will give unexpected results for integers >= 2^53
-    var s1 = this._raw.getUint32(this._cursor.offset - this._raw.byteOffset);
-    var s2 = this._raw.getUint32(this._cursor.offset - this._raw.byteOffset + 4);
+    s1 = this._raw.getUint32(offset);
+    s2 = this._raw.getUint32(offset + 4);
     result = (s1 * Math.pow(2,32)) + s2;
     break;
   }
   this._cursor.offset += (size >> 3);
-  return result;        
-}
+  return result;
+};
 
 ISOBox.prototype._readString = function(length) {
   var str = '';
@@ -2398,50 +2655,63 @@ ISOBox.prototype._readString = function(length) {
     var char = this._readUint(8);
     str += String.fromCharCode(char);
   }
-  return str;    
-}
-
-ISOBox.prototype._readTerminatedString = function() {
-  var str = '';
-  while (this._cursor.offset - this._offset < this._raw.byteLength) {
-    var char = this._readUint(8);
-    if (char == 0) break;
-    str += String.fromCharCode(char);
-  }
   return str;
-}
+};
 
 ISOBox.prototype._readTemplate = function(size) {
   var pre = this._readUint(size / 2);
   var post = this._readUint(size / 2);
   return pre + (post / Math.pow(2, size / 2));
-}
+};
+
+ISOBox.prototype._readTerminatedString = function() {
+  var str = '';
+  while (this._cursor.offset - this._offset < this._raw.byteLength) {
+    var char = this._readUint(8);
+    if (char === 0) break;
+    str += String.fromCharCode(char);
+  }
+  return str;
+};
+
+ISOBox.prototype._readData = function(size) {
+  var length = (size > 0) ? size : (this._raw.byteLength - (this._cursor.offset - this._offset));
+  var data = new DataView(this._raw.buffer, this._cursor.offset, length);
+  this._cursor.offset += length;
+  return data;
+};
+
+ISOBox.prototype._readUTF8String = function() {
+  var data = this._readData();
+  return ISOBoxer.Utils.dataViewToString(data);
+};
 
 ISOBox.prototype._parseBox = function() {
+  this._parsing = true;
   this._cursor.offset = this._offset;
-  
+
   // return immediately if there are not enough bytes to read the header
   if (this._offset + 8 > this._raw.buffer.byteLength) {
     this._root._incomplete = true;
     return;
   }
-  
-  this.size = this._readUint(32);
-  this.type = this._readString(4);
 
-  if (this.size == 1)      { this.largesize = this._readUint(64); }
-  if (this.type == 'uuid') { this.usertype = this._readString(16); }
+  this._procField('size', 'uint', 32);
+  this._procField('type', 'string', 4);
+
+  if (this.size === 1)      { this._procField('largesize', 'uint', 64); }
+  if (this.type === 'uuid') { this._procFieldArray('usertype', 16, 'uint', 8); }
 
   switch(this.size) {
   case 0:
-    this._raw = new DataView(this._raw.buffer, this._offset, (this._raw.byteLength - this._cursor.offset));
+    this._raw = new DataView(this._raw.buffer, this._offset, (this._raw.byteLength - this._cursor.offset + 8));
     break;
   case 1:
     if (this._offset + this.size > this._raw.buffer.byteLength) {
       this._incomplete = true;
       this._root._incomplete = true;
     } else {
-      this._raw = new DataView(this._raw.buffer, this._offset, this.largesize);      
+      this._raw = new DataView(this._raw.buffer, this._offset, this.largesize);
     }
     break;
   default:
@@ -2449,420 +2719,662 @@ ISOBox.prototype._parseBox = function() {
       this._incomplete = true;
       this._root._incomplete = true;
     } else {
-      this._raw = new DataView(this._raw.buffer, this._offset, this.size);      
+      this._raw = new DataView(this._raw.buffer, this._offset, this.size);
     }
   }
 
   // additional parsing
-  if (!this._incomplete && this._boxParsers[this.type]) this._boxParsers[this.type].call(this);
-}
+  if (!this._incomplete) {
+    if (this._boxProcessors[this.type]) {
+      this._boxProcessors[this.type].call(this);
+    }
+    if (this._boxContainers.indexOf(this.type) !== -1) {
+      this._parseContainerBox();
+    } else{
+      // Unknown box => read and store box content
+      this._data = this._readData();
+    }
+  }
+};
 
 ISOBox.prototype._parseFullBox = function() {
   this.version = this._readUint(8);
   this.flags = this._readUint(24);
-}
-
-ISOBox.prototype._boxParsers = {};;
-// ISO/IEC 14496-15:2014 - avc1 box
-ISOBox.prototype._boxParsers['avc1'] = function() {
-  this.version               = this._readUint(16);
-  this.revision_level        = this._readUint(16);
-  this.vendor                = this._readUint(32);
-  this.temporal_quality      = this._readUint(32);
-  this.spatial_quality       = this._readUint(32);
-  this.width                 = this._readUint(16);
-  this.height                = this._readUint(16);
-  this.horizontal_resolution = this._readUint(32);
-  this.vertical_resolution   = this._readUint(32);
-  this.data_size             = this._readUint(32);
-  this.frame_count           = this._readUint(16);
-  this.compressor_name       = this._readUint(32);
-  this.depth                 = this._readUint(16);
-  this.color_table_id        = this._readUint(16);
 };
-// Simple container boxes, all from ISO/IEC 14496-12:2012 except vttc which is from 14496-30.
-[
-  'moov', 'trak', 'tref', 'mdia', 'minf', 'stbl', 'edts', 'dinf',
-  'mvex', 'moof', 'traf', 'mfra', 'udta', 'meco', 'strk', 'vttc'
-].forEach(function(boxType) {
-  ISOBox.prototype._boxParsers[boxType] = function() {
-    this.boxes = [];
-    while (this._cursor.offset - this._raw.byteOffset < this._raw.byteLength) {
-      this.boxes.push(ISOBox.parse(this));
-    }  
-  }  
-})
-;
-// ISO/IEC 14496-12:2012 - 8.6.6 Edit List Box
-ISOBox.prototype._boxParsers['elst'] = function() {
-  this._parseFullBox();
-  this.entry_count = this._readUint(32);
-  this.entries = [];
-  
-  for (var i=1; i <= this.entry_count; i++) {
-    var entry = {};
-    if (this.version == 1) {
-      entry.segment_duration  = this._readUint(64);
-      entry.media_time        = this._readInt(64);
-    } else {
-      entry.segment_duration  = this._readUint(32);
-      entry.media_time        = this._readInt(32);
-    }
-    entry.media_rate_integer  = this._readInt(16);
-    entry.media_rate_fraction = this._readInt(16);
-    this.entries.push(entry);
+
+ISOBox.prototype._parseContainerBox = function() {
+  this.boxes = [];
+  while (this._cursor.offset - this._raw.byteOffset < this._raw.byteLength) {
+    this.boxes.push(ISOBox.parse(this));
   }
 };
-// ISO/IEC 23009-1:2014 - 5.10.3.3 Event Message Box
-ISOBox.prototype._boxParsers['emsg'] = function() {
-  this._parseFullBox();
-  this.scheme_id_uri           = this._readTerminatedString();
-  this.value                   = this._readTerminatedString();
-  this.timescale               = this._readUint(32);
-  this.presentation_time_delta = this._readUint(32);
-  this.event_duration          = this._readUint(32);
-  this.id                      = this._readUint(32);
-  this.message_data            = new DataView(this._raw.buffer, this._cursor.offset, this._raw.byteLength - (this._cursor.offset - this._offset));
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Write functions
+
+ISOBox.prototype.append = function(box, pos) {
+  ISOBoxer.Utils.appendBox(this, box, pos);
 };
+
+ISOBox.prototype.getLength = function() {
+  this._parsing = false;
+  this._rawo = null;
+
+  this.size = 0;
+  this._procField('size', 'uint', 32);
+  this._procField('type', 'string', 4);
+
+  if (this.size === 1)      { this._procField('largesize', 'uint', 64); }
+  if (this.type === 'uuid') { this._procFieldArray('usertype', 16, 'uint', 8); }
+
+  if (this._boxProcessors[this.type]) {
+    this._boxProcessors[this.type].call(this);
+  }
+
+  if (this._boxContainers.indexOf(this.type) !== -1) {
+    for (var i = 0; i < this.boxes.length; i++) {
+      this.size += this.boxes[i].getLength();
+    }
+  } 
+
+  if (this._data) {
+    this._writeData(this._data);
+  }
+
+  return this.size;
+};
+
+ISOBox.prototype.write = function() {
+  this._parsing = false;
+  this._cursor.offset = this._parent._cursor.offset;
+
+  switch(this.size) {
+  case 0:
+    this._rawo = new DataView(this._parent._rawo.buffer, this._cursor.offset, (this.parent._rawo.byteLength - this._cursor.offset));
+    break;
+  case 1:
+      this._rawo = new DataView(this._parent._rawo.buffer, this._cursor.offset, this.largesize);
+    break;
+  default:
+      this._rawo = new DataView(this._parent._rawo.buffer, this._cursor.offset, this.size);
+  }
+
+  this._procField('size', 'uint', 32);
+  this._procField('type', 'string', 4);
+
+  if (this.size === 1)      { this._procField('largesize', 'uint', 64); }
+  if (this.type === 'uuid') { this._procFieldArray('usertype', 16, 'uint', 8); }
+
+  if (this._boxProcessors[this.type]) {
+    this._boxProcessors[this.type].call(this);
+  }
+
+  if (this._boxContainers.indexOf(this.type) !== -1) {
+    for (var i = 0; i < this.boxes.length; i++) {
+      this.boxes[i].write();
+    }
+  } 
+
+  if (this._data) {
+    this._writeData(this._data);
+  }
+
+  this._parent._cursor.offset += this.size;
+
+  return this.size;
+};
+
+ISOBox.prototype._writeInt = function(size, value) {
+  if (this._rawo) {
+    var offset = this._cursor.offset - this._rawo.byteOffset;
+    switch(size) {
+    case 8:
+      this._rawo.setInt8(offset, value);
+      break;
+    case 16:
+      this._rawo.setInt16(offset, value);
+      break;
+    case 32:
+      this._rawo.setInt32(offset, value);
+      break;
+    case 64:
+      // Warning: JavaScript cannot handle 64-bit integers natively.
+      // This will give unexpected results for integers >= 2^53
+      var s1 = Math.floor(value / Math.pow(2,32));
+      var s2 = value - (s1 * Math.pow(2,32));
+      this._rawo.setUint32(offset, s1);
+      this._rawo.setUint32(offset + 4, s2);
+      break;
+    }
+    this._cursor.offset += (size >> 3);
+  } else {
+    this.size += (size >> 3);
+  }
+};
+
+ISOBox.prototype._writeUint = function(size, value) {
+
+  if (this._rawo) {
+    var offset = this._cursor.offset - this._rawo.byteOffset,
+        s1, s2;
+    switch(size) {
+    case 8:
+      this._rawo.setUint8(offset, value);
+      break;
+    case 16:
+      this._rawo.setUint16(offset, value);
+      break;
+    case 24:
+      s1 = (value & 0xFFFF00) >> 8;
+      s2 = (value & 0x0000FF);
+      this._rawo.setUint16(offset, s1);
+      this._rawo.setUint8(offset + 2, s2);
+      break;
+    case 32:
+      this._rawo.setUint32(offset, value);
+      break;
+    case 64:
+      // Warning: JavaScript cannot handle 64-bit integers natively.
+      // This will give unexpected results for integers >= 2^53
+      s1 = Math.floor(value / Math.pow(2,32));
+      s2 = value - (s1 * Math.pow(2,32));
+      this._rawo.setUint32(offset, s1);
+      this._rawo.setUint32(offset + 4, s2);
+      break;
+    }
+    this._cursor.offset += (size >> 3);
+  } else {
+    this.size += (size >> 3);
+  }
+};
+
+ISOBox.prototype._writeString = function(size, str) {
+  for (var c = 0; c < size; c++) {
+    this._writeUint(8, str.charCodeAt(c));
+  }
+};
+
+ISOBox.prototype._writeTerminatedString = function(str) {
+  if (str.length === 0) {
+    return;
+  }
+  for (var c = 0; c < str.length; c++) {
+    this._writeUint(8, str.charCodeAt(c));
+  }
+  this._writeUint(8, 0);
+};
+
+ISOBox.prototype._writeTemplate = function(size, value) {
+  var pre = Math.floor(value);
+  var post = (value - pre) * Math.pow(2, size / 2);
+  this._writeUint(size / 2, pre);
+  this._writeUint(size / 2, post);
+};
+
+ISOBox.prototype._writeData = function(data) {
+  var i;
+  if (data instanceof Array) {
+    if (!Uint8Array.from) {
+      var typedArray = new Uint8Array(data.length);
+      for (i = 0; i < data.length; i++) {
+        typedArray[i] = data[i];
+      }
+      data = new DataView(typedArray.buffer);
+    } else {
+      data = new DataView(Uint8Array.from(data).buffer);
+    }
+  }
+  if (data instanceof Uint8Array) {
+    data = new DataView(data.buffer);
+  }
+  if (this._rawo) {
+    var offset = this._cursor.offset - this._rawo.byteOffset;
+    for (i = 0; i < data.byteLength; i++) {
+        this._rawo.setUint8(offset + i, data.getUint8(i));
+    }
+    this._cursor.offset += data.byteLength;
+  } else {
+    this.size += data.byteLength;
+  }
+};
+
+ISOBox.prototype._writeUTF8String = function(string) {
+  var u = ISOBoxer.Utils.utf8ToByteArray(string);
+  if (this._rawo) {
+    var dataView = new DataView(this._rawo.buffer, this._cursor.offset, u.length);
+    for (var i = 0; i < u.length; i++) {
+      dataView.setUint8(i, u[i]);
+    }
+  } else {
+    this.size += u.length;
+  }
+};
+
+ISOBox.prototype._writeField = function(type, size, value) {
+  switch (type) {
+  case 'uint':
+    this._writeUint(size, value);
+    break;
+  case 'int':
+    this._writeInt(size, value);
+    break;
+  case 'template':
+    this._writeTemplate(size, value);
+    break;
+  case 'string':
+      if (size == -1) {
+        this._writeTerminatedString(value);
+      } else {
+        this._writeString(size, value);
+      }
+      break;
+  case 'data':
+    this._writeData(value);
+    break;
+  case 'utf8':
+    this._writeUTF8String(value);
+    break;
+  default:
+    break;
+  }
+};
+
+// ISO/IEC 14496-15:2014 - avc1 box
+ISOBox.prototype._boxProcessors['avc1'] = ISOBox.prototype._boxProcessors['encv'] = function() {
+  // SampleEntry fields
+  this._procFieldArray('reserved1', 6,    'uint', 8);
+  this._procField('data_reference_index', 'uint', 16);
+  // VisualSampleEntry fields
+  this._procField('pre_defined1',         'uint',     16);
+  this._procField('reserved2',            'uint',     16);
+  this._procFieldArray('pre_defined2', 3, 'uint',     32);
+  this._procField('width',                'uint',     16);
+  this._procField('height',               'uint',     16);
+  this._procField('horizresolution',      'template', 32);
+  this._procField('vertresolution',       'template', 32);
+  this._procField('reserved3',            'uint',     32);
+  this._procField('frame_count',          'uint',     16);
+  this._procFieldArray('compressorname', 32,'uint',    8);
+  this._procField('depth',                'uint',     16);
+  this._procField('pre_defined3',         'int',      16);
+  // AVCSampleEntry fields
+  this._procField('config', 'data', -1);
+};
+
+// ISO/IEC 14496-12:2012 - 8.7.2 Data Reference Box
+ISOBox.prototype._boxProcessors['dref'] = function() {
+  this._procFullBox();
+  this._procField('entry_count', 'uint', 32);
+  this._procSubBoxes('entries', this.entry_count);
+};
+
+// ISO/IEC 14496-12:2012 - 8.6.6 Edit List Box
+ISOBox.prototype._boxProcessors['elst'] = function() {
+  this._procFullBox();
+  this._procField('entry_count', 'uint', 32);
+  this._procEntries('entries', this.entry_count, function(entry) {
+    this._procEntryField(entry, 'segment_duration',     'uint', (this.version === 1) ? 64 : 32);
+    this._procEntryField(entry, 'media_time',           'int',  (this.version === 1) ? 64 : 32);
+    this._procEntryField(entry, 'media_rate_integer',   'int',  16);
+    this._procEntryField(entry, 'media_rate_fraction',  'int',  16);
+  });
+};
+
+// ISO/IEC 23009-1:2014 - 5.10.3.3 Event Message Box
+ISOBox.prototype._boxProcessors['emsg'] = function() {
+  this._procFullBox();
+  this._procField('scheme_id_uri',            'string', -1);
+  this._procField('value',                    'string', -1);
+  this._procField('timescale',                'uint',   32);
+  this._procField('presentation_time_delta',  'uint',   32);
+  this._procField('event_duration',           'uint',   32);
+  this._procField('id',                       'uint',   32);
+  this._procField('message_data',             'data',   -1);
+};
+
 // ISO/IEC 14496-12:2012 - 8.1.2 Free Space Box
-ISOBox.prototype._boxParsers['free'] = ISOBox.prototype._boxParsers['skip'] = function() {
-  this.data = new DataView(this._raw.buffer, this._cursor.offset, this._raw.byteLength - (this._cursor.offset - this._offset));
+ISOBox.prototype._boxProcessors['free'] = ISOBox.prototype._boxProcessors['skip'] = function() {
+  this._procField('data', 'data', -1);
+};
+
+// ISO/IEC 14496-12:2012 - 8.12.2 Original Format Box
+ISOBox.prototype._boxProcessors['frma'] = function() {
+  this._procField('data_format', 'uint', 32);
 };
 // ISO/IEC 14496-12:2012 - 4.3 File Type Box / 8.16.2 Segment Type Box
-ISOBox.prototype._boxParsers['ftyp'] = ISOBox.prototype._boxParsers['styp'] = function() {
-  this.major_brand = this._readString(4);
-  this.minor_versions = this._readUint(32);
-  this.compatible_brands = [];
-  
-  while (this._cursor.offset - this._raw.byteOffset < this._raw.byteLength) {
-    this.compatible_brands.push(this._readString(4));
+ISOBox.prototype._boxProcessors['ftyp'] =
+ISOBox.prototype._boxProcessors['styp'] = function() {
+  this._procField('major_brand', 'string', 4);
+  this._procField('minor_version', 'uint', 32);
+  var nbCompatibleBrands = -1;
+  if (this._parsing) {
+    nbCompatibleBrands = (this._raw.byteLength - (this._cursor.offset - this._raw.byteOffset)) / 4;
   }
+  this._procFieldArray('compatible_brands', nbCompatibleBrands, 'string', 4);
 };
+
 // ISO/IEC 14496-12:2012 - 8.4.3 Handler Reference Box
-ISOBox.prototype._boxParsers['hdlr'] = function() {
-  this._parseFullBox();
-  this.pre_defined = this._readUint(32);
-  this.handler_type = this._readString(4);
-  this.reserved = [this._readUint(32), this._readUint(32), this._readUint(32)]
-  this.name = this._readTerminatedString()
+ISOBox.prototype._boxProcessors['hdlr'] = function() {
+  this._procFullBox();
+  this._procField('pre_defined',      'uint',   32);
+  this._procField('handler_type',     'string', 4);
+  this._procFieldArray('reserved', 3, 'uint', 32);
+  this._procField('name',             'string', -1);
 };
+
 // ISO/IEC 14496-12:2012 - 8.1.1 Media Data Box
-ISOBox.prototype._boxParsers['mdat'] = function() {
-  this.data = new DataView(this._raw.buffer, this._cursor.offset, this._raw.byteLength - (this._cursor.offset - this._offset));
+ISOBox.prototype._boxProcessors['mdat'] = function() {
+  this._procField('data', 'data', -1);
 };
+
 // ISO/IEC 14496-12:2012 - 8.4.2 Media Header Box
-ISOBox.prototype._boxParsers['mdhd'] = function() {
-  this._parseFullBox();
-  if (this.version == 1) {
-    this.creation_time = this._readUint(64);
-    this.modification_time = this._readUint(64);
-    this.timescale = this._readUint(32);
-    this.duration = this._readUint(64);
-  } else {
-    this.creation_time = this._readUint(32);
-    this.modification_time = this._readUint(32);
-    this.timescale = this._readUint(32);
-    this.duration = this._readUint(32);
+ISOBox.prototype._boxProcessors['mdhd'] = function() {
+  this._procFullBox();
+  this._procField('creation_time',      'uint', (this.version == 1) ? 64 : 32);
+  this._procField('modification_time',  'uint', (this.version == 1) ? 64 : 32);
+  this._procField('timescale',          'uint', 32);
+  this._procField('duration',           'uint', (this.version == 1) ? 64 : 32);
+  if (!this._parsing && typeof this.language === 'string') {
+    // In case of writing and language has been set as a string, then convert it into char codes array
+    this.language = ((this.language.charCodeAt(0) - 0x60) << 10) |
+                    ((this.language.charCodeAt(1) - 0x60) << 5) |
+                    ((this.language.charCodeAt(2) - 0x60));
   }
-  var language = this._readUint(16);
-  this.pad = (language >> 15);
-  this.language = String.fromCharCode(
-    ((language >> 10) & 0x1F) + 0x60,
-    ((language >> 5) & 0x1F) + 0x60,
-    (language & 0x1F) + 0x60
-  );
-  this.pre_defined = this._readUint(16);
+  this._procField('language',           'uint', 16);
+  if (this._parsing) {
+    this.language = String.fromCharCode(((this.language >> 10) & 0x1F) + 0x60,
+                                        ((this.language >> 5) & 0x1F) + 0x60,
+                                        (this.language & 0x1F) + 0x60);
+  }
+  this._procField('pre_defined',        'uint', 16);
 };
+
 // ISO/IEC 14496-12:2012 - 8.8.2 Movie Extends Header Box
-ISOBox.prototype._boxParsers['mehd'] = function() {
-  this._parseFullBox();
-
-  if (this.version == 1) {
-    this.fragment_duration = this._readUint(64);
-   } else { // version==0
-    this.fragment_duration = this._readUint(32);
-   }
+ISOBox.prototype._boxProcessors['mehd'] = function() {
+  this._procFullBox();
+  this._procField('fragment_duration', 'uint', (this.version == 1) ? 64 : 32);
 };
+
 // ISO/IEC 14496-12:2012 - 8.8.5 Movie Fragment Header Box
-ISOBox.prototype._boxParsers['mfhd'] = function() {
-  this._parseFullBox();
-  this.sequence_number = this._readUint(32);
+ISOBox.prototype._boxProcessors['mfhd'] = function() {
+  this._procFullBox();
+  this._procField('sequence_number', 'uint', 32);
 };
+
 // ISO/IEC 14496-12:2012 - 8.8.11 Movie Fragment Random Access Box
-ISOBox.prototype._boxParsers['mfro'] = function() {
-  this._parseFullBox();
-  this.mfra_size = this._readUint(32); // Called mfra_size to distinguish from the normal "size" attribute of a box
-}
-;
+ISOBox.prototype._boxProcessors['mfro'] = function() {
+  this._procFullBox();
+  this._procField('mfra_size', 'uint', 32); // Called mfra_size to distinguish from the normal "size" attribute of a box
+};
+
+
 // ISO/IEC 14496-12:2012 - 8.5.2.2 mp4a box (use AudioSampleEntry definition and naming)
-ISOBox.prototype._boxParsers['mp4a'] = function() {
-  this.reserved1    = [this._readUint(32), this._readUint(32)];
-  this.channelcount = this._readUint(16);
-  this.samplesize   = this._readUint(16);
-  this.pre_defined  = this._readUint(16);
-  this.reserved2    = this._readUint(16);
-  this.sample_rate  = this._readUint(32);
+ISOBox.prototype._boxProcessors['mp4a'] = ISOBox.prototype._boxProcessors['enca'] = function() {
+  // SampleEntry fields
+  this._procFieldArray('reserved1', 6,    'uint', 8);
+  this._procField('data_reference_index', 'uint', 16);
+  // AudioSampleEntry fields
+  this._procFieldArray('reserved2', 2,    'uint', 32);
+  this._procField('channelcount',         'uint', 16);
+  this._procField('samplesize',           'uint', 16);
+  this._procField('pre_defined',          'uint', 16);
+  this._procField('reserved3',            'uint', 16);
+  this._procField('samplerate',           'template', 32);
+  // ESDescriptor fields
+  this._procField('esds',                 'data', -1);
 };
+
 // ISO/IEC 14496-12:2012 - 8.2.2 Movie Header Box
-ISOBox.prototype._boxParsers['mvhd'] = function() {
-  this._parseFullBox();
-  
-  if (this.version == 1) {
-    this.creation_time     = this._readUint(64);
-    this.modification_time = this._readUint(64);
-    this.timescale         = this._readUint(32);
-    this.duration          = this._readUint(64);
-  } else {
-    this.creation_time     = this._readUint(32);
-    this.modification_time = this._readUint(32);
-    this.timescale         = this._readUint(32);
-    this.duration          = this._readUint(32);      
-  }
-  
-  this.rate      = this._readTemplate(32);
-  this.volume    = this._readTemplate(16);
-  this.reserved1 = this._readUint(16);
-  this.reserved2 = [ this._readUint(32), this._readUint(32) ];
-  this.matrix = [];
-  for (var i=0; i<9; i++) {
-    this.matrix.push(this._readTemplate(32));
-  }
-  this.pre_defined = [];
-  for (var i=0; i<6; i++) {
-    this.pre_defined.push(this._readUint(32));
-  }
-  this.next_track_ID = this._readUint(32);
+ISOBox.prototype._boxProcessors['mvhd'] = function() {
+  this._procFullBox();
+  this._procField('creation_time',      'uint',     (this.version == 1) ? 64 : 32);
+  this._procField('modification_time',  'uint',     (this.version == 1) ? 64 : 32);
+  this._procField('timescale',          'uint',     32);
+  this._procField('duration',           'uint',     (this.version == 1) ? 64 : 32);
+  this._procField('rate',               'template', 32);
+  this._procField('volume',             'template', 16);
+  this._procField('reserved1',          'uint',  16);
+  this._procFieldArray('reserved2', 2,  'uint',     32);
+  this._procFieldArray('matrix', 9,     'template', 32);
+  this._procFieldArray('pre_defined', 6,'uint',   32);
+  this._procField('next_track_ID',      'uint',     32);
 };
+
 // ISO/IEC 14496-30:2014 - WebVTT Cue Payload Box.
-ISOBox.prototype._boxParsers['payl'] = function() {
-  var cue_text_raw = new DataView(this._raw.buffer, this._cursor.offset, this._raw.byteLength - (this._cursor.offset - this._offset));
-  this.cue_text = ISOBoxer.Utils.dataViewToString(cue_text_raw);
-}
-;
-// ISO/IEC 14496-12:2012 - 8.16.3 Segment Index Box
-ISOBox.prototype._boxParsers['sidx'] = function() {
-  this._parseFullBox();
-  this.reference_ID = this._readUint(32);
-  this.timescale = this._readUint(32);
-  if (this.version == 0) {
-    this.earliest_presentation_time = this._readUint(32);
-    this.first_offset = this._readUint(32);
-  } else {
-    this.earliest_presentation_time = this._readUint(64);
-    this.first_offset = this._readUint(64);    
-  }
-  this.reserved = this._readUint(16);
-  this.reference_count = this._readUint(16);
-  this.references = [];
-  for (var i=0; i<this.reference_count; i++) {
-    var ref = {};
-    var reference = this._readUint(32);
-    ref.reference_type = (reference >> 31) & 0x1;
-    ref.referenced_size = reference & 0x7FFFFFFF;
-    ref.subsegment_duration = this._readUint(32);
-    var sap = this._readUint(32);
-    ref.starts_with_SAP = (sap >> 31) & 0x1;
-    ref.SAP_type = (sap >> 28) & 0x7;
-    ref.SAP_delta_time = sap & 0xFFFFFFF;
-    this.references.push(ref);
-  }
+ISOBox.prototype._boxProcessors['payl'] = function() {
+  this._procField('cue_text', 'utf8');
 };
-// ISO/IEC 14496-12:2012 - 8.16.4 Subsegment Index Box
-ISOBox.prototype._boxParsers['ssix'] = function() {
-  this._parseFullBox();
-  this.subsegment_count = this._readUint(32);
-  this.subsegments = [];
 
-  for (var i=0; i<this.subsegment_count; i++) {
-    var subsegment = {};
-    subsegment.ranges_count = this._readUint(32);
-    subsegment.ranges = [];
+//ISO/IEC 23001-7:2011 - 8.1 Protection System Specific Header Box
+ISOBox.prototype._boxProcessors['pssh'] = function() {
+  this._procFullBox();
+  
+  this._procFieldArray('SystemID', 16, 'uint', 8);
+  this._procField('DataSize', 'uint', 32);
+  this._procFieldArray('Data', this.DataSize, 'uint', 8);
+};
+// ISO/IEC 14496-12:2012 - 8.12.5 Scheme Type Box
+ISOBox.prototype._boxProcessors['schm'] = function() {
+    this._procFullBox();
     
-    for (var j=0; j<subsegment.ranges_count; j++) {
-      var range = {};
-      range.level = this._readUint(8);
-      range.range_size = this._readUint(24);
-      subsegment.ranges.push(range);
+    this._procField('scheme_type', 'uint', 32);
+    this._procField('scheme_version', 'uint', 32);
+
+    if (this.flags & 0x000001) {
+        this._procField('scheme_uri', 'string', -1);
     }
-    this.subsegments.push(subsegment);
-  }
 };
+// ISO/IEC 14496-12:2012 - 8.6.4.1 sdtp box 
+ISOBox.prototype._boxProcessors['sdtp'] = function() {
+  this._procFullBox();
+
+  var sample_count = -1;
+  if (this._parsing) {
+    sample_count = (this._raw.byteLength - (this._cursor.offset - this._raw.byteOffset));
+  }
+
+  this._procFieldArray('sample_dependency_table', sample_count, 'uint', 8);
+};
+
+// ISO/IEC 14496-12:2012 - 8.16.3 Segment Index Box
+ISOBox.prototype._boxProcessors['sidx'] = function() {
+  this._procFullBox();
+  this._procField('reference_ID', 'uint', 32);
+  this._procField('timescale', 'uint', 32);
+  this._procField('earliest_presentation_time', 'uint', (this.version == 1) ? 64 : 32);
+  this._procField('first_offset', 'uint', (this.version == 1) ? 64 : 32);
+  this._procField('reserved', 'uint', 16);
+  this._procField('reference_count', 'uint', 16);
+  this._procEntries('references', this.reference_count, function(entry) {
+    if (!this._parsing) {
+      entry.reference  = (entry.reference_type  & 0x00000001) << 31;
+      entry.reference |= (entry.referenced_size & 0x7FFFFFFF);
+      entry.sap  = (entry.starts_with_SAP & 0x00000001) << 31;
+      entry.sap |= (entry.SAP_type        & 0x00000003) << 28;
+      entry.sap |= (entry.SAP_delta_time  & 0x0FFFFFFF);
+    }
+    this._procEntryField(entry, 'reference', 'uint', 32);
+    this._procEntryField(entry, 'subsegment_duration', 'uint', 32);
+    this._procEntryField(entry, 'sap', 'uint', 32);
+    if (this._parsing) {
+      entry.reference_type = (entry.reference >> 31) & 0x00000001;
+      entry.referenced_size = entry.reference & 0x7FFFFFFF;
+      entry.starts_with_SAP  = (entry.sap >> 31) & 0x00000001;
+      entry.SAP_type = (entry.sap >> 28) & 0x00000007;
+      entry.SAP_delta_time = (entry.sap  & 0x0FFFFFFF);
+    }
+  });
+};
+
+// ISO/IEC 14496-12:2012 - 8.4.5.3 Sound Media Header Box
+ISOBox.prototype._boxProcessors['smhd'] = function() {
+  this._procFullBox();
+  this._procField('balance',  'uint', 16);
+  this._procField('reserved', 'uint', 16);
+};
+
+// ISO/IEC 14496-12:2012 - 8.16.4 Subsegment Index Box
+ISOBox.prototype._boxProcessors['ssix'] = function() {
+  this._procFullBox();
+  this._procField('subsegment_count', 'uint', 32);
+  this._procEntries('subsegments', this.subsegment_count, function(subsegment) {
+    this._procEntryField(subsegment, 'ranges_count', 'uint', 32);
+    this._procSubEntries(subsegment, 'ranges', subsegment.ranges_count, function(range) {
+      this._procEntryField(range, 'level', 'uint', 8);
+      this._procEntryField(range, 'range_size', 'uint', 24);
+    });
+  });
+};
+
 // ISO/IEC 14496-12:2012 - 8.5.2 Sample Description Box
-ISOBox.prototype._boxParsers['stsd'] = function() {
-  this._parseFullBox();
-  this.entry_count = this._readUint(32);
-  this.entries = [];
+ISOBox.prototype._boxProcessors['stsd'] = function() {
+  this._procFullBox();
+  this._procField('entry_count', 'uint', 32);
+  this._procSubBoxes('entries', this.entry_count);
+};
 
-  for (var i = 0; i < this.entry_count ; i++){
-    this.entries.push(ISOBox.parse(this));
-  }
-}
-;
 // ISO/IEC 14496-12:2015 - 8.7.7 Sub-Sample Information Box
-ISOBox.prototype._boxParsers['subs'] = function () {
-  this._parseFullBox();
-  this.entry_count = this._readUint(32);
-  this.samples_with_subsamples = [];
-  var sample_nr = 0
-  for (var i = 0; i < this.entry_count; i++) {
-    var sample_delta = this._readUint(32)
-    sample_nr += sample_delta;
-    var subsample_count = this._readUint(16);
-    if (subsample_count > 0) {
-      var sample = {'nr': sample_nr, 'subsamples': [] }
-      for (var j = 0; j < subsample_count; j++) {
-        var subsample = {};
-        if (this.version & 0x1) {
-          subsample.size = this._readUint(32);
-        } else {
-          subsample.size = this._readUint(16);
-        }
-        subsample.priority = this._readUint(8);
-        subsample.discardable = this._readUint(8);
-        subsample.codec_specific_parameters = this._readUint(32);
-        sample.subsamples.push(subsample);
-      }
-      this.samples_with_subsamples.push(sample);
-    }
-  }
+ISOBox.prototype._boxProcessors['subs'] = function () {
+  this._procFullBox();
+  this._procField('entry_count', 'uint', 32);
+  this._procEntries('entries', this.entry_count, function(entry) {
+    this._procEntryField(entry, 'sample_delta', 'uint', 32);
+    this._procEntryField(entry, 'subsample_count', 'uint', 16);
+    this._procSubEntries(entry, 'subsamples', entry.subsample_count, function(subsample) {
+      this._procEntryField(subsample, 'subsample_size', 'uint', (this.version === 1) ? 32 : 16);
+      this._procEntryField(subsample, 'subsample_priority', 'uint', 8);
+      this._procEntryField(subsample, 'discardable', 'uint', 8);
+      this._procEntryField(subsample, 'codec_specific_parameters', 'uint', 32);
+    });
+  });
 };
+
+//ISO/IEC 23001-7:2011 - 8.2 Track Encryption Box
+ISOBox.prototype._boxProcessors['tenc'] = function() {
+    this._procFullBox();
+
+    this._procField('default_IsEncrypted', 'uint', 24);
+    this._procField('default_IV_size', 'uint', 8);
+    this._procFieldArray('default_KID', 16,    'uint', 8);
+ };
+
 // ISO/IEC 14496-12:2012 - 8.8.12 Track Fragmnent Decode Time
-ISOBox.prototype._boxParsers['tfdt'] = function() {
-  this._parseFullBox();
-  if (this.version == 1) {
-    this.baseMediaDecodeTime = this._readUint(64);
-  } else {
-    this.baseMediaDecodeTime = this._readUint(32);    
-  }
+ISOBox.prototype._boxProcessors['tfdt'] = function() {
+  this._procFullBox();
+  this._procField('baseMediaDecodeTime', 'uint', (this.version == 1) ? 64 : 32);
 };
+
 // ISO/IEC 14496-12:2012 - 8.8.7 Track Fragment Header Box
-ISOBox.prototype._boxParsers['tfhd'] = function() {
-  this._parseFullBox();
-  this.track_ID = this._readUint(32);
-  if (this.flags & 0x1) this.base_data_offset = this._readUint(64);
-  if (this.flags & 0x2) this.sample_description_offset = this._readUint(32);
-  if (this.flags & 0x8) this.default_sample_duration = this._readUint(32);
-  if (this.flags & 0x10) this.default_sample_size = this._readUint(32);
-  if (this.flags & 0x20) this.default_sample_flags = this._readUint(32);
+ISOBox.prototype._boxProcessors['tfhd'] = function() {
+  this._procFullBox();
+  this._procField('track_ID', 'uint', 32);
+  if (this.flags & 0x01) this._procField('base_data_offset',          'uint', 64);
+  if (this.flags & 0x02) this._procField('sample_description_offset', 'uint', 32);
+  if (this.flags & 0x08) this._procField('default_sample_duration',   'uint', 32);
+  if (this.flags & 0x10) this._procField('default_sample_size',       'uint', 32);
+  if (this.flags & 0x20) this._procField('default_sample_flags',      'uint', 32);
 };
+
 // ISO/IEC 14496-12:2012 - 8.8.10 Track Fragment Random Access Box
-ISOBox.prototype._boxParsers['tfra'] = function() {
-  this._parseFullBox();
-  this.track_ID = this._readUint(32);
-  this._packed = this._readUint(32);
-
-  this.reserved = this._packed >>> 6;
-
-  this.length_size_of_traf_num = (this._packed && 0xFFFF00000000) >>> 4;
-  this.length_size_of_trun_num = (this._packed && 0xFFFF0000) >>> 2;
-  this.length_size_of_sample_num = this._packed && 0xFF;
-
-  this.number_of_entry = this._readUint(32);
-
-  this.entries = [];
-
-  for (var i = 0; i < this.number_of_entry ; i++){
-    var entry = {};
-
-    if(this.version==1){
-      entry.time = this._readUint(64);
-      entry.moof_offset = this._readUint(64);
-    }else{
-      entry.time = this._readUint(32);
-      entry.moof_offset = this._readUint(32);
-    }
-
-    entry.traf_number = this._readUint((this.length_size_of_traf_num + 1) * 8);
-    entry.trun_number = this._readUint((this.length_size_of_trun_num + 1) * 8);
-    entry.sample_number = this._readUint((this.length_size_of_sample_num + 1) * 8);
-
-    this.entries.push(entry);
+ISOBox.prototype._boxProcessors['tfra'] = function() {
+  this._procFullBox();
+  this._procField('track_ID', 'uint', 32);
+  if (!this._parsing) {
+    this.reserved = 0;
+    this.reserved |= (this.length_size_of_traf_num  & 0x00000030) << 4;
+    this.reserved |= (this.length_size_of_trun_num  & 0x0000000C) << 2;
+    this.reserved |= (this.length_size_of_sample_num  & 0x00000003);
   }
-}
-;
+  this._procField('reserved', 'uint', 32);
+  if (this._parsing) {
+    this.length_size_of_traf_num = (this.reserved & 0x00000030) >> 4;
+    this.length_size_of_trun_num = (this.reserved & 0x0000000C) >> 2;
+    this.length_size_of_sample_num = (this.reserved & 0x00000003);
+  }
+  this._procField('number_of_entry', 'uint', 32);
+  this._procEntries('entries', this.number_of_entry, function(entry) {
+    this._procEntryField(entry, 'time', 'uint', (this.version === 1) ? 64 : 32);
+    this._procEntryField(entry, 'moof_offset', 'uint', (this.version === 1) ? 64 : 32);
+    this._procEntryField(entry, 'traf_number', 'uint', (this.length_size_of_traf_num + 1) * 8);
+    this._procEntryField(entry, 'trun_number', 'uint', (this.length_size_of_trun_num + 1) * 8);
+    this._procEntryField(entry, 'sample_number', 'uint', (this.length_size_of_sample_num + 1) * 8);
+  });
+};
+
 // ISO/IEC 14496-12:2012 - 8.3.2 Track Header Box
-ISOBox.prototype._boxParsers['tkhd'] = function() {
-  this._parseFullBox();
-  
-  if (this.version == 1) {
-    this.creation_time     = this._readUint(64);
-    this.modification_time = this._readUint(64);
-    this.track_ID          = this._readUint(32);
-    this.reserved1         = this._readUint(32);
-    this.duration          = this._readUint(64);
-  } else {
-    this.creation_time     = this._readUint(32);
-    this.modification_time = this._readUint(32);
-    this.track_ID          = this._readUint(32);
-    this.reserved1         = this._readUint(32);
-    this.duration          = this._readUint(32);
-  }
-  
-  this.reserved2 = [
-    this._readUint(32),
-    this._readUint(32)
-  ];
-  this.layer = this._readUint(16);
-  this.alternate_group = this._readUint(16);
-  this.volume = this._readTemplate(16);
-  this.reserved3 = this._readUint(16);
-  this.matrix = [];
-  for (var i=0; i<9; i++) {
-    this.matrix.push(this._readTemplate(32));
-  }
-  this.width = this._readUint(32);
-  this.height = this._readUint(32);
+ISOBox.prototype._boxProcessors['tkhd'] = function() {
+  this._procFullBox();
+  this._procField('creation_time',      'uint',     (this.version == 1) ? 64 : 32);
+  this._procField('modification_time',  'uint',     (this.version == 1) ? 64 : 32);
+  this._procField('track_ID',           'uint',     32);
+  this._procField('reserved1',          'uint',     32);
+  this._procField('duration',           'uint',     (this.version == 1) ? 64 : 32);
+  this._procFieldArray('reserved2', 2,  'uint',     32);
+  this._procField('layer',              'uint',     16);
+  this._procField('alternate_group',    'uint',     16);
+  this._procField('volume',             'template', 16);
+  this._procField('reserved3',          'uint',     16);
+  this._procFieldArray('matrix', 9,     'template', 32);
+  this._procField('width',              'template', 32);
+  this._procField('height',             'template', 32);
 };
-// ISO/IEC 14496-12:2012 - 8.8.3 Track Extends Box
-ISOBox.prototype._boxParsers['trex'] = function() {
-  this._parseFullBox();
 
-  this.track_ID = this._readUint(32);
-  this.default_sample_description_index = this._readUint(32);
-  this.default_sample_duration = this._readUint(32);
-  this.default_sample_size = this._readUint(32);
-  this.default_sample_flags = this._readUint(32);
+// ISO/IEC 14496-12:2012 - 8.8.3 Track Extends Box
+ISOBox.prototype._boxProcessors['trex'] = function() {
+  this._procFullBox();
+  this._procField('track_ID',                         'uint', 32);
+  this._procField('default_sample_description_index', 'uint', 32);
+  this._procField('default_sample_duration',          'uint', 32);
+  this._procField('default_sample_size',              'uint', 32);
+  this._procField('default_sample_flags',             'uint', 32);
 };
+
 // ISO/IEC 14496-12:2012 - 8.8.8 Track Run Box
 // Note: the 'trun' box has a direct relation to the 'tfhd' box for defaults.
 // These defaults are not set explicitly here, but are left to resolve for the user.
-ISOBox.prototype._boxParsers['trun'] = function() {
-  this._parseFullBox();
-  this.sample_count = this._readUint(32);
-  if (this.flags & 0x1) this.data_offset = this._readInt(32);
-  if (this.flags & 0x4) this.first_sample_flags = this._readUint(32);
-  this.samples = [];
-  for (var i=0; i<this.sample_count; i++) {
-    var sample = {};
-    if (this.flags & 0x100) sample.sample_duration = this._readUint(32);
-    if (this.flags & 0x200) sample.sample_size = this._readUint(32);
-    if (this.flags & 0x400) sample.sample_flags = this._readUint(32);
-    if (this.flags & 0x800) {
-      if (this.version == 0) {
-        sample.sample_composition_time_offset = this._readUint(32);
-      } else {
-        sample.sample_composition_time_offset = this._readInt(32);
-      }
-    }
-    this.samples.push(sample);
-  }
+ISOBox.prototype._boxProcessors['trun'] = function() {
+  this._procFullBox();
+  this._procField('sample_count', 'uint', 32);
+  if (this.flags & 0x1) this._procField('data_offset', 'int', 32);
+  if (this.flags & 0x4) this._procField('first_sample_flags', 'uint', 32);
+  this._procEntries('samples', this.sample_count, function(sample) {
+    if (this.flags & 0x100) this._procEntryField(sample, 'sample_duration', 'uint', 32);
+    if (this.flags & 0x200) this._procEntryField(sample, 'sample_size', 'uint', 32);
+    if (this.flags & 0x400) this._procEntryField(sample, 'sample_flags', 'uint', 32);
+    if (this.flags & 0x800) this._procEntryField(sample, 'sample_composition_time_offset', (this.version === 1) ? 'int' : 'uint',  32);
+  });
 };
+
+// ISO/IEC 14496-12:2012 - 8.7.2 Data Reference Box
+ISOBox.prototype._boxProcessors['url '] = ISOBox.prototype._boxProcessors['urn '] = function() {
+  this._procFullBox();
+  if (this.type === 'urn ') {
+    this._procField('name', 'string', -1);
+  }
+  this._procField('location', 'string', -1);
+};
+
 // ISO/IEC 14496-30:2014 - WebVTT Source Label Box
-ISOBox.prototype._boxParsers['vlab'] = function() {
-  var source_label_raw = new DataView(this._raw.buffer, this._cursor.offset, this._raw.byteLength - (this._cursor.offset - this._offset));
-  this.source_label = ISOBoxer.Utils.dataViewToString(source_label_raw);
-}
-;
+ISOBox.prototype._boxProcessors['vlab'] = function() {
+  this._procField('source_label', 'utf8');
+};
+
+// ISO/IEC 14496-12:2012 - 8.4.5.2 Video Media Header Box
+ISOBox.prototype._boxProcessors['vmhd'] = function() {
+  this._procFullBox();
+  this._procField('graphicsmode', 'uint', 16);
+  this._procFieldArray('opcolor', 3, 'uint', 16);
+};
+
 // ISO/IEC 14496-30:2014 - WebVTT Configuration Box
-ISOBox.prototype._boxParsers['vttC'] = function() {
-  var config_raw = new DataView(this._raw.buffer, this._cursor.offset, this._raw.byteLength - (this._cursor.offset - this._offset));
-  this.config = ISOBoxer.Utils.dataViewToString(config_raw);
-}
-;
+ISOBox.prototype._boxProcessors['vttC'] = function() {
+  this._procField('config', 'utf8');
+};
+
 // ISO/IEC 14496-30:2014 - WebVTT Empty Sample Box
-ISOBox.prototype._boxParsers['vtte'] = function() {
+ISOBox.prototype._boxProcessors['vtte'] = function() {
   // Nothing should happen here.
-}
+};
 
 },{}],6:[function(_dereq_,module,exports){
 'use strict';
@@ -3434,7 +3946,7 @@ Object.defineProperty(exports, '__esModule', {
     value: true
 });
 exports.getVersionString = getVersionString;
-var VERSION = '2.4.1-abr-5';
+var VERSION = '2.4.1-8';
 
 function getVersionString() {
     return VERSION;
