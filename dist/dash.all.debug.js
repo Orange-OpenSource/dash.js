@@ -15601,6 +15601,7 @@ var CoreEvents = (function (_EventsBase) {
         this.STREAMS_COMPOSED = 'streamsComposed';
         this.STREAM_BUFFERING_COMPLETED = 'streamBufferingCompleted';
         this.STREAM_COMPLETED = 'streamCompleted';
+        this.TEXT_TRACKS_QUEUE_INITIALIZED = 'textTracksQueueInitialized';
         this.TIMED_TEXT_REQUESTED = 'timedTextRequested';
         this.TIME_SYNCHRONIZATION_COMPLETED = 'timeSynchronizationComplete';
         this.URL_RESOLUTION_FAILED = 'urlResolutionFailed';
@@ -25047,6 +25048,99 @@ function MediaPlayer() {
      ---------------------------------------------------------------------------
     */
     /**
+     * Set default language for text. If default language is not one of text tracks, dash will choose the first one.
+     *
+     * @param {string} lang - default language
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function setTextDefaultLanguage(lang) {
+        if (textController === undefined) {
+            textController = (0, _textTextController2['default'])(context).getInstance();
+        }
+
+        textController.setTextDefaultLanguage(lang);
+    }
+
+    /**
+     * Get default language for text.
+     *
+     * @return {string} the default language if it has been set using setTextDefaultLanguage
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function getTextDefaultLanguage() {
+        if (textController === undefined) {
+            textController = (0, _textTextController2['default'])(context).getInstance();
+        }
+
+        return textController.getTextDefaultLanguage();
+    }
+
+    /**
+     * Set enabled default state.
+     * This is used to enable/disable text when a file is loaded.
+     * During playback, use enableText to enable text for the file
+     *
+     * @param {boolean} enable - true to enable text, false otherwise
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function setTextDefaultEnabled(enable) {
+        if (textController === undefined) {
+            textController = (0, _textTextController2['default'])(context).getInstance();
+        }
+
+        textController.setTextDefaultEnabled(enable);
+    }
+
+    /**
+     * Get enabled default state.
+     *
+     * @return {boolean}  default enable state
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function getTextDefaultEnabled() {
+        if (textController === undefined) {
+            textController = (0, _textTextController2['default'])(context).getInstance();
+        }
+
+        return textController.getTextDefaultEnabled();
+    }
+
+    /**
+     * Enable/disable text
+     * When enabling text, dash will choose the previous selected text track
+     *
+     * @param {boolean} enable - true to enable text, false otherwise (same as setTextTrack(-1))
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function enableText(enable) {
+        if (textController === undefined) {
+            textController = (0, _textTextController2['default'])(context).getInstance();
+        }
+
+        textController.enableText(enable);
+    }
+
+    /**
+     * Return if text is enabled
+     *
+     * @return {boolean} return true if text is enabled, false otherwise
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function isTextEnabled() {
+        if (textController === undefined) {
+            textController = (0, _textTextController2['default'])(context).getInstance();
+        }
+
+        return textController.isTextEnabled();
+    }
+
+    /**
      * Use this method to change the current text track for both external time text files and fragmented text tracks. There is no need to
      * set the track mode on the video object to switch a track when using this method.
      *
@@ -25928,6 +26022,12 @@ function MediaPlayer() {
         setLimitBitrateByPortal: setLimitBitrateByPortal,
         getUsePixelRatioInLimitBitrateByPortal: getUsePixelRatioInLimitBitrateByPortal,
         setUsePixelRatioInLimitBitrateByPortal: setUsePixelRatioInLimitBitrateByPortal,
+        setTextDefaultLanguage: setTextDefaultLanguage,
+        getTextDefaultLanguage: getTextDefaultLanguage,
+        setTextDefaultEnabled: setTextDefaultEnabled,
+        getTextDefaultEnabled: getTextDefaultEnabled,
+        enableText: enableText,
+        isTextEnabled: isTextEnabled,
         setTextTrack: setTextTrack,
         getBitrateInfoListFor: getBitrateInfoListFor,
         setInitialBitrateFor: setInitialBitrateFor,
@@ -26766,7 +26866,7 @@ function Stream(config) {
         }
     }
 
-    function createStreamProcessor(mediaInfo, mediaSource, optionalSettings) {
+    function createStreamProcessor(mediaInfo, allMediaForType, mediaSource, optionalSettings) {
         var streamProcessor = (0, _StreamProcessor2['default'])(context).create({
             type: getMimeTypeOrType(mediaInfo),
             mimeType: mediaInfo.mimeType,
@@ -26789,7 +26889,6 @@ function Stream(config) {
             errHandler: errHandler
         });
 
-        var allMediaForType = adapter.getAllMediaInfoForType(streamInfo, mediaInfo.type);
         streamProcessor.initialize(mediaSource);
         abrController.updateTopQualityIndex(mediaInfo);
 
@@ -26857,7 +26956,7 @@ function Stream(config) {
         // TODO : How to tell index handler live/duration?
         // TODO : Pass to controller and then pass to each method on handler?
 
-        createStreamProcessor(initialMediaInfo, mediaSource);
+        createStreamProcessor(initialMediaInfo, allMediaForType, mediaSource);
     }
 
     function initializeMedia(mediaSource) {
@@ -46486,14 +46585,21 @@ var _utilsTTMLParser = _dereq_(201);
 
 var _utilsTTMLParser2 = _interopRequireDefault(_utilsTTMLParser);
 
+var _coreEventBus = _dereq_(50);
+
+var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
+
+var _coreEventsEvents = _dereq_(54);
+
+var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
+
 function TextController() {
 
     var context = this.context;
     var instance = undefined;
     var textSourceBuffer = undefined;
 
-    var allTracksAreDisabled = undefined,
-        errHandler = undefined,
+    var errHandler = undefined,
         dashManifestModel = undefined,
         manifestModel = undefined,
         mediaController = undefined,
@@ -46501,16 +46607,27 @@ function TextController() {
         streamController = undefined,
         textTracks = undefined,
         vttParser = undefined,
-        ttmlParser = undefined;
+        ttmlParser = undefined,
+        eventBus = undefined,
+        defaultLanguage = undefined,
+        lastEnabledIndex = undefined,
+        textDefaultEnabled = undefined,
+        // this is used for default settings (each time a file is loaded, we check value of this settings )
+    allTracksAreDisabled = undefined; // this is used for one session (when a file has been loaded, we use this settings to enable/disable text)
 
     function setup() {
 
+        defaultLanguage = '';
+        lastEnabledIndex = -1;
+        textDefaultEnabled = true;
         textTracks = (0, _TextTracks2['default'])(context).getInstance();
         vttParser = (0, _utilsVTTParser2['default'])(context).getInstance();
         ttmlParser = (0, _utilsTTMLParser2['default'])(context).getInstance();
         textSourceBuffer = (0, _TextSourceBuffer2['default'])(context).getInstance();
+        eventBus = (0, _coreEventBus2['default'])(context).getInstance();
 
         textTracks.initialize();
+        eventBus.on(_coreEventsEvents2['default'].TEXT_TRACKS_QUEUE_INITIALIZED, onTextTracksAdded, instance);
 
         resetInitialSettings();
     }
@@ -46573,6 +46690,73 @@ function TextController() {
         textSourceBuffer.addEmbeddedTrack(mediaInfo);
     }
 
+    function setTextDefaultLanguage(lang) {
+        if (typeof lang !== 'string') {
+            return;
+        }
+
+        defaultLanguage = lang;
+    }
+
+    function getTextDefaultLanguage() {
+        return defaultLanguage;
+    }
+
+    function onTextTracksAdded(e) {
+        var tracks = e.tracks;
+        var index = e.index;
+        // find track corresponding to default subtitle and apply it
+        var defaultLanguageIndex = tracks.findIndex(function (item) {
+            return item.lang === defaultLanguage;
+        });
+
+        if (defaultLanguageIndex !== -1) {
+            this.setTextTrack(defaultLanguageIndex);
+            index = defaultLanguageIndex;
+        }
+
+        if (!textDefaultEnabled) {
+            // disable text at startup
+            this.setTextTrack(-1);
+        }
+
+        lastEnabledIndex = index;
+        eventBus.trigger(_coreEventsEvents2['default'].TEXT_TRACKS_ADDED, {
+            enabled: !allTracksAreDisabled,
+            index: index,
+            tracks: tracks
+        });
+    }
+
+    function setTextDefaultEnabled(enable) {
+        textDefaultEnabled = enable;
+    }
+
+    function getTextDefaultEnabled() {
+        return textDefaultEnabled;
+    }
+
+    function enableText(enable) {
+        var isTextEnabled = !allTracksAreDisabled;
+        if (isTextEnabled !== enable) {
+            // change track selection
+            if (enable) {
+                // apply last enabled tractk
+                this.setTextTrack(lastEnabledIndex);
+            }
+
+            if (!enable) {
+                // keep last index and disable text track
+                lastEnabledIndex = this.getCurrentTrackIdx();
+                this.setTextTrack(-1);
+            }
+        }
+    }
+
+    function isTextEnabled() {
+        return !allTracksAreDisabled;
+    }
+
     function setTextTrack(idx) {
         //For external time text file,  the only action needed to change a track is marking the track mode to showing.
         // Fragmented text tracks need the additional step of calling TextController.setTextTrack();
@@ -46609,7 +46793,6 @@ function TextController() {
     }
 
     function getCurrentTrackIdx() {
-        var textTracks = textSourceBuffer.getConfig().textTracks;
         return textTracks.getCurrentTrackIdx();
     }
 
@@ -46627,6 +46810,12 @@ function TextController() {
         getTextSourceBuffer: getTextSourceBuffer,
         getAllTracksAreDisabled: getAllTracksAreDisabled,
         addEmbeddedTrack: addEmbeddedTrack,
+        getTextDefaultLanguage: getTextDefaultLanguage,
+        setTextDefaultLanguage: setTextDefaultLanguage,
+        setTextDefaultEnabled: setTextDefaultEnabled,
+        getTextDefaultEnabled: getTextDefaultEnabled,
+        enableText: enableText,
+        isTextEnabled: isTextEnabled,
         setTextTrack: setTextTrack,
         getCurrentTrackIdx: getCurrentTrackIdx,
         reset: reset
@@ -46639,7 +46828,7 @@ TextController.__dashjs_factory_name = 'TextController';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(TextController);
 module.exports = exports['default'];
 
-},{"100":100,"187":187,"188":188,"201":201,"203":203,"51":51}],187:[function(_dereq_,module,exports){
+},{"100":100,"187":187,"188":188,"201":201,"203":203,"50":50,"51":51,"54":54}],187:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -47398,8 +47587,6 @@ function TextTracks() {
         var kind = textTrackQueue[i].kind;
         var label = textTrackQueue[i].label !== undefined ? textTrackQueue[i].label : textTrackQueue[i].lang;
         var lang = textTrackQueue[i].lang;
-        var isTTML = textTrackQueue[i].isTTML;
-        var isEmbedded = textTrackQueue[i].isEmbedded;
         var track = isChrome ? document.createElement('track') : videoModel.addTextTrack(kind, label, lang);
 
         if (isChrome) {
@@ -47407,9 +47594,6 @@ function TextTracks() {
             track.label = label;
             track.srclang = lang;
         }
-
-        track.isEmbedded = isEmbedded;
-        track.isTTML = isTTML;
 
         return track;
     }
@@ -47767,7 +47951,7 @@ function TextTracks() {
     }
 
     function getTrackByIdx(idx) {
-        return idx >= 0 && textTrackQueue[idx] ? videoModel.getTextTrack(textTrackQueue[idx].kind, textTrackQueue[idx].label, textTrackQueue[idx].lang, textTrackQueue[idx].isTTML, textTrackQueue[idx].isEmbedded) : null;
+        return idx >= 0 && textTrackQueue[idx] ? videoModel.getTextTrack(textTrackQueue[idx].kind, textTrackQueue[idx].label, textTrackQueue[idx].lang) : null;
     }
 
     function getCurrentTrackIdx() {
