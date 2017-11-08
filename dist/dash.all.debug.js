@@ -4191,7 +4191,7 @@ Object.defineProperty(exports, '__esModule', {
     value: true
 });
 exports.getVersionString = getVersionString;
-var VERSION = '2.4.1-8';
+var VERSION = '2.4.1-9';
 
 function getVersionString() {
     return VERSION;
@@ -7430,13 +7430,17 @@ function DashManifestModel() {
         if (adaptations.length > 1 && streamInfo) {
             var currentTrack = mediaController.getCurrentTrackFor(type, streamInfo);
             var allMediaInfoForType = adaptor.getAllMediaInfoForType(manifest, streamInfo, type);
+            var mainAdaptation = undefined;
             for (var i = 0, ln = adaptations.length; i < ln; i++) {
                 if (currentTrack && mediaController.isTracksEqual(currentTrack, allMediaInfoForType[i])) {
                     return adaptations[i];
                 }
                 if (getIsMain(adaptations[i])) {
-                    return adaptations[i];
+                    mainAdaptation = adaptations[i];
                 }
+            }
+            if (mainAdaptation) {
+                return mainAdaptation;
             }
         }
 

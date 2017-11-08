@@ -238,13 +238,17 @@ function DashManifestModel() {
         if (adaptations.length > 1 && streamInfo) {
             let currentTrack = mediaController.getCurrentTrackFor(type, streamInfo);
             let allMediaInfoForType = adaptor.getAllMediaInfoForType(manifest, streamInfo, type);
+            let mainAdaptation;
             for (let i = 0, ln = adaptations.length; i < ln; i++) {
                 if (currentTrack && mediaController.isTracksEqual(currentTrack, allMediaInfoForType[i])) {
                     return adaptations[i];
                 }
                 if (getIsMain(adaptations[i])) {
-                    return adaptations[i];
+                    mainAdaptation = adaptations[i];
                 }
+            }
+            if (mainAdaptation) {
+                return mainAdaptation;
             }
         }
 
