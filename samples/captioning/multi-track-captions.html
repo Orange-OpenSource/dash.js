@@ -13,18 +13,22 @@
     <!--<script src="../../dist/dash.all.min.js"></script>-->
 
     <script>
-        var EXTERNAL_CAPTION_URL = "http://dash.edgesuite.net/dash264/TestCases/4b/qualcomm/1/ED_OnDemand_5SecSeg_Subtitles.mpd", // need to manually seek to get stream to start... issue with MPD but only sample with multi adaptations for external sidecar caption text xml
-            FRAGMENTED_CAPTION_URL = "http://vm2.dashif.org/dash/vod/testpic_2s/multi_subs.mpd",
+        var EXTERNAL_CAPTION_URL = "https://dash.akamaized.net/dash264/TestCases/4b/qualcomm/1/ED_OnDemand_5SecSeg_Subtitles.mpd", // need to manually seek to get stream to start... issue with MPD but only sample with multi adaptations for external sidecar caption text xml
+            FRAGMENTED_CAPTION_URL = "https://vm2.dashif.org/dash/vod/testpic_2s/multi_subs.mpd",
             videoElement,
             controlbar,
             player;
 
         function startVideo() {
-            var url = FRAGMENTED_CAPTION_URL;
+            var url = FRAGMENTED_CAPTION_URL,
+                TTMLRenderingDiv;
 
             videoElement = document.querySelector(".videoContainer video");
+            TTMLRenderingDiv = document.querySelector("#ttml-rendering-div");
+
             player = dashjs.MediaPlayer().create();
             player.initialize(videoElement, url, true);
+            player.attachTTMLRenderingDiv(TTMLRenderingDiv);
             controlbar = new ControlBar(player); // Checkout ControlBar.js for more info on how to target/add text tracks to UI
             controlbar.initialize();
         }
@@ -45,6 +49,7 @@
     <body onload="startVideo()">
         <div class="videoContainer">
             <video preload="auto" autoplay="true" > </video>
+            <div id="ttml-rendering-div"></div>
 
             <div id="videoController" class="video-controller unselectable">
                 <div id="playPauseBtn" class="btn-play-pause" title="Play/Pause">

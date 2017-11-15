@@ -34,14 +34,17 @@ import FactoryMaker from '../../core/FactoryMaker';
 function RulesContext(config) {
 
     let instance;
-    let representationInfo = config.streamProcessor.getCurrentRepresentationInfo();
-    let sp = config.streamProcessor;
-    let currentValue = config.currentValue;
-    let playbackIndex = config.playbackIndex;
-    let switchHistory = config.switchHistory;
-    let droppedFramesHistory = config.droppedFramesHistory;
-    let currentRequest = config.currentRequest;
-    let richBuffer = config.hasRichBuffer;
+    const abrController = config.abrController;
+    const streamProcessor = config.streamProcessor;
+    const representationInfo = config.streamProcessor.getCurrentRepresentationInfo();
+    const switchHistory = config.switchHistory;
+    const droppedFramesHistory = config.droppedFramesHistory;
+    const currentRequest = config.currentRequest;
+    const bufferOccupancyABR = config.useBufferOccupancyABR;
+
+    function getMediaType() {
+        return representationInfo.mediaInfo.type;
+    }
 
     function getStreamInfo() {
         return representationInfo.mediaInfo.streamInfo;
@@ -51,24 +54,16 @@ function RulesContext(config) {
         return representationInfo.mediaInfo;
     }
 
-    function getTrackInfo() {
+    function getRepresentationInfo() {
         return representationInfo;
     }
 
-    function getCurrentValue() {
-        return currentValue;
-    }
-
-    function getManifestInfo() {
-        return representationInfo.mediaInfo.streamInfo.manifestInfo;
-    }
-
     function getStreamProcessor() {
-        return sp;
+        return streamProcessor;
     }
 
-    function getPlaybackIndex() {
-        return playbackIndex;
+    function getAbrController() {
+        return abrController;
     }
 
     function getSwitchHistory() {
@@ -83,22 +78,21 @@ function RulesContext(config) {
         return currentRequest;
     }
 
-    function hasRichBuffer() {
-        return richBuffer;
+    function useBufferOccupancyABR() {
+        return bufferOccupancyABR;
     }
 
     instance = {
-        getCurrentValue: getCurrentValue,
-        getManifestInfo: getManifestInfo,
+        getMediaType: getMediaType,
         getMediaInfo: getMediaInfo,
-        getPlaybackIndex: getPlaybackIndex,
         getDroppedFramesHistory: getDroppedFramesHistory,
         getCurrentRequest: getCurrentRequest,
         getSwitchHistory: getSwitchHistory,
         getStreamInfo: getStreamInfo,
         getStreamProcessor: getStreamProcessor,
-        getTrackInfo: getTrackInfo,
-        hasRichBuffer: hasRichBuffer
+        getAbrController: getAbrController,
+        getRepresentationInfo: getRepresentationInfo,
+        useBufferOccupancyABR: useBufferOccupancyABR
     };
 
     return instance;

@@ -39,14 +39,14 @@ function ListSegmentsGetter(config, isDynamic) {
 
     let instance;
 
-    function getSegmentsFromList(representation, requestedTime, index, availabilityUpperLimit) {
-        var list = representation.adaptation.period.mpd.manifest.Period_asArray[representation.adaptation.period.index].
+    function getSegmentsFromList(representation, requestedTime, index) {
+        let list = representation.adaptation.period.mpd.manifest.Period_asArray[representation.adaptation.period.index].
             AdaptationSet_asArray[representation.adaptation.index].Representation_asArray[representation.index].SegmentList;
-        var len = list.SegmentURL_asArray.length;
+        const len = list.SegmentURL_asArray.length;
 
-        var segments = [];
+        let segments = [];
 
-        var periodSegIdx,
+        let periodSegIdx,
             seg,
             s,
             range,
@@ -56,7 +56,7 @@ function ListSegmentsGetter(config, isDynamic) {
 
         start = representation.startNumber;
 
-        range = decideSegmentListRangeForTemplate(timelineConverter, isDynamic, representation, requestedTime, index, availabilityUpperLimit);
+        range = decideSegmentListRangeForTemplate(timelineConverter, isDynamic, representation, requestedTime, index);
         startIdx = Math.max(range.start, 0);
         endIdx = Math.min(range.end, list.SegmentURL_asArray.length - 1);
 

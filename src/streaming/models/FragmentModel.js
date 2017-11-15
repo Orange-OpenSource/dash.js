@@ -47,31 +47,25 @@ function FragmentModel(config) {
     const log = Debug(context).getInstance().log;
     const eventBus = EventBus(context).getInstance();
     const metricsModel = config.metricsModel;
+    const fragmentLoader = config.fragmentLoader;
 
     let instance,
-        scheduleController,
+        streamProcessor,
         executedRequests,
-        loadingRequests,
-        fragmentLoader;
+        loadingRequests;
 
     function setup() {
-        scheduleController = null;
-        fragmentLoader = null;
-        executedRequests = [];
-        loadingRequests = [];
+        resetInitialSettings();
         eventBus.on(Events.LOADING_COMPLETED, onLoadingCompleted, instance);
+        eventBus.on(Events.LOADING_ABANDONED, onLoadingAborted, instance);
     }
 
-    function setLoader(value) {
-        fragmentLoader = value;
+    function setStreamProcessor(value) {
+        streamProcessor = value;
     }
 
-    function setScheduleController(value) {
-        scheduleController = value;
-    }
-
-    function getScheduleController() {
-        return scheduleController;
+    function getStreamProcessor() {
+        return streamProcessor;
     }
 
     function isFragmentLoaded(request) {
@@ -89,7 +83,7 @@ function FragmentModel(config) {
 
         const check = function (requests) {
             let isLoaded = false;
-            requests.some( req => {
+            requests.some(req => {
                 if (isEqualMedia(request, req) || isEqualInit(request, req) || isEqualComplete(request, req)) {
                     isLoaded = true;
                     return isLoaded;
@@ -98,7 +92,32 @@ function FragmentModel(config) {
             return isLoaded;
         };
 
+        if (!request) {
+            return false;
+        }
+
         return check(executedRequests);
+    }
+
+    function isFragmentLoadedOrPending(request) {
+        let isLoaded = false;
+        let i = 0;
+        let req;
+
+        // First, check if the fragment has already been loaded
+        isLoaded = isFragmentLoaded(request);
+
+        // Then, check if the fragment is about to be loeaded
+        if (!isLoaded) {
+            for (i = 0; i < loadingRequests.length; i++) {
+                req = loadingRequests[i];
+                if ((request.url === req.url) && (request.startTime === req.startTime)) {
+                    isLoaded = true;
+                }
+            }
+        }
+
+        return isLoaded;
     }
 
     /**
@@ -116,10 +135,10 @@ function FragmentModel(config) {
      */
     function getRequests(filter) {
 
-        const states = filter.state instanceof Array ? filter.state : [filter.state];
+        const states = filter ? filter.state instanceof Array ? filter.state : [filter.state] : [];
 
         let filteredRequests = [];
-        states.forEach( state => {
+        states.forEach(state => {
             const requests = getRequestsForState(state);
             filteredRequests = filteredRequests.concat(filterRequests(requests, filter));
         });
@@ -128,7 +147,7 @@ function FragmentModel(config) {
     }
 
     function removeExecutedRequestsBeforeTime(time) {
-        executedRequests = executedRequests.filter( req => isNaN(req.startTime) || req.startTime >= time );
+        executedRequests = executedRequests.filter(req => isNaN(req.startTime) || req.startTime >= time);
     }
 
     function abortRequests() {
@@ -142,7 +161,10 @@ function FragmentModel(config) {
             case FragmentRequest.ACTION_COMPLETE:
                 executedRequests.push(request);
                 addSchedulingInfoMetrics(request, FRAGMENT_MODEL_EXECUTED);
-                eventBus.trigger(Events.STREAM_COMPLETED, {request: request, fragmentModel: this});
+                eventBus.trigger(Events.STREAM_COMPLETED, {
+                    request: request,
+                    fragmentModel: this
+                });
                 break;
             case FragmentRequest.ACTION_DOWNLOAD:
                 addSchedulingInfoMetrics(request, FRAGMENT_MODEL_LOADING);
@@ -155,7 +177,10 @@ function FragmentModel(config) {
     }
 
     function loadCurrentFragment(request) {
-        eventBus.trigger(Events.FRAGMENT_LOADING_STARTED, {sender: instance, request: request});
+        eventBus.trigger(Events.FRAGMENT_LOADING_STARTED, {
+            sender: instance,
+            request: request
+        });
         fragmentLoader.load(request);
     }
 
@@ -241,24 +266,33 @@ function FragmentModel(config) {
         });
     }
 
-    function reset() {
-        eventBus.off(Events.LOADING_COMPLETED, onLoadingCompleted, this);
+    function onLoadingAborted(e) {
+        if (e.sender !== fragmentLoader) return;
 
-        if (fragmentLoader) {
-            fragmentLoader.reset();
-            fragmentLoader = null;
-        }
+        eventBus.trigger(Events.FRAGMENT_LOADING_ABANDONED, {streamProcessor: this.getStreamProcessor(), request: e.request, mediaType: e.mediaType});
+    }
 
+    function resetInitialSettings() {
         executedRequests = [];
         loadingRequests = [];
     }
 
+    function reset() {
+        eventBus.off(Events.LOADING_COMPLETED, onLoadingCompleted, this);
+        eventBus.off(Events.LOADING_ABANDONED, onLoadingAborted, this);
+
+        if (fragmentLoader) {
+            fragmentLoader.reset();
+        }
+        resetInitialSettings();
+    }
+
     instance = {
-        setLoader: setLoader,
-        setScheduleController: setScheduleController,
-        getScheduleController: getScheduleController,
+        setStreamProcessor: setStreamProcessor,
+        getStreamProcessor: getStreamProcessor,
         getRequests: getRequests,
         isFragmentLoaded: isFragmentLoaded,
+        isFragmentLoadedOrPending: isFragmentLoadedOrPending,
         removeExecutedRequestsBeforeTime: removeExecutedRequestsBeforeTime,
         abortRequests: abortRequests,
         executeRequest: executeRequest,
@@ -275,4 +309,5 @@ factory.FRAGMENT_MODEL_LOADING = FRAGMENT_MODEL_LOADING;
 factory.FRAGMENT_MODEL_EXECUTED = FRAGMENT_MODEL_EXECUTED;
 factory.FRAGMENT_MODEL_CANCELED = FRAGMENT_MODEL_CANCELED;
 factory.FRAGMENT_MODEL_FAILED = FRAGMENT_MODEL_FAILED;
+FactoryMaker.updateClassFactory(FragmentModel.__dashjs_factory_name, factory);
 export default factory;

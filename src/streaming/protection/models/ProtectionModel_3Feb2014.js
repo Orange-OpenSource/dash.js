@@ -44,13 +44,12 @@ import KeyError from '../vo/KeyError';
 import KeyMessage from '../vo/KeyMessage';
 import KeySystemConfiguration from '../vo/KeySystemConfiguration';
 import KeySystemAccess from '../vo/KeySystemAccess';
-import Events from '../../../core/events/Events';
-import FactoryMaker from '../../../core/FactoryMaker';
 
 function ProtectionModel_3Feb2014(config) {
 
     let context = this.context;
     let eventBus = config.eventBus;//Need to pass in here so we can use same instance since this is optional module
+    const events = config.events;
     let log = config.log;
     let api = config.api;
 
@@ -76,15 +75,15 @@ function ProtectionModel_3Feb2014(config) {
 
     function reset() {
         try {
-            for (var i = 0; i < sessions.length; i++) {
+            for (let i = 0; i < sessions.length; i++) {
                 closeKeySession(sessions[i]);
             }
             if (videoElement) {
                 videoElement.removeEventListener(api.needkey, eventHandler);
             }
-            eventBus.trigger(Events.TEARDOWN_COMPLETE);
+            eventBus.trigger(events.TEARDOWN_COMPLETE);
         } catch (error) {
-            eventBus.trigger(Events.TEARDOWN_COMPLETE, {error: 'Error tearing down key sessions and MediaKeys! -- ' + error.message});
+            eventBus.trigger(events.TEARDOWN_COMPLETE, {error: 'Error tearing down key sessions and MediaKeys! -- ' + error.message});
         }
     }
 
@@ -93,8 +92,8 @@ function ProtectionModel_3Feb2014(config) {
     }
 
     function getAllInitData() {
-        var retVal = [];
-        for (var i = 0; i < sessions.length; i++) {
+        let retVal = [];
+        for (let i = 0; i < sessions.length; i++) {
             retVal.push(sessions[i].initData);
         }
         return retVal;
@@ -104,23 +103,23 @@ function ProtectionModel_3Feb2014(config) {
 
         // Try key systems in order, first one with supported key system configuration
         // is used
-        var found = false;
-        for (var ksIdx = 0; ksIdx < ksConfigurations.length; ksIdx++) {
-            var systemString = ksConfigurations[ksIdx].ks.systemString;
-            var configs = ksConfigurations[ksIdx].configs;
-            var supportedAudio = null;
-            var supportedVideo = null;
+        let found = false;
+        for (let ksIdx = 0; ksIdx < ksConfigurations.length; ksIdx++) {
+            let systemString = ksConfigurations[ksIdx].ks.systemString;
+            let configs = ksConfigurations[ksIdx].configs;
+            let supportedAudio = null;
+            let supportedVideo = null;
 
             // Try key system configs in order, first one with supported audio/video
             // is used
-            for (var configIdx = 0; configIdx < configs.length; configIdx++) {
-                var audios = configs[configIdx].audioCapabilities;
-                var videos = configs[configIdx].videoCapabilities;
+            for (let configIdx = 0; configIdx < configs.length; configIdx++) {
+                let audios = configs[configIdx].audioCapabilities;
+                let videos = configs[configIdx].videoCapabilities;
 
                 // Look for supported audio container/codecs
                 if (audios && audios.length !== 0) {
                     supportedAudio = []; // Indicates that we have a requested audio config
-                    for (var audioIdx = 0; audioIdx < audios.length; audioIdx++) {
+                    for (let audioIdx = 0; audioIdx < audios.length; audioIdx++) {
                         if (window[api.MediaKeys].isTypeSupported(systemString, audios[audioIdx].contentType)) {
                             supportedAudio.push(audios[audioIdx]);
                         }
@@ -130,7 +129,7 @@ function ProtectionModel_3Feb2014(config) {
                 // Look for supported video container/codecs
                 if (videos && videos.length !== 0) {
                     supportedVideo = []; // Indicates that we have a requested video config
-                    for (var videoIdx = 0; videoIdx < videos.length; videoIdx++) {
+                    for (let videoIdx = 0; videoIdx < videos.length; videoIdx++) {
                         if (window[api.MediaKeys].isTypeSupported(systemString, videos[videoIdx].contentType)) {
                             supportedVideo.push(videos[videoIdx]);
                         }
@@ -147,14 +146,14 @@ function ProtectionModel_3Feb2014(config) {
 
                 // This configuration is supported
                 found = true;
-                var ksConfig = new KeySystemConfiguration(supportedAudio, supportedVideo);
-                var ks = protectionKeyController.getKeySystemBySystemString(systemString);
-                eventBus.trigger(Events.KEY_SYSTEM_ACCESS_COMPLETE, {data: new KeySystemAccess(ks, ksConfig)});
+                let ksConfig = new KeySystemConfiguration(supportedAudio, supportedVideo);
+                let ks = protectionKeyController.getKeySystemBySystemString(systemString);
+                eventBus.trigger(events.KEY_SYSTEM_ACCESS_COMPLETE, {data: new KeySystemAccess(ks, ksConfig)});
                 break;
             }
         }
         if (!found) {
-            eventBus.trigger(Events.KEY_SYSTEM_ACCESS_COMPLETE, {error: 'Key system access denied! -- No valid audio/video content configurations detected!'});
+            eventBus.trigger(events.KEY_SYSTEM_ACCESS_COMPLETE, {error: 'Key system access denied! -- No valid audio/video content configurations detected!'});
         }
     }
 
@@ -166,9 +165,9 @@ function ProtectionModel_3Feb2014(config) {
             if (videoElement) {
                 setMediaKeys();
             }
-            eventBus.trigger(Events.INTERNAL_KEY_SYSTEM_SELECTED);
+            eventBus.trigger(events.INTERNAL_KEY_SYSTEM_SELECTED);
         } catch (error) {
-            eventBus.trigger(Events.INTERNAL_KEY_SYSTEM_SELECTED, {error: 'Error selecting keys system (' + keySystem.systemString + ')! Could not create MediaKeys -- TODO'});
+            eventBus.trigger(events.INTERNAL_KEY_SYSTEM_SELECTED, {error: 'Error selecting keys system (' + keySystem.systemString + ')! Could not create MediaKeys -- TODO'});
         }
     }
 
@@ -192,7 +191,7 @@ function ProtectionModel_3Feb2014(config) {
         }
     }
 
-    function createKeySession(initData /*, keySystemType */) {
+    function createKeySession(initData, sessionType, cdmData) {
 
         if (!keySystem || !mediaKeys || !keySystemAccess) {
             throw new Error('Can not create sessions until you have selected a key system');
@@ -202,7 +201,7 @@ function ProtectionModel_3Feb2014(config) {
         // TODO:  Not sure if there is a way to concatenate all capability data into a RFC6386-compatible format
 
         // If player is trying to playback Audio only stream - don't error out.
-        var capabilities = null;
+        let capabilities = null;
 
         if (keySystemAccess.ksConfiguration.videoCapabilities !== null && keySystemAccess.ksConfiguration.videoCapabilities.length > 0)
           capabilities = keySystemAccess.ksConfiguration.videoCapabilities[0];
@@ -213,9 +212,9 @@ function ProtectionModel_3Feb2014(config) {
         if (capabilities === null)
           throw new Error('Can not create sessions for unknown content types.');
 
-        var contentType = capabilities.contentType;
-        var session = mediaKeys.createSession(contentType, new Uint8Array(initData));
-        var sessionToken = createSessionToken(session, initData);
+        let contentType = capabilities.contentType;
+        let session = mediaKeys.createSession(contentType, new Uint8Array(initData), cdmData ? new Uint8Array(cdmData) : null);
+        let sessionToken = createSessionToken(session, initData);
 
         // Add all event listeners
         session.addEventListener(api.error, sessionToken);
@@ -226,12 +225,12 @@ function ProtectionModel_3Feb2014(config) {
         // Add to our session list
         sessions.push(sessionToken);
         log('DRM: Session created.  SessionID = ' + sessionToken.getSessionID());
-        eventBus.trigger(Events.KEY_SESSION_CREATED, {data: sessionToken});
+        eventBus.trigger(events.KEY_SESSION_CREATED, {data: sessionToken});
     }
 
     function updateKeySession(sessionToken, message) {
 
-        var session = sessionToken.session;
+        let session = sessionToken.session;
 
         if (!protectionKeyController.isClearKey(keySystem)) {
             // Send our request to the key session
@@ -250,7 +249,7 @@ function ProtectionModel_3Feb2014(config) {
      */
     function closeKeySession(sessionToken) {
 
-        var session = sessionToken.session;
+        let session = sessionToken.session;
 
         // Remove event listeners
         session.removeEventListener(api.error, sessionToken);
@@ -259,7 +258,7 @@ function ProtectionModel_3Feb2014(config) {
         session.removeEventListener(api.close, sessionToken);
 
         // Remove from our session list
-        for (var i = 0; i < sessions.length; i++) {
+        for (let i = 0; i < sessions.length; i++) {
             if (sessions[i] === sessionToken) {
                 sessions.splice(i,1);
                 break;
@@ -282,8 +281,8 @@ function ProtectionModel_3Feb2014(config) {
 
                     case api.needkey:
                         if (event.initData) {
-                            var initData = ArrayBuffer.isView(event.initData) ? event.initData.buffer : event.initData;
-                            eventBus.trigger(Events.NEED_KEY, {key: new NeedKey(initData, 'cenc')});
+                            let initData = ArrayBuffer.isView(event.initData) ? event.initData.buffer : event.initData;
+                            eventBus.trigger(events.NEED_KEY, {key: new NeedKey(initData, 'cenc')});
                         }
                         break;
                 }
@@ -296,11 +295,11 @@ function ProtectionModel_3Feb2014(config) {
     // readyState, so we need this logic to ensure we don't set the keys
     // too early
     function setMediaKeys() {
-        var boundDoSetKeys = null;
-        var doSetKeys = function () {
+        let boundDoSetKeys = null;
+        const doSetKeys = function () {
             videoElement.removeEventListener('loadedmetadata', boundDoSetKeys);
             videoElement[api.setMediaKeys](mediaKeys);
-            eventBus.trigger(Events.VIDEO_ELEMENT_SELECTED);
+            eventBus.trigger(events.VIDEO_ELEMENT_SELECTED);
         };
         if (videoElement.readyState >= 1) {
             doSetKeys();
@@ -337,21 +336,21 @@ function ProtectionModel_3Feb2014(config) {
                 switch (event.type) {
 
                     case api.error:
-                        var errorStr = 'KeyError'; // TODO: Make better string from event
-                        eventBus.trigger(Events.KEY_ERROR, { data: new KeyError(this, errorStr) });
+                        let errorStr = 'KeyError'; // TODO: Make better string from event
+                        eventBus.trigger(events.KEY_ERROR, { data: new KeyError(this, errorStr) });
                         break;
                     case api.message:
-                        var message = ArrayBuffer.isView(event.message) ? event.message.buffer : event.message;
-                        eventBus.trigger(Events.INTERNAL_KEY_MESSAGE, { data: new KeyMessage(this, message, event.destinationURL) });
+                        let message = ArrayBuffer.isView(event.message) ? event.message.buffer : event.message;
+                        eventBus.trigger(events.INTERNAL_KEY_MESSAGE, { data: new KeyMessage(this, message, event.destinationURL) });
                         break;
                     case api.ready:
                         log('DRM: Key added.');
-                        eventBus.trigger(Events.KEY_ADDED);
+                        eventBus.trigger(events.KEY_ADDED);
                         break;
 
                     case api.close:
                         log('DRM: Session closed.  SessionID = ' + this.getSessionID());
-                        eventBus.trigger(Events.KEY_SESSION_CLOSED, { data: this.getSessionID() });
+                        eventBus.trigger(events.KEY_SESSION_CLOSED, { data: this.getSessionID() });
                         break;
                 }
             }
@@ -379,4 +378,4 @@ function ProtectionModel_3Feb2014(config) {
 }
 
 ProtectionModel_3Feb2014.__dashjs_factory_name = 'ProtectionModel_3Feb2014';
-export default FactoryMaker.getClassFactory(ProtectionModel_3Feb2014);
+export default dashjs.FactoryMaker.getClassFactory(ProtectionModel_3Feb2014); /* jshint ignore:line */

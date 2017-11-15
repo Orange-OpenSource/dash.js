@@ -29,7 +29,6 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-import FactoryMaker from '../../../../core/FactoryMaker';
 import MetricsReportingEvents from '../../MetricsReportingEvents';
 
 function DVBErrorsHandler(config) {
@@ -38,6 +37,7 @@ function DVBErrorsHandler(config) {
         reportingController;
 
     let eventBus = config.eventBus;
+    const metricsConstants = config.metricsConstants;
 
     function onInitialisationComplete() {
         // we only want to report this once per call to initialize
@@ -72,7 +72,7 @@ function DVBErrorsHandler(config) {
 
     function handleNewMetric(metric, vo) {
         // simply pass metric straight through
-        if (metric === 'DVBErrors') {
+        if (metric === metricsConstants.DVB_ERRORS) {
             if (reportingController) {
                 reportingController.report(metric, vo);
             }
@@ -88,4 +88,4 @@ function DVBErrorsHandler(config) {
     return instance;
 }
 
-export default FactoryMaker.getClassFactory(DVBErrorsHandler);
+export default dashjs.FactoryMaker.getClassFactory(DVBErrorsHandler); /* jshint ignore:line */

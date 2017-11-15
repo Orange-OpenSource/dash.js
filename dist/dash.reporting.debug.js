@@ -42,11 +42,16 @@ var FactoryMaker = (function () {
     var instance = undefined;
     var extensions = [];
     var singletonContexts = [];
+    var singletonFactories = [];
+    var classFactories = [];
 
     function extend(name, childInstance, override, context) {
         var extensionContext = getExtensionContext(context);
         if (!extensionContext[name] && childInstance) {
-            extensionContext[name] = { instance: childInstance, override: override };
+            extensionContext[name] = {
+                instance: childInstance,
+                override: override
+            };
         }
     }
 
@@ -89,53 +94,155 @@ var FactoryMaker = (function () {
                 return;
             }
         }
-        singletonContexts.push({ name: className, context: context, instance: instance });
+        singletonContexts.push({
+            name: className,
+            context: context,
+            instance: instance
+        });
+    }
+
+    /*------------------------------------------------------------------------------------------*/
+
+    // Factories storage Management
+
+    /*------------------------------------------------------------------------------------------*/
+
+    function registerFactory(name, factory, factoriesArray) {
+        for (var i in factoriesArray) {
+            var obj = factoriesArray[i];
+            if (obj.name === name) {
+                factoriesArray[i].factory = factory;
+                return;
+            }
+        }
+        factoriesArray.push({
+            name: name,
+            factory: factory
+        });
+    }
+
+    function getFactoryByName(name, factoriesArray) {
+        for (var i in factoriesArray) {
+            var obj = factoriesArray[i];
+            if (obj.name === name) {
+                return factoriesArray[i].factory;
+            }
+        }
+        return null;
+    }
+
+    function updateFactory(name, factory, factoriesArray) {
+        for (var i in factoriesArray) {
+            var obj = factoriesArray[i];
+            if (obj.name === name) {
+                factoriesArray[i].factory = factory;
+                return;
+            }
+        }
+    }
+
+    /*------------------------------------------------------------------------------------------*/
+
+    // Class Factories Management
+
+    /*------------------------------------------------------------------------------------------*/
+
+    function updateClassFactory(name, factory) {
+        updateFactory(name, factory, classFactories);
+    }
+
+    function getClassFactoryByName(name) {
+        return getFactoryByName(name, classFactories);
     }
 
     function getClassFactory(classConstructor) {
-        return function (context) {
-            if (context === undefined) {
-                context = {};
-            }
-            return {
-                create: function create() {
-                    return merge(classConstructor.__dashjs_factory_name, classConstructor.apply({ context: context }, arguments), context, arguments);
+        var factory = getFactoryByName(classConstructor.__dashjs_factory_name, classFactories);
+
+        if (!factory) {
+            factory = function (context) {
+                if (context === undefined) {
+                    context = {};
                 }
+                return {
+                    create: function create() {
+                        return merge(classConstructor.__dashjs_factory_name, classConstructor.apply({
+                            context: context
+                        }, arguments), context, arguments);
+                    }
+                };
             };
-        };
+
+            registerFactory(classConstructor.__dashjs_factory_name, factory, classFactories); // store factory
+        }
+        return factory;
+    }
+
+    /*------------------------------------------------------------------------------------------*/
+
+    // Singleton Factory MAangement
+
+    /*------------------------------------------------------------------------------------------*/
+
+    function updateSingletonFactory(name, factory) {
+        updateFactory(name, factory, singletonFactories);
+    }
+
+    function getSingletonFactoryByName(name) {
+        return getFactoryByName(name, singletonFactories);
     }
 
     function getSingletonFactory(classConstructor) {
-        return function (context) {
-            var instance = undefined;
-            if (context === undefined) {
-                context = {};
-            }
-            return {
-                getInstance: function getInstance() {
-                    // If we don't have an instance yet check for one on the context
-                    if (!instance) {
-                        instance = getSingletonInstance(context, classConstructor.__dashjs_factory_name);
-                    }
-                    // If there's no instance on the context then create one
-                    if (!instance) {
-                        instance = merge(classConstructor.__dashjs_factory_name, classConstructor.apply({ context: context }, arguments), context, arguments);
-                        singletonContexts.push({ name: classConstructor.__dashjs_factory_name, context: context, instance: instance });
-                    }
-                    return instance;
+        var factory = getFactoryByName(classConstructor.__dashjs_factory_name, singletonFactories);
+        if (!factory) {
+            factory = function (context) {
+                var instance = undefined;
+                if (context === undefined) {
+                    context = {};
                 }
+                return {
+                    getInstance: function getInstance() {
+                        // If we don't have an instance yet check for one on the context
+                        if (!instance) {
+                            instance = getSingletonInstance(context, classConstructor.__dashjs_factory_name);
+                        }
+                        // If there's no instance on the context then create one
+                        if (!instance) {
+                            instance = merge(classConstructor.__dashjs_factory_name, classConstructor.apply({
+                                context: context
+                            }, arguments), context, arguments);
+                            singletonContexts.push({
+                                name: classConstructor.__dashjs_factory_name,
+                                context: context,
+                                instance: instance
+                            });
+                        }
+                        return instance;
+                    }
+                };
             };
-        };
+            registerFactory(classConstructor.__dashjs_factory_name, factory, singletonFactories); // store factory
+        }
+
+        return factory;
     }
 
     function merge(name, classConstructor, context, args) {
+        // Add getClassName function to class instance prototype (used by Debug)
+        classConstructor.getClassName = function () {
+            return name;
+        };
+
         var extensionContext = getExtensionContext(context);
         var extensionObject = extensionContext[name];
         if (extensionObject) {
             var extension = extensionObject.instance;
             if (extensionObject.override) {
                 //Override public methods in parent but keep parent.
-                extension = extension.apply({ context: context, factory: instance, parent: classConstructor }, args);
+                extension = extension.apply({
+                    context: context,
+                    factory: instance,
+                    parent: classConstructor
+                }, args);
                 for (var prop in extension) {
                     if (classConstructor.hasOwnProperty(prop)) {
                         classConstructor[prop] = extension[prop];
@@ -143,7 +250,10 @@ var FactoryMaker = (function () {
                 }
             } else {
                 //replace parent object completely with new object. Same as dijon.
-                return extension.apply({ context: context, factory: instance }, args);
+                return extension.apply({
+                    context: context,
+                    factory: instance
+                }, args);
             }
         }
         return classConstructor;
@@ -157,7 +267,8 @@ var FactoryMaker = (function () {
             }
         });
         if (!extensionContext) {
-            extensionContext = extensions.push(context);
+            extensions.push(context);
+            extensionContext = context;
         }
         return extensionContext;
     }
@@ -167,7 +278,11 @@ var FactoryMaker = (function () {
         getSingletonInstance: getSingletonInstance,
         setSingletonInstance: setSingletonInstance,
         getSingletonFactory: getSingletonFactory,
-        getClassFactory: getClassFactory
+        getSingletonFactoryByName: getSingletonFactoryByName,
+        updateSingletonFactory: updateSingletonFactory,
+        getClassFactory: getClassFactory,
+        getClassFactoryByName: getClassFactoryByName,
+        updateClassFactory: updateClassFactory
     };
 
     return instance;
@@ -177,180 +292,6 @@ exports["default"] = FactoryMaker;
 module.exports = exports["default"];
 
 },{}],2:[function(_dereq_,module,exports){
-/**
- * The copyright in this software is being made available under the BSD License,
- * included below. This software may be subject to other third party and contributor
- * rights, including patent rights, and no such rights are granted under this license.
- *
- * Copyright (c) 2013, Dash Industry Forum.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *  * Redistributions of source code must retain the above copyright notice, this
- *  list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright notice,
- *  this list of conditions and the following disclaimer in the documentation and/or
- *  other materials provided with the distribution.
- *  * Neither the name of Dash Industry Forum nor the names of its
- *  contributors may be used to endorse or promote products derived from this software
- *  without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS AND ANY
- *  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- *  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- *  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *  POSSIBILITY OF SUCH DAMAGE.
- */
-'use strict';
-
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var _EventsBase2 = _dereq_(4);
-
-var _EventsBase3 = _interopRequireDefault(_EventsBase2);
-
-/**
- * These are internal events that should not be needed at the player level.
- * If you find and event in here that you would like access to from MediaPlayer level
- * please add an issue at https://github.com/Dash-Industry-Forum/dash.js/issues/new
- * @class
- * @ignore
- */
-
-var CoreEvents = (function (_EventsBase) {
-  _inherits(CoreEvents, _EventsBase);
-
-  function CoreEvents() {
-    _classCallCheck(this, CoreEvents);
-
-    _get(Object.getPrototypeOf(CoreEvents.prototype), 'constructor', this).call(this);
-    this.BUFFERING_COMPLETED = 'bufferingCompleted';
-    this.BUFFER_CLEARED = 'bufferCleared';
-    this.BUFFER_LEVEL_UPDATED = 'bufferLevelUpdated';
-    this.BYTES_APPENDED = 'bytesAppended';
-    this.CHECK_FOR_EXISTENCE_COMPLETED = 'checkForExistenceCompleted';
-    this.CURRENT_TRACK_CHANGED = 'currentTrackChanged';
-    this.DATA_UPDATE_COMPLETED = 'dataUpdateCompleted';
-    this.DATA_UPDATE_STARTED = 'dataUpdateStarted';
-    this.INITIALIZATION_LOADED = 'initializationLoaded';
-    this.INIT_FRAGMENT_LOADED = 'initFragmentLoaded';
-    this.INIT_REQUESTED = 'initRequested';
-    this.INTERNAL_MANIFEST_LOADED = 'internalManifestLoaded';
-    this.LIVE_EDGE_SEARCH_COMPLETED = 'liveEdgeSearchCompleted';
-    this.LOADING_COMPLETED = 'loadingCompleted';
-    this.LOADING_PROGRESS = 'loadingProgress';
-    this.MANIFEST_UPDATED = 'manifestUpdated';
-    this.MEDIA_FRAGMENT_LOADED = 'mediaFragmentLoaded';
-    this.QUOTA_EXCEEDED = 'quotaExceeded';
-    this.REPRESENTATION_UPDATED = 'representationUpdated';
-    this.SEGMENTS_LOADED = 'segmentsLoaded';
-    this.SERVICE_LOCATION_BLACKLIST_CHANGED = 'serviceLocationBlacklistChanged';
-    this.SOURCEBUFFER_APPEND_COMPLETED = 'sourceBufferAppendCompleted';
-    this.SOURCEBUFFER_REMOVE_COMPLETED = 'sourceBufferRemoveCompleted';
-    this.STREAMS_COMPOSED = 'streamsComposed';
-    this.STREAM_BUFFERING_COMPLETED = 'streamBufferingCompleted';
-    this.STREAM_COMPLETED = 'streamCompleted';
-    this.STREAM_TEARDOWN_COMPLETE = 'streamTeardownComplete';
-    this.TIMED_TEXT_REQUESTED = 'timedTextRequested';
-    this.TIME_SYNCHRONIZATION_COMPLETED = 'timeSynchronizationComplete';
-    this.URL_RESOLUTION_FAILED = 'urlResolutionFailed';
-    this.WALLCLOCK_TIME_UPDATED = 'wallclockTimeUpdated';
-    this.XLINK_ELEMENT_LOADED = 'xlinkElementLoaded';
-    this.XLINK_READY = 'xlinkReady';
-  }
-
-  return CoreEvents;
-})(_EventsBase3['default']);
-
-exports['default'] = CoreEvents;
-module.exports = exports['default'];
-
-},{"4":4}],3:[function(_dereq_,module,exports){
-/**
- * The copyright in this software is being made available under the BSD License,
- * included below. This software may be subject to other third party and contributor
- * rights, including patent rights, and no such rights are granted under this license.
- *
- * Copyright (c) 2013, Dash Industry Forum.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *  * Redistributions of source code must retain the above copyright notice, this
- *  list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright notice,
- *  this list of conditions and the following disclaimer in the documentation and/or
- *  other materials provided with the distribution.
- *  * Neither the name of Dash Industry Forum nor the names of its
- *  contributors may be used to endorse or promote products derived from this software
- *  without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS AND ANY
- *  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- *  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- *  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *  POSSIBILITY OF SUCH DAMAGE.
- */
-/**
- * @class
- * @ignore
- */
-'use strict';
-
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var _CoreEvents2 = _dereq_(2);
-
-var _CoreEvents3 = _interopRequireDefault(_CoreEvents2);
-
-var Events = (function (_CoreEvents) {
-  _inherits(Events, _CoreEvents);
-
-  function Events() {
-    _classCallCheck(this, Events);
-
-    _get(Object.getPrototypeOf(Events.prototype), 'constructor', this).apply(this, arguments);
-  }
-
-  return Events;
-})(_CoreEvents3['default']);
-
-var events = new Events();
-exports['default'] = events;
-module.exports = exports['default'];
-
-},{"2":2}],4:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -422,274 +363,7 @@ var EventsBase = (function () {
 exports['default'] = EventsBase;
 module.exports = exports['default'];
 
-},{}],5:[function(_dereq_,module,exports){
-/**
- * The copyright in this software is being made available under the BSD License,
- * included below. This software may be subject to other third party and contributor
- * rights, including patent rights, and no such rights are granted under this license.
- *
- * Copyright (c) 2013, Dash Industry Forum.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *  * Redistributions of source code must retain the above copyright notice, this
- *  list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright notice,
- *  this list of conditions and the following disclaimer in the documentation and/or
- *  other materials provided with the distribution.
- *  * Neither the name of Dash Industry Forum nor the names of its
- *  contributors may be used to endorse or promote products derived from this software
- *  without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS AND ANY
- *  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- *  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- *  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *  POSSIBILITY OF SUCH DAMAGE.
- */
-'use strict';
-
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var _coreEventsEventsBase = _dereq_(4);
-
-var _coreEventsEventsBase2 = _interopRequireDefault(_coreEventsEventsBase);
-
-/**
- * @class
- *
- */
-
-var MediaPlayerEvents = (function (_EventsBase) {
-  _inherits(MediaPlayerEvents, _EventsBase);
-
-  /**
-   * @description Public facing external events to be used when developing a player that implements dash.js.
-   */
-
-  function MediaPlayerEvents() {
-    _classCallCheck(this, MediaPlayerEvents);
-
-    _get(Object.getPrototypeOf(MediaPlayerEvents.prototype), 'constructor', this).call(this);
-    /**
-     * Triggered when playback will not start yet
-     * as the MPD's availabilityStartTime is in the future.
-     * Check delay property in payload to determine time before playback will start.
-     */
-    this.AST_IN_FUTURE = 'astInFuture';
-    /**
-     * Triggered when the video element's buffer state changes to stalled.
-     * Check mediaType in payload to determine type (Video, Audio, FragmentedText).
-     * @event MediaPlayerEvents#BUFFER_EMPTY
-     */
-    this.BUFFER_EMPTY = 'bufferStalled';
-    /**
-     * Triggered when the video element's buffer state changes to loaded.
-     * Check mediaType in payload to determine type (Video, Audio, FragmentedText).
-     * @event MediaPlayerEvents#BUFFER_LOADED
-     */
-    this.BUFFER_LOADED = 'bufferLoaded';
-
-    /**
-     * Triggered when the video element's buffer state changes, either stalled or loaded. Check payload for state.
-     * @event MediaPlayerEvents#BUFFER_LEVEL_STATE_CHANGED
-     */
-    this.BUFFER_LEVEL_STATE_CHANGED = 'bufferStateChanged';
-
-    /**
-    * Triggered when there is an error from the element or MSE source buffer.
-    * @event MediaPlayerEvents#ERROR
-    */
-    this.ERROR = 'error';
-
-    /**
-    * Triggered when a fragment download has completed.
-    * @event MediaPlayerEvents#FRAGMENT_LOADING_COMPLETED
-    */
-    this.FRAGMENT_LOADING_COMPLETED = 'fragmentLoadingCompleted';
-    /**
-    * Triggered when a fragment download has started.
-    * @event MediaPlayerEvents#FRAGMENT_LOADING_STARTED
-    */
-    this.FRAGMENT_LOADING_STARTED = 'fragmentLoadingStarted';
-    /**
-    * Triggered when a fragment download is abandoned due to detection of slow download base on the ABR abandon rule..
-    * @event MediaPlayerEvents#FRAGMENT_LOADING_ABANDONED
-    */
-    this.FRAGMENT_LOADING_ABANDONED = 'fragmentLoadingAbandoned';
-    /**
-     * Triggered when {@link module:Debug} log method is called.
-     * @event MediaPlayerEvents#LOG
-     */
-    this.LOG = 'log';
-    //TODO refactor with internal event
-    /**
-     * Triggered when the manifest load is complete
-     * @event MediaPlayerEvents#MANIFEST_LOADED
-     */
-    this.MANIFEST_LOADED = 'manifestLoaded';
-    /**
-     * Triggered anytime there is a change to the overall metrics.
-     * @event MediaPlayerEvents#METRICS_CHANGED
-     */
-    this.METRICS_CHANGED = 'metricsChanged';
-    /**
-     * Triggered when an individual metric is added, updated or cleared.
-     * @event MediaPlayerEvents#METRIC_CHANGED
-     */
-    this.METRIC_CHANGED = 'metricChanged';
-    /**
-     * Triggered every time a new metric is added.
-     * @event MediaPlayerEvents#METRIC_ADDED
-     */
-    this.METRIC_ADDED = 'metricAdded';
-    /**
-     * Triggered every time a metric is updated.
-     * @event MediaPlayerEvents#METRIC_UPDATED
-     */
-    this.METRIC_UPDATED = 'metricUpdated';
-    /**
-     * Triggered at the stream end of a period.
-     * @event MediaPlayerEvents#PERIOD_SWITCH_COMPLETED
-     */
-    this.PERIOD_SWITCH_COMPLETED = 'periodSwitchCompleted';
-    /**
-     * Triggered when a new period starts.
-     * @event MediaPlayerEvents#PERIOD_SWITCH_STARTED
-     */
-    this.PERIOD_SWITCH_STARTED = 'periodSwitchStarted';
-
-    /**
-     * Triggered when an ABR up /down switch is initialed; either by user in manual mode or auto mode via ABR rules.
-     * @event MediaPlayerEvents#QUALITY_CHANGE_REQUESTED
-     */
-    this.QUALITY_CHANGE_REQUESTED = 'qualityChangeRequested';
-
-    /**
-     * Triggered when the new ABR quality is being rendered on-screen.
-     * @event MediaPlayerEvents#QUALITY_CHANGE_RENDERED
-     */
-    this.QUALITY_CHANGE_RENDERED = 'qualityChangeRendered';
-
-    /**
-     * Triggered when the stream is setup and ready.
-     * @event MediaPlayerEvents#STREAM_INITIALIZED
-     */
-    this.STREAM_INITIALIZED = 'streamInitialized';
-    /**
-     * Triggered once all text tracks detected in the MPD are added to the video element.
-     * @event MediaPlayerEvents#TEXT_TRACKS_ADDED
-     */
-    this.TEXT_TRACKS_ADDED = 'allTextTracksAdded';
-    /**
-     * Triggered when a text track is added to the video element's TextTrackList
-     * @event MediaPlayerEvents#TEXT_TRACK_ADDED
-     */
-    this.TEXT_TRACK_ADDED = 'textTrackAdded';
-
-    /**
-     * Sent when enough data is available that the media can be played,
-     * at least for a couple of frames.  This corresponds to the
-     * HAVE_ENOUGH_DATA readyState.
-     * @event MediaPlayerEvents#CAN_PLAY
-     */
-    this.CAN_PLAY = 'canPlay';
-
-    /**
-     * Sent when playback completes.
-     * @event MediaPlayerEvents#PLAYBACK_ENDED
-     */
-    this.PLAYBACK_ENDED = 'playbackEnded';
-
-    /**
-     * Sent when an error occurs.  The element's error
-     * attribute contains more information.
-     * @event MediaPlayerEvents#PLAYBACK_ERROR
-     */
-    this.PLAYBACK_ERROR = 'playbackError';
-    /**
-     * Sent when playback is not allowed (for example if user gesture is needed).
-     * @event MediaPlayerEvents#PLAYBACK_NOT_ALLOWED
-     */
-    this.PLAYBACK_NOT_ALLOWED = 'playbackNotAllowed';
-    /**
-     * The media's metadata has finished loading; all attributes now
-     * contain as much useful information as they're going to.
-     * @event MediaPlayerEvents#PLAYBACK_METADATA_LOADED
-     */
-    this.PLAYBACK_METADATA_LOADED = 'playbackMetaDataLoaded';
-    /**
-     * Sent when playback is paused.
-     * @event MediaPlayerEvents#PLAYBACK_PAUSED
-     */
-    this.PLAYBACK_PAUSED = 'playbackPaused';
-    /**
-     * Sent when the media begins to play (either for the first time, after having been paused,
-     * or after ending and then restarting).
-     *
-     * @event MediaPlayerEvents#PLAYBACK_PLAYING
-     */
-    this.PLAYBACK_PLAYING = 'playbackPlaying';
-    /**
-     * Sent periodically to inform interested parties of progress downloading
-     * the media. Information about the current amount of the media that has
-     * been downloaded is available in the media element's buffered attribute.
-     * @event MediaPlayerEvents#PLAYBACK_PROGRESS
-     */
-    this.PLAYBACK_PROGRESS = 'playbackProgress';
-    /**
-     * Sent when the playback speed changes.
-     * @event MediaPlayerEvents#PLAYBACK_RATE_CHANGED
-     */
-    this.PLAYBACK_RATE_CHANGED = 'playbackRateChanged';
-    /**
-     * Sent when a seek operation completes.
-     * @event MediaPlayerEvents#PLAYBACK_SEEKED
-     */
-    this.PLAYBACK_SEEKED = 'playbackSeeked';
-    /**
-     * Sent when a seek operation begins.
-     * @event MediaPlayerEvents#PLAYBACK_SEEKING
-     */
-    this.PLAYBACK_SEEKING = 'playbackSeeking';
-    /**
-     * Sent when playback of the media starts after having been paused;
-     * that is, when playback is resumed after a prior pause event.
-     *
-     * @event MediaPlayerEvents#PLAYBACK_STARTED
-     */
-    this.PLAYBACK_STARTED = 'playbackStarted';
-    /**
-     * The time indicated by the element's currentTime attribute has changed.
-     * @event MediaPlayerEvents#PLAYBACK_TIME_UPDATED
-     */
-    this.PLAYBACK_TIME_UPDATED = 'playbackTimeUpdated';
-  }
-
-  return MediaPlayerEvents;
-})(_coreEventsEventsBase2['default']);
-
-var mediaPlayerEvents = new MediaPlayerEvents();
-exports['default'] = mediaPlayerEvents;
-module.exports = exports['default'];
-
-},{"4":4}],6:[function(_dereq_,module,exports){
+},{}],3:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -729,29 +403,25 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _utilsDVBErrorsTranslator = _dereq_(20);
+var _utilsDVBErrorsTranslator = _dereq_(17);
 
 var _utilsDVBErrorsTranslator2 = _interopRequireDefault(_utilsDVBErrorsTranslator);
 
-var _MetricsReportingEvents = _dereq_(7);
+var _MetricsReportingEvents = _dereq_(4);
 
 var _MetricsReportingEvents2 = _interopRequireDefault(_MetricsReportingEvents);
 
-var _controllersMetricsCollectionController = _dereq_(8);
+var _controllersMetricsCollectionController = _dereq_(5);
 
 var _controllersMetricsCollectionController2 = _interopRequireDefault(_controllersMetricsCollectionController);
 
-var _metricsMetricsHandlerFactory = _dereq_(13);
+var _metricsMetricsHandlerFactory = _dereq_(10);
 
 var _metricsMetricsHandlerFactory2 = _interopRequireDefault(_metricsMetricsHandlerFactory);
 
-var _reportingReportingFactory = _dereq_(18);
+var _reportingReportingFactory = _dereq_(15);
 
 var _reportingReportingFactory2 = _interopRequireDefault(_reportingReportingFactory);
-
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
 function MetricsReporting() {
 
@@ -768,7 +438,9 @@ function MetricsReporting() {
     function createMetricsReporting(config) {
         dvbErrorsTranslator = (0, _utilsDVBErrorsTranslator2['default'])(context).getInstance({
             eventBus: config.eventBus,
-            metricsModel: config.metricsModel
+            metricsModel: config.metricsModel,
+            metricsConstants: config.metricsConstants,
+            events: config.events
         });
 
         return (0, _controllersMetricsCollectionController2['default'])(context).create(config);
@@ -800,12 +472,13 @@ function MetricsReporting() {
 }
 
 MetricsReporting.__dashjs_factory_name = 'MetricsReporting';
-var factory = _coreFactoryMaker2['default'].getClassFactory(MetricsReporting);
+var factory = dashjs.FactoryMaker.getClassFactory(MetricsReporting); /* jshint ignore:line */
 factory.events = _MetricsReportingEvents2['default'];
+dashjs.FactoryMaker.updateClassFactory(MetricsReporting.__dashjs_factory_name, factory); /* jshint ignore:line */
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"1":1,"13":13,"18":18,"20":20,"7":7,"8":8}],7:[function(_dereq_,module,exports){
+},{"10":10,"15":15,"17":17,"4":4,"5":5}],4:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -850,7 +523,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _coreEventsEventsBase = _dereq_(4);
+var _coreEventsEventsBase = _dereq_(2);
 
 var _coreEventsEventsBase2 = _interopRequireDefault(_coreEventsEventsBase);
 
@@ -873,7 +546,7 @@ var metricsReportingEvents = new MetricsReportingEvents();
 exports['default'] = metricsReportingEvents;
 module.exports = exports['default'];
 
-},{"4":4}],8:[function(_dereq_,module,exports){
+},{"2":2}],5:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -913,25 +586,17 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _MetricsController = _dereq_(9);
+var _MetricsController = _dereq_(6);
 
 var _MetricsController2 = _interopRequireDefault(_MetricsController);
 
-var _utilsManifestParsing = _dereq_(22);
+var _utilsManifestParsing = _dereq_(19);
 
 var _utilsManifestParsing2 = _interopRequireDefault(_utilsManifestParsing);
 
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
-var _MetricsReportingEvents = _dereq_(7);
+var _MetricsReportingEvents = _dereq_(4);
 
 var _MetricsReportingEvents2 = _interopRequireDefault(_MetricsReportingEvents);
-
-var _coreEventsEvents = _dereq_(3);
-
-var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
 function MetricsCollectionController(config) {
 
@@ -939,6 +604,7 @@ function MetricsCollectionController(config) {
 
     var context = this.context;
     var eventBus = config.eventBus;
+    var events = config.events;
 
     function update(e) {
         if (e.error) {
@@ -949,7 +615,8 @@ function MetricsCollectionController(config) {
         var controllersToRemove = Object.keys(metricsControllers);
 
         var metrics = (0, _utilsManifestParsing2['default'])(context).getInstance({
-            dashManifestModel: config.dashManifestModel
+            dashManifestModel: config.dashManifestModel,
+            constants: config.constants
         }).getMetrics(e.manifest);
 
         metrics.forEach(function (m) {
@@ -978,7 +645,7 @@ function MetricsCollectionController(config) {
         eventBus.trigger(_MetricsReportingEvents2['default'].METRICS_INITIALISATION_COMPLETE);
     }
 
-    function reset() {
+    function resetMetricsControllers() {
         Object.keys(metricsControllers).forEach(function (key) {
             metricsControllers[key].reset();
         });
@@ -987,22 +654,28 @@ function MetricsCollectionController(config) {
     }
 
     function setup() {
+        eventBus.on(events.MANIFEST_UPDATED, update);
+        eventBus.on(events.STREAM_TEARDOWN_COMPLETE, resetMetricsControllers);
+    }
 
-        eventBus.on(_coreEventsEvents2['default'].MANIFEST_UPDATED, update);
-        eventBus.on(_coreEventsEvents2['default'].STREAM_TEARDOWN_COMPLETE, reset);
+    function reset() {
+        eventBus.off(events.MANIFEST_UPDATED, update);
+        eventBus.off(events.STREAM_TEARDOWN_COMPLETE, resetMetricsControllers);
     }
 
     setup();
 
-    // don't export any actual methods
-    return {};
+    return {
+        reset: reset
+    };
 }
 
 MetricsCollectionController.__dashjs_factory_name = 'MetricsCollectionController';
-exports['default'] = _coreFactoryMaker2['default'].getClassFactory(MetricsCollectionController);
+exports['default'] = dashjs.FactoryMaker.getClassFactory(MetricsCollectionController);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1,"22":22,"3":3,"7":7,"9":9}],9:[function(_dereq_,module,exports){
+},{"19":19,"4":4,"6":6}],6:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -1042,19 +715,15 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
-var _RangeController = _dereq_(11);
+var _RangeController = _dereq_(8);
 
 var _RangeController2 = _interopRequireDefault(_RangeController);
 
-var _ReportingController = _dereq_(12);
+var _ReportingController = _dereq_(9);
 
 var _ReportingController2 = _interopRequireDefault(_ReportingController);
 
-var _MetricsHandlersController = _dereq_(10);
+var _MetricsHandlersController = _dereq_(7);
 
 var _MetricsHandlersController2 = _interopRequireDefault(_MetricsHandlersController);
 
@@ -1076,14 +745,17 @@ function MetricsController(config) {
             rangeController.initialize(metricsEntry.Range);
 
             reportingController = (0, _ReportingController2['default'])(context).create({
-                log: config.log
+                log: config.log,
+                metricsConstants: config.metricsConstants
             });
 
             reportingController.initialize(metricsEntry.Reporting, rangeController);
 
             metricsHandlersController = (0, _MetricsHandlersController2['default'])(context).create({
                 log: config.log,
-                eventBus: config.eventBus
+                eventBus: config.eventBus,
+                metricsConstants: config.metricsConstants,
+                events: config.events
             });
 
             metricsHandlersController.initialize(metricsEntry.metrics, reportingController);
@@ -1116,10 +788,11 @@ function MetricsController(config) {
 }
 
 MetricsController.__dashjs_factory_name = 'MetricsController';
-exports['default'] = _coreFactoryMaker2['default'].getClassFactory(MetricsController);
+exports['default'] = dashjs.FactoryMaker.getClassFactory(MetricsController);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1,"10":10,"11":11,"12":12}],10:[function(_dereq_,module,exports){
+},{"7":7,"8":8,"9":9}],7:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -1159,17 +832,9 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _metricsMetricsHandlerFactory = _dereq_(13);
+var _metricsMetricsHandlerFactory = _dereq_(10);
 
 var _metricsMetricsHandlerFactory2 = _interopRequireDefault(_metricsMetricsHandlerFactory);
-
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
-var _MediaPlayerEvents = _dereq_(5);
-
-var _MediaPlayerEvents2 = _interopRequireDefault(_MediaPlayerEvents);
 
 function MetricsHandlersController(config) {
     var handlers = [];
@@ -1177,10 +842,12 @@ function MetricsHandlersController(config) {
     var instance = undefined;
     var context = this.context;
     var eventBus = config.eventBus;
+    var Events = config.events;
 
     var metricsHandlerFactory = (0, _metricsMetricsHandlerFactory2['default'])(context).getInstance({
         log: config.log,
-        eventBus: config.eventBus
+        eventBus: config.eventBus,
+        metricsConstants: config.metricsConstants
     });
 
     function handle(e) {
@@ -1191,7 +858,7 @@ function MetricsHandlersController(config) {
 
     function initialize(metrics, reportingController) {
         metrics.split(',').forEach(function (m, midx, ms) {
-            var handler;
+            var handler = undefined;
 
             // there is a bug in ISO23009-1 where the metrics attribute
             // is a comma-separated list but HttpList key can contain a
@@ -1214,15 +881,15 @@ function MetricsHandlersController(config) {
             }
         });
 
-        eventBus.on(_MediaPlayerEvents2['default'].METRIC_ADDED, handle, instance);
+        eventBus.on(Events.METRIC_ADDED, handle, instance);
 
-        eventBus.on(_MediaPlayerEvents2['default'].METRIC_UPDATED, handle, instance);
+        eventBus.on(Events.METRIC_UPDATED, handle, instance);
     }
 
     function reset() {
-        eventBus.off(_MediaPlayerEvents2['default'].METRIC_ADDED, handle, instance);
+        eventBus.off(Events.METRIC_ADDED, handle, instance);
 
-        eventBus.off(_MediaPlayerEvents2['default'].METRIC_UPDATED, handle, instance);
+        eventBus.off(Events.METRIC_UPDATED, handle, instance);
 
         handlers.forEach(function (handler) {
             return handler.reset();
@@ -1240,10 +907,11 @@ function MetricsHandlersController(config) {
 }
 
 MetricsHandlersController.__dashjs_factory_name = 'MetricsHandlersController';
-exports['default'] = _coreFactoryMaker2['default'].getClassFactory(MetricsHandlersController);
+exports['default'] = dashjs.FactoryMaker.getClassFactory(MetricsHandlersController);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1,"13":13,"5":5}],11:[function(_dereq_,module,exports){
+},{"10":10}],8:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -1283,11 +951,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
-var _utilsCustomTimeRanges = _dereq_(29);
+var _utilsCustomTimeRanges = _dereq_(26);
 
 var _utilsCustomTimeRanges2 = _interopRequireDefault(_utilsCustomTimeRanges);
 
@@ -1323,7 +987,7 @@ function RangeController(config) {
 
     function isEnabled() {
         var numRanges = ranges.length;
-        var time;
+        var time = undefined;
 
         if (!numRanges) {
             return true;
@@ -1357,10 +1021,11 @@ function RangeController(config) {
 }
 
 RangeController.__dashjs_factory_name = 'RangeController';
-exports['default'] = _coreFactoryMaker2['default'].getClassFactory(RangeController);
+exports['default'] = dashjs.FactoryMaker.getClassFactory(RangeController);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1,"29":29}],12:[function(_dereq_,module,exports){
+},{"26":26}],9:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -1400,11 +1065,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
-var _reportingReportingFactory = _dereq_(18);
+var _reportingReportingFactory = _dereq_(15);
 
 var _reportingReportingFactory2 = _interopRequireDefault(_reportingReportingFactory);
 
@@ -1413,9 +1074,7 @@ function ReportingController(config) {
     var reporters = [];
     var instance = undefined;
 
-    var reportingFactory = (0, _reportingReportingFactory2['default'])(this.context).getInstance({
-        log: config.log
-    });
+    var reportingFactory = (0, _reportingReportingFactory2['default'])(this.context).getInstance(config);
 
     function initialize(reporting, rangeController) {
         // "if multiple Reporting elements are present, it is expected that
@@ -1455,10 +1114,11 @@ function ReportingController(config) {
 }
 
 ReportingController.__dashjs_factory_name = 'ReportingController';
-exports['default'] = _coreFactoryMaker2['default'].getClassFactory(ReportingController);
+exports['default'] = dashjs.FactoryMaker.getClassFactory(ReportingController);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1,"18":18}],13:[function(_dereq_,module,exports){
+},{"15":15}],10:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -1498,23 +1158,19 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
-var _handlersBufferLevelHandler = _dereq_(14);
+var _handlersBufferLevelHandler = _dereq_(11);
 
 var _handlersBufferLevelHandler2 = _interopRequireDefault(_handlersBufferLevelHandler);
 
-var _handlersDVBErrorsHandler = _dereq_(15);
+var _handlersDVBErrorsHandler = _dereq_(12);
 
 var _handlersDVBErrorsHandler2 = _interopRequireDefault(_handlersDVBErrorsHandler);
 
-var _handlersHttpListHandler = _dereq_(17);
+var _handlersHttpListHandler = _dereq_(14);
 
 var _handlersHttpListHandler2 = _interopRequireDefault(_handlersHttpListHandler);
 
-var _handlersGenericMetricHandler = _dereq_(16);
+var _handlersGenericMetricHandler = _dereq_(13);
 
 var _handlersGenericMetricHandler2 = _interopRequireDefault(_handlersGenericMetricHandler);
 
@@ -1546,7 +1202,8 @@ function MetricsHandlerFactory(config) {
 
         try {
             handler = knownFactoryProducts[matches[1]](context).create({
-                eventBus: config.eventBus
+                eventBus: config.eventBus,
+                metricsConstants: config.metricsConstants
             });
 
             handler.initialize(matches[1], reportingController, matches[3], matches[5]);
@@ -1577,10 +1234,11 @@ function MetricsHandlerFactory(config) {
 }
 
 MetricsHandlerFactory.__dashjs_factory_name = 'MetricsHandlerFactory';
-exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(MetricsHandlerFactory);
+exports['default'] = dashjs.FactoryMaker.getSingletonFactory(MetricsHandlerFactory);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1,"14":14,"15":15,"16":16,"17":17}],14:[function(_dereq_,module,exports){
+},{"11":11,"12":12,"13":13,"14":14}],11:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -1620,15 +1278,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
-var _utilsHandlerHelpers = _dereq_(21);
+var _utilsHandlerHelpers = _dereq_(18);
 
 var _utilsHandlerHelpers2 = _interopRequireDefault(_utilsHandlerHelpers);
 
-function BufferLevelHandler() {
+function BufferLevelHandler(config) {
 
     var instance = undefined,
         reportingController = undefined,
@@ -1641,6 +1295,8 @@ function BufferLevelHandler() {
     var handlerHelpers = (0, _utilsHandlerHelpers2['default'])(context).getInstance();
 
     var storedVOs = [];
+
+    var metricsConstants = config.metricsConstants;
 
     function getLowestBufferLevelVO() {
         try {
@@ -1685,7 +1341,7 @@ function BufferLevelHandler() {
     }
 
     function handleNewMetric(metric, vo, type) {
-        if (metric === 'BufferLevel') {
+        if (metric === metricsConstants.BUFFER_LEVEL) {
             storedVOs[type] = vo;
         }
     }
@@ -1700,10 +1356,11 @@ function BufferLevelHandler() {
 }
 
 BufferLevelHandler.__dashjs_factory_name = 'BufferLevelHandler';
-exports['default'] = _coreFactoryMaker2['default'].getClassFactory(BufferLevelHandler);
+exports['default'] = dashjs.FactoryMaker.getClassFactory(BufferLevelHandler);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1,"21":21}],15:[function(_dereq_,module,exports){
+},{"18":18}],12:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -1743,11 +1400,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
-var _MetricsReportingEvents = _dereq_(7);
+var _MetricsReportingEvents = _dereq_(4);
 
 var _MetricsReportingEvents2 = _interopRequireDefault(_MetricsReportingEvents);
 
@@ -1757,6 +1410,7 @@ function DVBErrorsHandler(config) {
         reportingController = undefined;
 
     var eventBus = config.eventBus;
+    var metricsConstants = config.metricsConstants;
 
     function onInitialisationComplete() {
         // we only want to report this once per call to initialize
@@ -1781,7 +1435,7 @@ function DVBErrorsHandler(config) {
 
     function handleNewMetric(metric, vo) {
         // simply pass metric straight through
-        if (metric === 'DVBErrors') {
+        if (metric === metricsConstants.DVB_ERRORS) {
             if (reportingController) {
                 reportingController.report(metric, vo);
             }
@@ -1797,10 +1451,11 @@ function DVBErrorsHandler(config) {
     return instance;
 }
 
-exports['default'] = _coreFactoryMaker2['default'].getClassFactory(DVBErrorsHandler);
+exports['default'] = dashjs.FactoryMaker.getClassFactory(DVBErrorsHandler);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1,"7":7}],16:[function(_dereq_,module,exports){
+},{"4":4}],13:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -1837,13 +1492,6 @@ module.exports = exports['default'];
 Object.defineProperty(exports, '__esModule', {
     value: true
 });
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
 function GenericMetricHandler() {
 
     var instance = undefined,
@@ -1879,10 +1527,11 @@ function GenericMetricHandler() {
 }
 
 GenericMetricHandler.__dashjs_factory_name = 'GenericMetricHandler';
-exports['default'] = _coreFactoryMaker2['default'].getClassFactory(GenericMetricHandler);
+exports['default'] = dashjs.FactoryMaker.getClassFactory(GenericMetricHandler);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1}],17:[function(_dereq_,module,exports){
+},{}],14:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -1922,15 +1571,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
-var _utilsHandlerHelpers = _dereq_(21);
+var _utilsHandlerHelpers = _dereq_(18);
 
 var _utilsHandlerHelpers2 = _interopRequireDefault(_utilsHandlerHelpers);
 
-function HttpListHandler() {
+function HttpListHandler(config) {
 
     var instance = undefined,
         reportingController = undefined,
@@ -1942,6 +1587,8 @@ function HttpListHandler() {
     var storedVos = [];
 
     var handlerHelpers = (0, _utilsHandlerHelpers2['default'])(this.context).getInstance();
+
+    var metricsConstants = config.metricsConstants;
 
     function intervalCallback() {
         var vos = storedVos;
@@ -1984,7 +1631,7 @@ function HttpListHandler() {
     }
 
     function handleNewMetric(metric, vo) {
-        if (metric === 'HttpList') {
+        if (metric === metricsConstants.HTTP_REQUEST) {
             if (!type || type === vo.type) {
                 storedVos.push(vo);
             }
@@ -2001,10 +1648,11 @@ function HttpListHandler() {
 }
 
 HttpListHandler.__dashjs_factory_name = 'HttpListHandler';
-exports['default'] = _coreFactoryMaker2['default'].getClassFactory(HttpListHandler);
+exports['default'] = dashjs.FactoryMaker.getClassFactory(HttpListHandler);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1,"21":21}],18:[function(_dereq_,module,exports){
+},{"18":18}],15:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -2044,11 +1692,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
-var _reportersDVBReporting = _dereq_(19);
+var _reportersDVBReporting = _dereq_(16);
 
 var _reportersDVBReporting2 = _interopRequireDefault(_reportersDVBReporting);
 
@@ -2060,13 +1704,17 @@ function ReportingFactory(config) {
 
     var context = this.context;
     var log = config.log;
+    var metricsConstants = config.metricsConstants;
+
     var instance = undefined;
 
     function create(entry, rangeController) {
-        var reporting;
+        var reporting = undefined;
 
         try {
-            reporting = knownReportingSchemeIdUris[entry.schemeIdUri](context).create();
+            reporting = knownReportingSchemeIdUris[entry.schemeIdUri](context).create({
+                metricsConstants: metricsConstants
+            });
 
             reporting.initialize(entry, rangeController);
         } catch (e) {
@@ -2096,10 +1744,11 @@ function ReportingFactory(config) {
 }
 
 ReportingFactory.__dashjs_factory_name = 'ReportingFactory';
-exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(ReportingFactory);
+exports['default'] = dashjs.FactoryMaker.getSingletonFactory(ReportingFactory);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1,"19":19}],19:[function(_dereq_,module,exports){
+},{"16":16}],16:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -2130,6 +1779,7 @@ module.exports = exports['default'];
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
+
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -2138,19 +1788,15 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
-var _utilsMetricSerialiser = _dereq_(23);
+var _utilsMetricSerialiser = _dereq_(20);
 
 var _utilsMetricSerialiser2 = _interopRequireDefault(_utilsMetricSerialiser);
 
-var _utilsRNG = _dereq_(24);
+var _utilsRNG = _dereq_(21);
 
 var _utilsRNG2 = _interopRequireDefault(_utilsRNG);
 
-function DVBReporting() {
+function DVBReporting(config) {
     var instance = undefined;
 
     var context = this.context;
@@ -2164,6 +1810,8 @@ function DVBReporting() {
     var rangeController = null;
     var allowPendingRequestsToCompleteOnReset = true;
     var pendingRequests = [];
+
+    var metricsConstants = config.metricsConstants;
 
     function doGetRequest(url, successCB, failureCB) {
         var req = new XMLHttpRequest();
@@ -2216,7 +1864,7 @@ function DVBReporting() {
                 var url = metricSerialiser.serialise(vo);
 
                 // this has been proposed for errata
-                if (USE_DRAFT_DVB_SPEC && type !== 'DVBErrors') {
+                if (USE_DRAFT_DVB_SPEC && type !== metricsConstants.DVB_ERRORS) {
                     url = 'metricname=' + type + '&' + url;
                 }
 
@@ -2241,7 +1889,7 @@ function DVBReporting() {
     }
 
     function initialize(entry, rc) {
-        var probability;
+        var probability = undefined;
 
         rangeController = rc;
 
@@ -2296,10 +1944,11 @@ function DVBReporting() {
 }
 
 DVBReporting.__dashjs_factory_name = 'DVBReporting';
-exports['default'] = _coreFactoryMaker2['default'].getClassFactory(DVBReporting);
+exports['default'] = dashjs.FactoryMaker.getClassFactory(DVBReporting);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1,"23":23,"24":24}],20:[function(_dereq_,module,exports){
+},{"20":20,"21":21}],17:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -2339,25 +1988,13 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _voDVBErrors = _dereq_(25);
+var _voDVBErrors = _dereq_(22);
 
 var _voDVBErrors2 = _interopRequireDefault(_voDVBErrors);
 
-var _coreEventsEvents = _dereq_(3);
-
-var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
-
-var _MediaPlayerEvents = _dereq_(5);
-
-var _MediaPlayerEvents2 = _interopRequireDefault(_MediaPlayerEvents);
-
-var _MetricsReportingEvents = _dereq_(7);
+var _MetricsReportingEvents = _dereq_(4);
 
 var _MetricsReportingEvents2 = _interopRequireDefault(_MetricsReportingEvents);
-
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
 function DVBErrorsTranslator(config) {
 
@@ -2365,6 +2002,10 @@ function DVBErrorsTranslator(config) {
     var eventBus = config.eventBus;
     var metricModel = config.metricsModel;
     var mpd = undefined;
+
+    var metricsConstants = config.metricsConstants;
+    //MediaPlayerEvents have been added to Events in MediaPlayer class
+    var Events = config.events;
 
     function report(vo) {
         var o = new _voDVBErrors2['default']();
@@ -2428,7 +2069,7 @@ function DVBErrorsTranslator(config) {
 
     function onMetricEvent(e) {
         switch (e.metric) {
-            case 'HttpList':
+            case metricsConstants.HTTP_REQUEST:
                 handleHttpMetric(e.value);
                 break;
             default:
@@ -2438,7 +2079,7 @@ function DVBErrorsTranslator(config) {
 
     function onPlaybackError(e) {
         var reason = e.error ? e.error.code : 0;
-        var errorcode;
+        var errorcode = undefined;
 
         switch (reason) {
             case MediaError.MEDIA_ERR_NETWORK:
@@ -2457,20 +2098,20 @@ function DVBErrorsTranslator(config) {
     }
 
     function initialise() {
-        eventBus.on(_coreEventsEvents2['default'].MANIFEST_UPDATED, onManifestUpdate, instance);
-        eventBus.on(_coreEventsEvents2['default'].SERVICE_LOCATION_BLACKLIST_CHANGED, onServiceLocationChanged, instance);
-        eventBus.on(_MediaPlayerEvents2['default'].METRIC_ADDED, onMetricEvent, instance);
-        eventBus.on(_MediaPlayerEvents2['default'].METRIC_UPDATED, onMetricEvent, instance);
-        eventBus.on(_MediaPlayerEvents2['default'].PLAYBACK_ERROR, onPlaybackError, instance);
+        eventBus.on(Events.MANIFEST_UPDATED, onManifestUpdate, instance);
+        eventBus.on(Events.SERVICE_LOCATION_BLACKLIST_CHANGED, onServiceLocationChanged, instance);
+        eventBus.on(Events.METRIC_ADDED, onMetricEvent, instance);
+        eventBus.on(Events.METRIC_UPDATED, onMetricEvent, instance);
+        eventBus.on(Events.PLAYBACK_ERROR, onPlaybackError, instance);
         eventBus.on(_MetricsReportingEvents2['default'].BECAME_REPORTING_PLAYER, onBecameReporter, instance);
     }
 
     function reset() {
-        eventBus.off(_coreEventsEvents2['default'].MANIFEST_UPDATED, onManifestUpdate, instance);
-        eventBus.off(_coreEventsEvents2['default'].SERVICE_LOCATION_BLACKLIST_CHANGED, onServiceLocationChanged, instance);
-        eventBus.off(_MediaPlayerEvents2['default'].METRIC_ADDED, onMetricEvent, instance);
-        eventBus.off(_MediaPlayerEvents2['default'].METRIC_UPDATED, onMetricEvent, instance);
-        eventBus.off(_MediaPlayerEvents2['default'].PLAYBACK_ERROR, onPlaybackError, instance);
+        eventBus.off(Events.MANIFEST_UPDATED, onManifestUpdate, instance);
+        eventBus.off(Events.SERVICE_LOCATION_BLACKLIST_CHANGED, onServiceLocationChanged, instance);
+        eventBus.off(Events.METRIC_ADDED, onMetricEvent, instance);
+        eventBus.off(Events.METRIC_UPDATED, onMetricEvent, instance);
+        eventBus.off(Events.PLAYBACK_ERROR, onPlaybackError, instance);
         eventBus.off(_MetricsReportingEvents2['default'].BECAME_REPORTING_PLAYER, onBecameReporter, instance);
     }
 
@@ -2485,10 +2126,11 @@ function DVBErrorsTranslator(config) {
 }
 
 DVBErrorsTranslator.__dashjs_factory_name = 'DVBErrorsTranslator';
-exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(DVBErrorsTranslator);
+exports['default'] = dashjs.FactoryMaker.getSingletonFactory(DVBErrorsTranslator);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1,"25":25,"3":3,"5":5,"7":7}],21:[function(_dereq_,module,exports){
+},{"22":22,"4":4}],18:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -2525,13 +2167,6 @@ module.exports = exports['default'];
 Object.defineProperty(exports, '__esModule', {
     value: true
 });
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
 function HandlerHelpers() {
     return {
         reconstructFullMetricName: function reconstructFullMetricName(key, n, type) {
@@ -2571,10 +2206,11 @@ function HandlerHelpers() {
 }
 
 HandlerHelpers.__dashjs_factory_name = 'HandlerHelpers';
-exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(HandlerHelpers);
+exports['default'] = dashjs.FactoryMaker.getSingletonFactory(HandlerHelpers);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1}],22:[function(_dereq_,module,exports){
+},{}],19:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -2583,29 +2219,26 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _voMetrics = _dereq_(26);
+var _voMetrics = _dereq_(23);
 
 var _voMetrics2 = _interopRequireDefault(_voMetrics);
 
-var _voRange = _dereq_(27);
+var _voRange = _dereq_(24);
 
 var _voRange2 = _interopRequireDefault(_voRange);
 
-var _voReporting = _dereq_(28);
+var _voReporting = _dereq_(25);
 
 var _voReporting2 = _interopRequireDefault(_voReporting);
-
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
 function ManifestParsing(config) {
     var instance = undefined;
     var dashManifestModel = config.dashManifestModel;
+    var constants = config.constants;
 
     function getMetricsRangeStartTime(manifest, dynamic, range) {
         var mpd = dashManifestModel.getMpd(manifest);
-        var periods;
+        var voPeriods;
         var presentationStartTime = 0;
         var reportingStartTime;
 
@@ -2619,10 +2252,10 @@ function ManifestParsing(config) {
             // For services with MPD@type='static', the start time is indicated
             // in Media Presentation time and is relative to the PeriodStart
             // time of the first Period in this MPD.
-            periods = this.getRegularPeriods(manifest, mpd);
+            voPeriods = this.getRegularPeriods(mpd);
 
-            if (periods.length) {
-                presentationStartTime = periods[0].start;
+            if (voPeriods.length) {
+                presentationStartTime = voPeriods[0].start;
             }
         }
 
@@ -2631,7 +2264,7 @@ function ManifestParsing(config) {
         // consumption.
         reportingStartTime = presentationStartTime;
 
-        if (range && range.hasOwnProperty('starttime')) {
+        if (range && range.hasOwnProperty(constants.START_TIME)) {
             reportingStartTime += range.starttime;
         }
 
@@ -2677,7 +2310,7 @@ function ManifestParsing(config) {
                     metric.Reporting_asArray.forEach(function (reporting) {
                         var reportingEntry = new _voReporting2['default']();
 
-                        if (reporting.hasOwnProperty('schemeIdUri')) {
+                        if (reporting.hasOwnProperty(constants.SCHEME_ID_URI)) {
                             reportingEntry.schemeIdUri = reporting.schemeIdUri;
                         } else {
                             // Invalid Reporting. schemeIdUri must be set. Ignore.
@@ -2712,10 +2345,11 @@ function ManifestParsing(config) {
 }
 
 ManifestParsing.__dashjs_factory_name = 'ManifestParsing';
-exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(ManifestParsing);
+exports['default'] = dashjs.FactoryMaker.getSingletonFactory(ManifestParsing);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1,"26":26,"27":27,"28":28}],23:[function(_dereq_,module,exports){
+},{"23":23,"24":24,"25":25}],20:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -2752,13 +2386,6 @@ module.exports = exports['default'];
 Object.defineProperty(exports, '__esModule', {
     value: true
 });
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
 function MetricSerialiser() {
 
     // For each entry in the top level list within the metric (in the case
@@ -2767,7 +2394,8 @@ function MetricSerialiser() {
     function serialise(metric) {
         var pairs = [];
         var obj = [];
-        var key, value;
+        var key = undefined,
+            value = undefined;
 
         // Take each (key, value) pair from the metric entry and create a
         // string consisting of the name of the key, followed by an equals
@@ -2823,10 +2451,11 @@ function MetricSerialiser() {
 }
 
 MetricSerialiser.__dashjs_factory_name = 'MetricSerialiser';
-exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(MetricSerialiser);
+exports['default'] = dashjs.FactoryMaker.getSingletonFactory(MetricSerialiser);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1}],24:[function(_dereq_,module,exports){
+},{}],21:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -2863,13 +2492,6 @@ module.exports = exports['default'];
 Object.defineProperty(exports, '__esModule', {
     value: true
 });
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-var _coreFactoryMaker = _dereq_(1);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
 function RNG() {
 
     // check whether secure random numbers are available. if not, revert to
@@ -2900,7 +2522,7 @@ function RNG() {
     }
 
     function rand(min, max) {
-        var r;
+        var r = undefined;
 
         if (!min) {
             min = 0;
@@ -2934,10 +2556,11 @@ function RNG() {
 }
 
 RNG.__dashjs_factory_name = 'RNG';
-exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(RNG);
+exports['default'] = dashjs.FactoryMaker.getSingletonFactory(RNG);
+/* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"1":1}],25:[function(_dereq_,module,exports){
+},{}],22:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -3045,7 +2668,7 @@ DVBErrors.BECAME_REPORTER = 'S00';
 exports['default'] = DVBErrors;
 module.exports = exports['default'];
 
-},{}],26:[function(_dereq_,module,exports){
+},{}],23:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -3099,7 +2722,7 @@ var Metrics = function Metrics() {
 exports['default'] = Metrics;
 module.exports = exports['default'];
 
-},{}],27:[function(_dereq_,module,exports){
+},{}],24:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -3156,7 +2779,7 @@ var Range = function Range() {
 exports["default"] = Range;
 module.exports = exports["default"];
 
-},{}],28:[function(_dereq_,module,exports){
+},{}],25:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -3210,7 +2833,7 @@ var Reporting = function Reporting() {
 exports['default'] = Reporting;
 module.exports = exports['default'];
 
-},{}],29:[function(_dereq_,module,exports){
+},{}],26:[function(_dereq_,module,exports){
 /**
 * The copyright in this software is being made available under the BSD License,
 * included below. This software may be subject to other third party and contributor
@@ -3346,11 +2969,31 @@ function CustomTimeRanges() /*config*/{
         return false;
     }
 
+    function checkIndex(index) {
+        var isInt = index !== null && !isNaN(index) && index % 1 === 0;
+
+        if (!isInt) {
+            throw new Error('index argument is not an integer');
+        }
+    }
+
     function start(index) {
+        checkIndex(index);
+
+        if (index >= this.customTimeRangeArray.length || index < 0) {
+            return NaN;
+        }
+
         return this.customTimeRangeArray[index].start;
     }
 
     function end(index) {
+        checkIndex(index);
+
+        if (index >= this.customTimeRangeArray.length || index < 0) {
+            return NaN;
+        }
+
         return this.customTimeRangeArray[index].end;
     }
 
@@ -3369,6 +3012,6 @@ CustomTimeRanges.__dashjs_factory_name = 'CustomTimeRanges';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(CustomTimeRanges);
 module.exports = exports['default'];
 
-},{"1":1}]},{},[6])(6)
+},{"1":1}]},{},[3])(3)
 });
 //# sourceMappingURL=dash.reporting.debug.js.map

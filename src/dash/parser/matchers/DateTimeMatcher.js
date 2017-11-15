@@ -32,6 +32,7 @@
  * @classdesc matches and converts xs:datetime to Date
  */
 import BaseMatcher from './BaseMatcher';
+import DashConstants from '../../constants/DashConstants';
 
 const SECONDS_IN_MIN = 60;
 const MINUTES_IN_HOUR = 60;
@@ -43,9 +44,8 @@ class DateTimeMatcher extends BaseMatcher {
     constructor() {
 
         const attributeList = [
-            'availabilityStartTime', 'publishTime',
+            DashConstants.AVAILABILITY_START_TIME, DashConstants.PUBLISH_TIME
         ];
-
 
         super(
             attr => attributeList.includes(attr.nodeName),

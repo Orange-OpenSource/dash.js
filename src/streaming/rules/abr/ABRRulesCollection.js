@@ -34,19 +34,19 @@ import AbandonRequestsRule from './AbandonRequestsRule';
 import DroppedFramesRule from './DroppedFramesRule.js';
 import SwitchHistoryRule from './SwitchHistoryRule.js';
 import BolaRule from './BolaRule';
-import BolaAbandonRule from './BolaAbandonRule';
-import MediaPlayerModel from '../../models/MediaPlayerModel';
-import MetricsModel from '../../models/MetricsModel';
-import DashMetrics from '../../../dash/DashMetrics';
 import FactoryMaker from '../../../core/FactoryMaker';
 import SwitchRequest from '../SwitchRequest.js';
 
 const QUALITY_SWITCH_RULES = 'qualitySwitchRules';
 const ABANDON_FRAGMENT_RULES = 'abandonFragmentRules';
 
-function ABRRulesCollection() {
+function ABRRulesCollection(config) {
 
-    let context = this.context;
+    const context = this.context;
+
+    const mediaPlayerModel = config.mediaPlayerModel;
+    const metricsModel = config.metricsModel;
+    const dashMetrics = config.dashMetrics;
 
     let instance,
         qualitySwitchRules,
@@ -56,83 +56,131 @@ function ABRRulesCollection() {
         qualitySwitchRules = [];
         abandonFragmentRules = [];
 
-        let metricsModel = MetricsModel(context).getInstance();
-        let dashMetrics = DashMetrics(context).getInstance();
-        let mediaPlayerModel = MediaPlayerModel(context).getInstance();
-
-        if (mediaPlayerModel.getBufferOccupancyABREnabled()) {
+        if (mediaPlayerModel.getUseDefaultABRRules()) {
+            // Only one of BolaRule and ThroughputRule will give a switchRequest.quality !== SwitchRequest.NO_CHANGE.
+            // This is controlled by useBufferOccupancyABR mechanism in AbrController.
             qualitySwitchRules.push(
                 BolaRule(context).create({
                     metricsModel: metricsModel,
-                    dashMetrics: DashMetrics(context).getInstance()
+                    dashMetrics: dashMetrics,
+                    mediaPlayerModel: mediaPlayerModel
                 })
             );
-            abandonFragmentRules.push(
-                BolaAbandonRule(context).create({
-                    metricsModel: metricsModel,
-                    dashMetrics: DashMetrics(context).getInstance()
-                })
-            );
-        } else {
             qualitySwitchRules.push(
                 ThroughputRule(context).create({
                     metricsModel: metricsModel,
                     dashMetrics: dashMetrics
                 })
             );
-
-            qualitySwitchRules.push(InsufficientBufferRule(context).create({metricsModel: metricsModel}));
-            qualitySwitchRules.push(SwitchHistoryRule(context).create());
-            qualitySwitchRules.push(DroppedFramesRule(context).create());
-            abandonFragmentRules.push(AbandonRequestsRule(context).create());
+            qualitySwitchRules.push(
+                InsufficientBufferRule(context).create({
+                    metricsModel: metricsModel,
+                    dashMetrics: dashMetrics
+                })
+            );
+            qualitySwitchRules.push(
+                SwitchHistoryRule(context).create()
+            );
+            qualitySwitchRules.push(
+                DroppedFramesRule(context).create()
+            );
+            abandonFragmentRules.push(
+                AbandonRequestsRule(context).create({
+                    metricsModel: metricsModel,
+                    dashMetrics: dashMetrics,
+                    mediaPlayerModel: mediaPlayerModel
+                })
+            );
         }
-    }
 
-    function getRules (type) {
-        switch (type) {
-            case QUALITY_SWITCH_RULES:
-                return qualitySwitchRules;
-            case ABANDON_FRAGMENT_RULES:
-                return abandonFragmentRules;
-            default:
-                return null;
-        }
-    }
+        // add custom ABR rules if any
+        const customRules = mediaPlayerModel.getABRCustomRules();
+        customRules.forEach(function (rule) {
+            if (rule.type === QUALITY_SWITCH_RULES) {
+                qualitySwitchRules.push(rule.rule(context).create());
+            }
 
-    function getActiveRules(srArray) {
-        return srArray.filter(sr => sr && (sr.value > SwitchRequest.NO_CHANGE));
-    }
-
-    function getMinSwitchRequest(srArray) {
-        if (srArray.length === 0) {
-            return;
-        }
-        return srArray.reduce((a, b) => {
-            return a && b ?
-                (a.value < b.value ? a : b) :
-                (a || b || window.undefined);
+            if (rule.type === ABANDON_FRAGMENT_RULES) {
+                abandonFragmentRules.push(rule.rule(context).create());
+            }
         });
     }
 
+    function getActiveRules(srArray) {
+        return srArray.filter(sr => sr && (sr.quality > SwitchRequest.NO_CHANGE));
+    }
+
+    function getMinSwitchRequest(srArray) {
+        const values = {};
+        let i,
+            len,
+            req,
+            newQuality,
+            quality;
+
+        if (srArray.length === 0) {
+            return;
+        }
+
+        values[SwitchRequest.PRIORITY.STRONG] = SwitchRequest.NO_CHANGE;
+        values[SwitchRequest.PRIORITY.WEAK] = SwitchRequest.NO_CHANGE;
+        values[SwitchRequest.PRIORITY.DEFAULT] = SwitchRequest.NO_CHANGE;
+
+        for (i = 0, len = srArray.length; i < len; i += 1) {
+            req = srArray[i];
+            if (req.quality !== SwitchRequest.NO_CHANGE) {
+                values[req.priority] = values[req.priority] > SwitchRequest.NO_CHANGE ? Math.min(values[req.priority], req.quality) : req.quality;
+            }
+        }
+
+        if (values[SwitchRequest.PRIORITY.WEAK] !== SwitchRequest.NO_CHANGE) {
+            newQuality = values[SwitchRequest.PRIORITY.WEAK];
+        }
+
+        if (values[SwitchRequest.PRIORITY.DEFAULT] !== SwitchRequest.NO_CHANGE) {
+            newQuality = values[SwitchRequest.PRIORITY.DEFAULT];
+        }
+
+        if (values[SwitchRequest.PRIORITY.STRONG] !== SwitchRequest.NO_CHANGE) {
+            newQuality = values[SwitchRequest.PRIORITY.STRONG];
+        }
+
+        if (newQuality !== SwitchRequest.NO_CHANGE) {
+            quality = newQuality;
+        }
+
+        return SwitchRequest(context).create(quality);
+    }
+
     function getMaxQuality(rulesContext) {
-        let switchRequestArray = qualitySwitchRules.map(rule => rule.getMaxIndex(rulesContext));
-        let activeRules = getActiveRules(switchRequestArray);
-        let maxQuality = getMinSwitchRequest(activeRules);
+        const switchRequestArray = qualitySwitchRules.map(rule => rule.getMaxIndex(rulesContext));
+        const activeRules = getActiveRules(switchRequestArray);
+        const maxQuality = getMinSwitchRequest(activeRules);
 
         return maxQuality || SwitchRequest(context).create();
     }
 
     function shouldAbandonFragment(rulesContext) {
-        let abandonRequestArray = abandonFragmentRules.map(rule => rule.shouldAbandon(rulesContext));
-        let activeRules = getActiveRules(abandonRequestArray);
-        let shouldAbandon = getMinSwitchRequest(activeRules);
+        const abandonRequestArray = abandonFragmentRules.map(rule => rule.shouldAbandon(rulesContext));
+        const activeRules = getActiveRules(abandonRequestArray);
+        const shouldAbandon = getMinSwitchRequest(activeRules);
 
         return shouldAbandon || SwitchRequest(context).create();
     }
 
+    function reset() {
+        [qualitySwitchRules, abandonFragmentRules].forEach(rules => {
+            if (rules && rules.length) {
+                rules.forEach(rule => rule.reset && rule.reset());
+            }
+        });
+        qualitySwitchRules = [];
+        abandonFragmentRules = [];
+    }
+
     instance = {
         initialize: initialize,
-        getRules: getRules,
+        reset: reset,
         getMaxQuality: getMaxQuality,
         shouldAbandonFragment: shouldAbandonFragment
     };
@@ -141,7 +189,9 @@ function ABRRulesCollection() {
 }
 
 ABRRulesCollection.__dashjs_factory_name = 'ABRRulesCollection';
-let factory =  FactoryMaker.getSingletonFactory(ABRRulesCollection);
+const factory = FactoryMaker.getClassFactory(ABRRulesCollection);
 factory.QUALITY_SWITCH_RULES = QUALITY_SWITCH_RULES;
 factory.ABANDON_FRAGMENT_RULES = ABANDON_FRAGMENT_RULES;
+FactoryMaker.updateSingletonFactory(ABRRulesCollection.__dashjs_factory_name, factory);
+
 export default factory;

@@ -176,11 +176,10 @@ export default class X2JS {
         if (xmlDocStr === undefined) { return null; }
 
         var xmlDoc;
-        var parsererrorNS = null;
 
         try {
             xmlDoc = parser.parseFromString( xmlDocStr, 'text/xml' );
-            if ( parsererrorNS && xmlDoc.getElementsByTagNameNS(parsererrorNS, 'parsererror').length > 0) {
+            if (xmlDoc.getElementsByTagNameNS('*', 'parsererror').length > 0) {
                 xmlDoc = null;
             }
         }

@@ -28,7 +28,6 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-import ErrorHandler from '../../streaming/utils/ErrorHandler';
 import FactoryMaker from '../../core/FactoryMaker';
 import Debug from '../../core/Debug';
 import ObjectIron from '../../../externals/molotovtv/objectiron';
@@ -40,11 +39,11 @@ import NumericMatcher from './matchers/NumericMatcher';
 import RepresentationBaseValuesMap from './maps/RepresentationBaseValuesMap';
 import SegmentValuesMap from './maps/SegmentValuesMap';
 
-function DashParser(/*config*/) {
+function DashParser(config) {
 
     const context = this.context;
     const log = Debug(context).getInstance().log;
-    const errorHandler = ErrorHandler(context).getInstance();
+    const errorHandler = config.errorHandler;
 
     let instance,
         matchers,
@@ -76,8 +75,24 @@ function DashParser(/*config*/) {
         ]);
     }
 
-    function parse(data, xlinkController) {
-        var manifest;
+    function checkConfig() {
+        if (!errorHandler || !errorHandler.hasOwnProperty('manifestError')) {
+            throw new Error('Missing config parameter(s)');
+        }
+    }
+
+    function getMatchers() {
+        return matchers;
+    }
+
+    function getIron() {
+        return objectIron;
+    }
+
+    function parse(data) {
+        let manifest;
+
+        checkConfig();
 
         try {
             const startTime = window.performance.now();
@@ -94,9 +109,6 @@ function DashParser(/*config*/) {
 
             const ironedTime = window.performance.now();
 
-            xlinkController.setMatchers(matchers);
-            xlinkController.setIron(objectIron);
-
             log('Parsing complete: ( xml2json: ' + (jsonTime - startTime).toPrecision(3) + 'ms, objectiron: ' + (ironedTime - jsonTime).toPrecision(3) + 'ms, total: ' + ((ironedTime - startTime) / 1000).toPrecision(3) + 's)');
         } catch (err) {
             errorHandler.manifestError('parsing the manifest failed', 'parse', data, err);
@@ -106,19 +118,10 @@ function DashParser(/*config*/) {
         return manifest;
     }
 
-    function parseXML(data) {
-        return converter.xml_str2json(data);
-    }
-
-    function setXlinkObjectIron(xlinkController) {
-        xlinkController.setMatchers(matchers);
-        xlinkController.setIron(objectIron);
-    }
-
     instance = {
         parse: parse,
-        parseXML: parseXML,
-        setXlinkObjectIron: setXlinkObjectIron,
+        getMatchers: getMatchers,
+        getIron: getIron
     };
 
     setup();

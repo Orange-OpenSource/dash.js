@@ -30,10 +30,7 @@
  */
 
 import DVBErrors from '../vo/DVBErrors';
-import Events from '../../../core/events/Events';
-import MediaPlayerEvents from '../../MediaPlayerEvents';
 import MetricsReportingEvents from '../MetricsReportingEvents';
-import FactoryMaker from '../../../core/FactoryMaker';
 
 function DVBErrorsTranslator(config) {
 
@@ -42,8 +39,12 @@ function DVBErrorsTranslator(config) {
     let metricModel = config.metricsModel;
     let mpd;
 
+    const metricsConstants = config.metricsConstants;
+    //MediaPlayerEvents have been added to Events in MediaPlayer class
+    const Events = config.events;
+
     function report(vo) {
-        var o = new DVBErrors();
+        let o = new DVBErrors();
 
         if (!mpd) {
             return;
@@ -103,7 +104,7 @@ function DVBErrorsTranslator(config) {
 
     function onMetricEvent(e) {
         switch (e.metric) {
-        case 'HttpList':
+        case metricsConstants.HTTP_REQUEST:
             handleHttpMetric(e.value);
             break;
         default:
@@ -112,8 +113,8 @@ function DVBErrorsTranslator(config) {
     }
 
     function onPlaybackError(e) {
-        var reason = e.error ? e.error.code : 0;
-        var errorcode;
+        let reason = e.error ? e.error.code : 0;
+        let errorcode;
 
         switch (reason) {
             case MediaError.MEDIA_ERR_NETWORK:
@@ -138,9 +139,9 @@ function DVBErrorsTranslator(config) {
             onServiceLocationChanged,
             instance
         );
-        eventBus.on(MediaPlayerEvents.METRIC_ADDED, onMetricEvent, instance);
-        eventBus.on(MediaPlayerEvents.METRIC_UPDATED, onMetricEvent, instance);
-        eventBus.on(MediaPlayerEvents.PLAYBACK_ERROR, onPlaybackError, instance);
+        eventBus.on(Events.METRIC_ADDED, onMetricEvent, instance);
+        eventBus.on(Events.METRIC_UPDATED, onMetricEvent, instance);
+        eventBus.on(Events.PLAYBACK_ERROR, onPlaybackError, instance);
         eventBus.on(
             MetricsReportingEvents.BECAME_REPORTING_PLAYER,
             onBecameReporter,
@@ -155,9 +156,9 @@ function DVBErrorsTranslator(config) {
             onServiceLocationChanged,
             instance
         );
-        eventBus.off(MediaPlayerEvents.METRIC_ADDED, onMetricEvent, instance);
-        eventBus.off(MediaPlayerEvents.METRIC_UPDATED, onMetricEvent, instance);
-        eventBus.off(MediaPlayerEvents.PLAYBACK_ERROR, onPlaybackError, instance);
+        eventBus.off(Events.METRIC_ADDED, onMetricEvent, instance);
+        eventBus.off(Events.METRIC_UPDATED, onMetricEvent, instance);
+        eventBus.off(Events.PLAYBACK_ERROR, onPlaybackError, instance);
         eventBus.off(
             MetricsReportingEvents.BECAME_REPORTING_PLAYER,
             onBecameReporter,
@@ -176,4 +177,4 @@ function DVBErrorsTranslator(config) {
 }
 
 DVBErrorsTranslator.__dashjs_factory_name = 'DVBErrorsTranslator';
-export default FactoryMaker.getSingletonFactory(DVBErrorsTranslator);
+export default dashjs.FactoryMaker.getSingletonFactory(DVBErrorsTranslator); /* jshint ignore:line */

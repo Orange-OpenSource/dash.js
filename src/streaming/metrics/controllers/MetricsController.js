@@ -29,7 +29,6 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-import FactoryMaker from '../../../core/FactoryMaker';
 import RangeController from './RangeController';
 import ReportingController from './ReportingController';
 import MetricsHandlersController from './MetricsHandlersController';
@@ -52,7 +51,8 @@ function MetricsController(config) {
             rangeController.initialize(metricsEntry.Range);
 
             reportingController = ReportingController(context).create({
-                log: config.log
+                log: config.log,
+                metricsConstants: config.metricsConstants
             });
 
             reportingController.initialize(metricsEntry.Reporting, rangeController);
@@ -60,6 +60,8 @@ function MetricsController(config) {
             metricsHandlersController = MetricsHandlersController(context).create({
                 log: config.log,
                 eventBus: config.eventBus,
+                metricsConstants: config.metricsConstants,
+                events: config.events
             });
 
             metricsHandlersController.initialize(metricsEntry.metrics, reportingController);
@@ -92,4 +94,4 @@ function MetricsController(config) {
 }
 
 MetricsController.__dashjs_factory_name = 'MetricsController';
-export default FactoryMaker.getClassFactory(MetricsController);
+export default dashjs.FactoryMaker.getClassFactory(MetricsController); /* jshint ignore:line */

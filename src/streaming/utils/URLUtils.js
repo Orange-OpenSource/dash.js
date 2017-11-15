@@ -44,6 +44,7 @@ function URLUtils() {
 
     const schemeRegex = /^[a-z][a-z0-9+\-.]*:/i;
     const httpUrlRegex = /^https?:\/\//i;
+    const httpsUrlRegex = /^https:\/\//i;
     const originRegex = /^([a-z][a-z0-9+\-.]*:\/\/[^\/]+)\/?/i;
 
     /**
@@ -80,7 +81,7 @@ function URLUtils() {
      * @private
      */
     const dumbURLResolver = (url, baseUrl) => {
-        var baseUrlParseFunc = parseBaseUrl;
+        let baseUrlParseFunc = parseBaseUrl;
 
         if (!baseUrl) {
             return url;
@@ -92,6 +93,10 @@ function URLUtils() {
 
         if (isPathAbsolute(url)) {
             baseUrlParseFunc = parseOrigin;
+        }
+
+        if (isSchemeRelative(url)) {
+            baseUrlParseFunc = parseScheme;
         }
 
         const base = baseUrlParseFunc(baseUrl);
@@ -160,6 +165,23 @@ function URLUtils() {
     }
 
     /**
+     * Returns a string that contains the scheme of a URL, if determinable.
+     * @param {string} url - full url
+     * @return {string}
+     * @memberof module:URLUtils
+     * @instance
+     */
+    function parseScheme(url) {
+        const matches = url.match(schemeRegex);
+
+        if (matches) {
+            return matches[0];
+        }
+
+        return '';
+    }
+
+    /**
      * Determines whether the url is relative.
      * @return {bool}
      * @param {string} url
@@ -169,7 +191,6 @@ function URLUtils() {
     function isRelative(url) {
         return !schemeRegex.test(url);
     }
-
 
     /**
      * Determines whether the url is path-absolute.
@@ -183,6 +204,17 @@ function URLUtils() {
     }
 
     /**
+     * Determines whether the url is scheme-relative.
+     * @return {bool}
+     * @param {string} url
+     * @memberof module:URLUtils
+     * @instance
+     */
+    function isSchemeRelative(url) {
+        return url.indexOf('//') === 0;
+    }
+
+    /**
      * Determines whether the url is an HTTP-URL as defined in ISO/IEC
      * 23009-1:2014 3.1.15. ie URL with a fixed scheme of http or https
      * @return {bool}
@@ -192,6 +224,17 @@ function URLUtils() {
      */
     function isHTTPURL(url) {
         return httpUrlRegex.test(url);
+    }
+
+    /**
+     * Determines whether the supplied url has https scheme
+     * @return {bool}
+     * @param {string} url
+     * @memberof module:URLUtils
+     * @instance
+     */
+    function isHTTPS(url) {
+        return httpsUrlRegex.test(url);
     }
 
     /**
@@ -209,12 +252,15 @@ function URLUtils() {
     setup();
 
     const instance = {
-        parseBaseUrl:   parseBaseUrl,
-        parseOrigin:    parseOrigin,
-        isRelative:     isRelative,
-        isPathAbsolute: isPathAbsolute,
-        isHTTPURL:      isHTTPURL,
-        resolve:        resolve
+        parseBaseUrl:       parseBaseUrl,
+        parseOrigin:        parseOrigin,
+        parseScheme:        parseScheme,
+        isRelative:         isRelative,
+        isPathAbsolute:     isPathAbsolute,
+        isSchemeRelative:   isSchemeRelative,
+        isHTTPURL:          isHTTPURL,
+        isHTTPS:            isHTTPS,
+        resolve:            resolve
     };
 
     return instance;

@@ -32,6 +32,7 @@
  * @classdesc a SegmentValuesMap type for input to objectiron
  */
 import MapNode from './MapNode';
+import DashConstants from '../../constants/DashConstants';
 
 /*
  * As described in chapter 5.3.9.1, Representations are assigned Segment
@@ -59,12 +60,12 @@ import MapNode from './MapNode';
 class SegmentValuesMap extends MapNode {
     constructor() {
         const commonProperties = [
-            'SegmentBase', 'SegmentTemplate', 'SegmentList'
+            DashConstants.SEGMENT_BASE, DashConstants.SEGMENT_TEMPLATE, DashConstants.SEGMENT_LIST
         ];
 
-        super('Period', commonProperties, [
-            new MapNode('AdaptationSet', commonProperties, [
-                new MapNode('Representation', commonProperties)
+        super(DashConstants.PERIOD, commonProperties, [
+            new MapNode(DashConstants.ADAPTATION_SET, commonProperties, [
+                new MapNode(DashConstants.REPRESENTATION, commonProperties)
             ])
         ]);
     }

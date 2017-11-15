@@ -28,7 +28,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-
+import DashConstants from '../constants/DashConstants';
 import FactoryMaker from '../../core/FactoryMaker';
 import TimelineSegmentsGetter from './TimelineSegmentsGetter';
 import TemplateSegmentsGetter from './TemplateSegmentsGetter';
@@ -49,35 +49,33 @@ function SegmentsGetter(config, isDynamic) {
         listSegmentsGetter = ListSegmentsGetter(context).create(config, isDynamic);
     }
 
-    function getSegments(representation, requestedTime, index, onSegmentListUpdatedCallback, availabilityUpperLimit) {
-        var segments;
-        var type = representation.segmentInfoType;
+    function getSegments(representation, requestedTime, index, onSegmentListUpdatedCallback) {
+        let segments;
+        const type = representation.segmentInfoType;
 
         // Already figure out the segments.
-        if (type === 'SegmentBase' || type === 'BaseURL' || !isSegmentListUpdateRequired(representation, index)) {
+        if (type === DashConstants.SEGMENT_BASE || type === DashConstants.BASE_URL || !isSegmentListUpdateRequired(representation, index)) {
             segments = representation.segments;
         } else {
-            if (type === 'SegmentTimeline') {
-                segments = timelineSegmentsGetter.getSegments(representation, requestedTime, index, availabilityUpperLimit);
-            } else if (type === 'SegmentTemplate') {
-                segments = templateSegmentsGetter.getSegments(representation, requestedTime, index, availabilityUpperLimit);
-            } else if (type === 'SegmentList') {
-                segments = listSegmentsGetter.getSegments(representation, requestedTime, index, availabilityUpperLimit);
+            if (type === DashConstants.SEGMENT_TIMELINE) {
+                segments = timelineSegmentsGetter.getSegments(representation, requestedTime, index);
+            } else if (type === DashConstants.SEGMENT_TEMPLATE) {
+                segments = templateSegmentsGetter.getSegments(representation, requestedTime, index);
+            } else if (type === DashConstants.SEGMENT_LIST) {
+                segments = listSegmentsGetter.getSegments(representation, requestedTime, index);
             }
 
             if (onSegmentListUpdatedCallback) {
                 onSegmentListUpdatedCallback(representation, segments);
             }
         }
-
-        return segments;
     }
 
     function isSegmentListUpdateRequired(representation, index) {
-        var segments = representation.segments;
-        var updateRequired = false;
+        let segments = representation.segments;
+        let updateRequired = false;
 
-        var upperIdx,
+        let upperIdx,
             lowerIdx;
 
         if (!segments || segments.length === 0) {

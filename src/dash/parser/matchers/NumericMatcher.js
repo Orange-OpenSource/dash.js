@@ -38,9 +38,7 @@ const numericRegex = /^[-+]?[0-9]+[.]?[0-9]*(?:[eE][-+]?[0-9]+)?$/;
 class NumericMatcher extends BaseMatcher {
     constructor() {
         super(
-            attr => {
-                return numericRegex.test(attr.value);
-            },
+            attr => numericRegex.test(attr.value),
             str => parseFloat(str)
         );
     }

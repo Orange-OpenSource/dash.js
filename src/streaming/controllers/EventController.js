@@ -29,7 +29,6 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-import PlaybackController from '../controllers/PlaybackController';
 import FactoryMaker from '../../core/FactoryMaker';
 import Debug from '../../core/Debug';
 import EventBus from '../../core/EventBus';
@@ -55,7 +54,11 @@ function EventController() {
         playbackController,
         isStarted;
 
-    function initialize() {
+    function setup() {
+        resetInitialSettings();
+    }
+
+    function resetInitialSettings() {
         isStarted = false;
         inlineEvents = {};
         inbandEvents = {};
@@ -63,7 +66,12 @@ function EventController() {
         eventInterval = null;
         refreshDelay = 100;
         presentationTimeThreshold = refreshDelay / 1000;
-        playbackController = PlaybackController(context).getInstance();
+    }
+
+    function checkSetConfigCall() {
+        if (!manifestModel || !manifestUpdater || !playbackController) {
+            throw new Error('setConfig function has to be called previously');
+        }
     }
 
     function clear() {
@@ -75,6 +83,7 @@ function EventController() {
     }
 
     function start() {
+        checkSetConfigCall();
         log('Start Event Controller');
         if (!isStarted && !isNaN(refreshDelay)) {
             isStarted = true;
@@ -87,6 +96,8 @@ function EventController() {
      * @param {Array.<Object>} values
      */
     function addInlineEvents(values) {
+        checkSetConfigCall();
+
         inlineEvents = {};
 
         if (values) {
@@ -104,6 +115,8 @@ function EventController() {
      * @param {Array.<Object>} values
      */
     function addInbandEvents(values) {
+        checkSetConfigCall();
+
         for (var i = 0; i < values.length; i++) {
             var event = values[i];
             if (!(event.id in inbandEvents)) {
@@ -145,14 +158,8 @@ function EventController() {
     }
 
     function refreshManifest() {
-        var manifest = manifestModel.getValue();
-        var url = manifest.url;
-
-        if (manifest.hasOwnProperty('Location')) {
-            url = manifest.Location;
-        }
-        log('Refresh manifest @ ' + url);
-        manifestUpdater.getManifestLoader().load(url);
+        checkSetConfigCall();
+        manifestUpdater.refreshManifest();
     }
 
     function triggerEvents(events) {
@@ -195,18 +202,18 @@ function EventController() {
         if (config.manifestUpdater) {
             manifestUpdater = config.manifestUpdater;
         }
+
+        if (config.playbackController) {
+            playbackController = config.playbackController;
+        }
     }
 
     function reset() {
         clear();
-        inlineEvents = null;
-        inbandEvents = null;
-        activeEvents = null;
-        playbackController = null;
+        resetInitialSettings();
     }
 
     instance = {
-        initialize: initialize,
         addInlineEvents: addInlineEvents,
         addInbandEvents: addInbandEvents,
         clear: clear,
@@ -215,8 +222,10 @@ function EventController() {
         reset: reset
     };
 
+    setup();
+
     return instance;
 }
 
 EventController.__dashjs_factory_name = 'EventController';
-export default FactoryMaker.getSingletonFactory(EventController);
+export default FactoryMaker.getClassFactory(EventController);

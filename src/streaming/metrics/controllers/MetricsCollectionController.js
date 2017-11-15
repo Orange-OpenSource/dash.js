@@ -31,9 +31,7 @@
 
 import MetricsController from './MetricsController';
 import ManifestParsing from '../utils/ManifestParsing';
-import FactoryMaker from '../../../core/FactoryMaker';
 import MetricsReportingEvents from '../MetricsReportingEvents';
-import Events from '../../../core/events/Events';
 
 function MetricsCollectionController(config) {
 
@@ -41,6 +39,7 @@ function MetricsCollectionController(config) {
 
     let context = this.context;
     let eventBus = config.eventBus;
+    const events = config.events;
 
     function update(e) {
         if (e.error) {
@@ -51,7 +50,8 @@ function MetricsCollectionController(config) {
         let controllersToRemove = Object.keys(metricsControllers);
 
         const metrics = ManifestParsing(context).getInstance({
-            dashManifestModel: config.dashManifestModel
+            dashManifestModel: config.dashManifestModel,
+            constants: config.constants
         }).getMetrics(e.manifest);
 
         metrics.forEach(m => {
@@ -59,7 +59,7 @@ function MetricsCollectionController(config) {
 
             if (!metricsControllers.hasOwnProperty(key)) {
                 try {
-                    var controller = MetricsController(context).create(config);
+                    let controller = MetricsController(context).create(config);
                     controller.initialize(m);
                     metricsControllers[key] = controller;
                 } catch (e) {
@@ -82,7 +82,7 @@ function MetricsCollectionController(config) {
         );
     }
 
-    function reset() {
+    function resetMetricsControllers() {
         Object.keys(metricsControllers).forEach(key => {
             metricsControllers[key].reset();
         });
@@ -91,17 +91,21 @@ function MetricsCollectionController(config) {
     }
 
     function setup() {
+        eventBus.on(events.MANIFEST_UPDATED, update);
+        eventBus.on(events.STREAM_TEARDOWN_COMPLETE, resetMetricsControllers);
+    }
 
-
-        eventBus.on(Events.MANIFEST_UPDATED, update);
-        eventBus.on(Events.STREAM_TEARDOWN_COMPLETE, reset);
+    function reset() {
+        eventBus.off(events.MANIFEST_UPDATED, update);
+        eventBus.off(events.STREAM_TEARDOWN_COMPLETE, resetMetricsControllers);
     }
 
     setup();
 
-    // don't export any actual methods
-    return {};
+    return {
+        reset: reset
+    };
 }
 
 MetricsCollectionController.__dashjs_factory_name = 'MetricsCollectionController';
-export default FactoryMaker.getClassFactory(MetricsCollectionController);
+export default dashjs.FactoryMaker.getClassFactory(MetricsCollectionController); /* jshint ignore:line */

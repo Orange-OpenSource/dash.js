@@ -29,12 +29,10 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-import FactoryMaker from '../../../core/FactoryMaker';
-
 function HandlerHelpers() {
     return {
         reconstructFullMetricName: function (key, n, type) {
-            var mn = key;
+            let mn = key;
 
             if (n) {
                 mn += '(' + n;
@@ -70,4 +68,4 @@ function HandlerHelpers() {
 }
 
 HandlerHelpers.__dashjs_factory_name = 'HandlerHelpers';
-export default FactoryMaker.getSingletonFactory(HandlerHelpers);
+export default dashjs.FactoryMaker.getSingletonFactory(HandlerHelpers); /* jshint ignore:line */

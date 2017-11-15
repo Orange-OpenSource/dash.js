@@ -32,15 +32,15 @@
 import KeyPair from '../vo/KeyPair';
 import ClearKeyKeySet from '../vo/ClearKeyKeySet';
 import CommonEncryption from '../CommonEncryption';
-import FactoryMaker from '../../../core/FactoryMaker';
 
 const uuid = '1077efec-c0b2-4d02-ace3-3c1e52e2fb4b';
 const systemString = 'org.w3.clearkey';
 const schemeIdURI = 'urn:uuid:' + uuid;
 
-function KeySystemClearKey() {
+function KeySystemClearKey(config) {
 
     let instance;
+    let BASE64 = config.BASE64;
     /**
      * Returns desired clearkeys (as specified in the CDM message) from protection data
      *
@@ -52,15 +52,15 @@ function KeySystemClearKey() {
      * @memberof KeySystemClearKey
      */
     function getClearKeysFromProtectionData(protectionData, message) {
-        var clearkeySet = null;
+        let clearkeySet = null;
         if (protectionData) {
             // ClearKey is the only system that does not require a license server URL, so we
             // handle it here when keys are specified in protection data
-            var jsonMsg = JSON.parse(String.fromCharCode.apply(null, new Uint8Array(message)));
-            var keyPairs = [];
-            for (var i = 0; i < jsonMsg.kids.length; i++) {
-                var clearkeyID = jsonMsg.kids[i];
-                var clearkey = (protectionData.clearkeys.hasOwnProperty(clearkeyID)) ? protectionData.clearkeys[clearkeyID] : null;
+            let jsonMsg = JSON.parse(String.fromCharCode.apply(null, new Uint8Array(message)));
+            let keyPairs = [];
+            for (let i = 0; i < jsonMsg.kids.length; i++) {
+                let clearkeyID = jsonMsg.kids[i];
+                let clearkey = (protectionData.clearkeys.hasOwnProperty(clearkeyID)) ? protectionData.clearkeys[clearkeyID] : null;
                 if (!clearkey) {
                     throw new Error('DRM: ClearKey keyID (' + clearkeyID + ') is not known!');
                 }
@@ -73,7 +73,7 @@ function KeySystemClearKey() {
     }
 
     function getInitData(cp) {
-        return CommonEncryption.parseInitDataFromContentProtection(cp);
+        return CommonEncryption.parseInitDataFromContentProtection(cp, BASE64);
     }
 
     function getRequestHeadersFromMessage(/*message*/) {
@@ -88,6 +88,10 @@ function KeySystemClearKey() {
         return null;
     }
 
+    function getCDMData() {
+        return null;
+    }
+
     instance = {
         uuid: uuid,
         schemeIdURI: schemeIdURI,
@@ -96,6 +100,7 @@ function KeySystemClearKey() {
         getRequestHeadersFromMessage: getRequestHeadersFromMessage,
         getLicenseRequestFromMessage: getLicenseRequestFromMessage,
         getLicenseServerURLFromInitData: getLicenseServerURLFromInitData,
+        getCDMData: getCDMData,
         getClearKeysFromProtectionData: getClearKeysFromProtectionData
     };
 
@@ -103,4 +108,4 @@ function KeySystemClearKey() {
 }
 
 KeySystemClearKey.__dashjs_factory_name = 'KeySystemClearKey';
-export default FactoryMaker.getSingletonFactory(KeySystemClearKey);
+export default dashjs.FactoryMaker.getSingletonFactory(KeySystemClearKey); /* jshint ignore:line */
