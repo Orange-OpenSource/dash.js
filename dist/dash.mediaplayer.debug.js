@@ -26142,6 +26142,12 @@ var MediaPlayerEvents = (function (_EventsBase) {
     this.TEXT_TRACK_ADDED = 'textTrackAdded';
 
     /**
+     * Triggered when a ttml chunk is parsed.
+     * @event MediaPlayerEvents#TTML_PARSED
+     */
+    this.TTML_PARSED = 'ttmlParsed';
+
+    /**
      * Sent when enough data is available that the media can be played,
      * at least for a couple of frames.  This corresponds to the
      * HAVE_ENOUGH_DATA readyState.
@@ -36066,6 +36072,14 @@ function VideoModel() {
         return element ? element.videoHeight : NaN;
     }
 
+    function getVideoRelativeOffsetTop() {
+        return element && element.parentNode ? element.getBoundingClientRect().top - element.parentNode.getBoundingClientRect().top : NaN;
+    }
+
+    function getVideoRelativeOffsetLeft() {
+        return element && element.parentNode ? element.getBoundingClientRect().left - element.parentNode.getBoundingClientRect().left : NaN;
+    }
+
     function getTextTracks() {
         return element ? element.textTracks : [];
     }
@@ -36136,7 +36150,9 @@ function VideoModel() {
         appendChild: appendChild,
         removeChild: removeChild,
         getVideoWidth: getVideoWidth,
-        getVideoHeight: getVideoHeight
+        getVideoHeight: getVideoHeight,
+        getVideoRelativeOffsetTop: getVideoRelativeOffsetTop,
+        getVideoRelativeOffsetLeft: getVideoRelativeOffsetLeft
     };
 
     return instance;
@@ -40167,6 +40183,8 @@ function TextTracks() {
         var kind = textTrackQueue[i].kind;
         var label = textTrackQueue[i].label !== undefined ? textTrackQueue[i].label : textTrackQueue[i].lang;
         var lang = textTrackQueue[i].lang;
+        var isTTML = textTrackQueue[i].isTTML;
+        var isEmbedded = textTrackQueue[i].isEmbedded;
         var track = isChrome ? document.createElement('track') : videoModel.addTextTrack(kind, label, lang);
 
         if (isChrome) {
@@ -40174,6 +40192,9 @@ function TextTracks() {
             track.label = label;
             track.srclang = lang;
         }
+
+        track.isEmbedded = isEmbedded;
+        track.isTTML = isTTML;
 
         return track;
     }
@@ -40243,7 +40264,7 @@ function TextTracks() {
                 }
             }
 
-            eventBus.trigger(_coreEventsEvents2['default'].TEXT_TRACKS_ADDED, {
+            eventBus.trigger(_coreEventsEvents2['default'].TEXT_TRACKS_QUEUE_INITIALIZED, {
                 index: currentTrackIdx,
                 tracks: textTrackQueue
             }); //send default idx.
@@ -40273,15 +40294,13 @@ function TextTracks() {
 
         if (videoPictureAspect > aspectRatio) {
             videoPictureHeightAspect = videoPictureHeight;
-            videoPictureWidthAspect = videoPictureHeight / (1 / aspectRatio);
-            videoPictureXAspect = (viewWidth - videoPictureWidthAspect) / 2;
-            videoPictureYAspect = 0;
+            videoPictureWidthAspect = videoPictureHeight * aspectRatio;
         } else {
             videoPictureWidthAspect = videoPictureWidth;
             videoPictureHeightAspect = videoPictureWidth / aspectRatio;
-            videoPictureXAspect = 0;
-            videoPictureYAspect = (viewHeight - videoPictureHeightAspect) / 2;
         }
+        videoPictureXAspect = (viewWidth - videoPictureWidthAspect) / 2;
+        videoPictureYAspect = (viewHeight - videoPictureHeightAspect) / 2;
 
         if (use80Percent) {
             return {
@@ -40305,7 +40324,9 @@ function TextTracks() {
         var clientHeight = videoModel.getClientHeight();
         var videoWidth = videoModel.getVideoWidth();
         var videoHeight = videoModel.getVideoHeight();
-        var aspectRatio = clientWidth / clientHeight;
+        var videoOffsetTop = videoModel.getVideoRelativeOffsetTop();
+        var videoOffsetLeft = videoModel.getVideoRelativeOffsetLeft();
+        var aspectRatio = videoWidth / videoHeight;
         var use80Percent = false;
         if (track.isFromCEA608) {
             // If this is CEA608 then use predefined aspect ratio
@@ -40317,10 +40338,12 @@ function TextTracks() {
 
         var newVideoWidth = realVideoSize.w;
         var newVideoHeight = realVideoSize.h;
+        var newVideoLeft = realVideoSize.x;
+        var newVideoTop = realVideoSize.y;
 
-        if (newVideoWidth != actualVideoWidth || newVideoHeight != actualVideoHeight) {
-            actualVideoLeft = realVideoSize.x;
-            actualVideoTop = realVideoSize.y;
+        if (newVideoWidth != actualVideoWidth || newVideoHeight != actualVideoHeight || newVideoLeft != actualVideoLeft || newVideoTop != actualVideoTop) {
+            actualVideoLeft = newVideoLeft + videoOffsetLeft;
+            actualVideoTop = newVideoTop + videoOffsetTop;
             actualVideoWidth = newVideoWidth;
             actualVideoHeight = newVideoHeight;
             captionContainer.style.left = actualVideoLeft + 'px';
@@ -40410,6 +40433,38 @@ function TextTracks() {
                 }
             }
         }
+
+        if (activeCue.isd) {
+            var htmlCaptionDiv = document.getElementById(activeCue.cueID);
+            if (htmlCaptionDiv) {
+                captionContainer.removeChild(htmlCaptionDiv);
+                renderCaption(activeCue);
+            }
+        }
+    }
+
+    function renderCaption(cue) {
+        var finalCue = document.createElement('div');
+        captionContainer.appendChild(finalCue);
+        (0, _imsc.renderHTML)(cue.isd, finalCue, function (uri) {
+            var imsc1ImgUrnTester = /^(urn:)(mpeg:[a-z0-9][a-z0-9-]{0,31}:)(subs:)([0-9])$/;
+            var smpteImgUrnTester = /^#(.*)$/;
+            if (imsc1ImgUrnTester.test(uri)) {
+                var match = imsc1ImgUrnTester.exec(uri);
+                var imageId = parseInt(match[4], 10) - 1;
+                var imageData = btoa(cue.images[imageId]);
+                var dataUrl = 'data:image/png;base64,' + imageData;
+                return dataUrl;
+            } else if (smpteImgUrnTester.test(uri)) {
+                var match = smpteImgUrnTester.exec(uri);
+                var imageId = match[1];
+                var dataUrl = 'data:image/png;base64,' + cue.embeddedImages[imageId];
+                return dataUrl;
+            } else {
+                return null;
+            }
+        }, captionContainer.clientHeight, captionContainer.clientWidth);
+        finalCue.id = cue.cueID;
     }
 
     /*
@@ -40427,7 +40482,7 @@ function TextTracks() {
             return;
         }
 
-        var _loop = function (item) {
+        for (var item in captionData) {
             var cue = undefined;
             var currentItem = captionData[item];
 
@@ -40456,28 +40511,8 @@ function TextTracks() {
                 cue.onenter = function () {
                     if (track.mode === _constantsConstants2['default'].TEXT_SHOWING) {
                         if (this.isd) {
-                            var finalCue = document.createElement('div');
+                            renderCaption(this);
                             log('Cue enter id:' + this.cueID);
-                            captionContainer.appendChild(finalCue);
-                            (0, _imsc.renderHTML)(this.isd, finalCue, function (uri) {
-                                var imsc1ImgUrnTester = /^(urn:)(mpeg:[a-z0-9][a-z0-9-]{0,31}:)(subs:)([0-9])$/;
-                                var smpteImgUrnTester = /^#(.*)$/;
-                                if (imsc1ImgUrnTester.test(uri)) {
-                                    var match = imsc1ImgUrnTester.exec(uri);
-                                    var imageId = parseInt(match[4], 10) - 1;
-                                    var imageData = btoa(cue.images[imageId]);
-                                    var dataUrl = 'data:image/png;base64,' + imageData;
-                                    return dataUrl;
-                                } else if (smpteImgUrnTester.test(uri)) {
-                                    var match = smpteImgUrnTester.exec(uri);
-                                    var imageId = match[1];
-                                    var dataUrl = 'data:image/png;base64,' + cue.embeddedImages[imageId];
-                                    return dataUrl;
-                                } else {
-                                    return null;
-                                }
-                            }, captionContainer.clientHeight, captionContainer.clientWidth);
-                            finalCue.id = this.cueID;
                         } else {
                             captionContainer.appendChild(this.cueHTMLElement);
                             scaleCue.call(self, this);
@@ -40513,15 +40548,11 @@ function TextTracks() {
             }
 
             track.addCue(cue);
-        };
-
-        for (var item in captionData) {
-            _loop(item);
         }
     }
 
     function getTrackByIdx(idx) {
-        return idx >= 0 && textTrackQueue[idx] ? videoModel.getTextTrack(textTrackQueue[idx].kind, textTrackQueue[idx].label, textTrackQueue[idx].lang) : null;
+        return idx >= 0 && textTrackQueue[idx] ? videoModel.getTextTrack(textTrackQueue[idx].kind, textTrackQueue[idx].label, textTrackQueue[idx].lang, textTrackQueue[idx].isTTML, textTrackQueue[idx].isEmbedded) : null;
     }
 
     function getCurrentTrackIdx() {
@@ -42392,12 +42423,21 @@ var _coreDebug = _dereq_(48);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
+var _coreEventBus = _dereq_(49);
+
+var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
+
+var _coreEventsEvents = _dereq_(53);
+
+var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
+
 var _imsc = _dereq_(19);
 
 function TTMLParser() {
 
     var context = this.context;
     var log = (0, _coreDebug2['default'])(context).getInstance().log;
+    var eventBus = (0, _coreEventBus2['default'])(context).getInstance();
 
     /*
      * This TTML parser follows "EBU-TT-D SUBTITLING DISTRIBUTION FORMAT - tech3380" spec - https://tech.ebu.ch/docs/tech/tech3380.pdf.
@@ -42468,8 +42508,9 @@ function TTMLParser() {
         var imsc1doc = (0, _imsc.fromXML)(data, function (msg) {
             errorMsg = msg;
         }, metadataHandler);
-        var mediaTimeEvents = imsc1doc.getMediaTimeEvents();
+        eventBus.trigger(_coreEventsEvents2['default'].TTML_PARSED, { data: data, ttmlDoc: imsc1doc });
 
+        var mediaTimeEvents = imsc1doc.getMediaTimeEvents();
         for (i = 0; i < mediaTimeEvents.length; i++) {
             var isd = (0, _imsc.generateISD)(imsc1doc, mediaTimeEvents[i], function (error) {
                 errorMsg = error;
@@ -42520,7 +42561,7 @@ TTMLParser.__dashjs_factory_name = 'TTMLParser';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(TTMLParser);
 module.exports = exports['default'];
 
-},{"19":19,"48":48,"50":50}],154:[function(_dereq_,module,exports){
+},{"19":19,"48":48,"49":49,"50":50,"53":53}],154:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
