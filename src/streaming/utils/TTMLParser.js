@@ -30,12 +30,15 @@
  */
 import FactoryMaker from '../../core/FactoryMaker';
 import Debug from '../../core/Debug';
+import EventBus from '../../core/EventBus';
+import Events from '../../core/events/Events';
 import { fromXML, generateISD } from 'imsc';
 
 function TTMLParser() {
 
     let context = this.context;
     let log = Debug(context).getInstance().log;
+    let eventBus = EventBus(context).getInstance();
 
     /*
      * This TTML parser follows "EBU-TT-D SUBTITLING DISTRIBUTION FORMAT - tech3380" spec - https://tech.ebu.ch/docs/tech/tech3380.pdf.
@@ -49,7 +52,6 @@ function TTMLParser() {
         cueCounter++;
         return id;
     }
-
 
     /**
      * Parse the raw data and process it to return the HTML element representing the cue.
@@ -108,8 +110,9 @@ function TTMLParser() {
             errorMsg = msg;
         },
             metadataHandler);
-        let mediaTimeEvents = imsc1doc.getMediaTimeEvents();
+        eventBus.trigger(Events.TTML_PARSED, {data: data, ttmlDoc: imsc1doc});
 
+        let mediaTimeEvents = imsc1doc.getMediaTimeEvents();
         for (i = 0; i < mediaTimeEvents.length; i++) {
             let isd = generateISD(imsc1doc, mediaTimeEvents[i], function (error) {
                 errorMsg = error;
