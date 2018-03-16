@@ -401,6 +401,9 @@ function ProtectionModel_21Jan2015(config) {
                                 case 'expired':
                                     eventBus.trigger(events.INTERNAL_KEY_STATUS_CHANGED, {error: new DashJSError(ProtectionErrors.KEY_STATUS_CHANGED_EXPIRED_ERROR_CODE, ProtectionErrors.KEY_STATUS_CHANGED_EXPIRED_ERROR_MESSAGE)});
                                     break;
+                                case 'output-restricted':
+                                    eventBus.trigger(events.INTERNAL_KEY_STATUS_CHANGED, {error: 'There is no available output device with the required characteristics for the content protection system'});
+                                    break;
                                 default:
                                     eventBus.trigger(events.INTERNAL_KEY_STATUS_CHANGED, keyStatus);
                                     break;
