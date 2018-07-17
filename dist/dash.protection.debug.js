@@ -3368,8 +3368,13 @@ function ProtectionModel_21Jan2015(config) {
         (function (i) {
             var keySystem = ksConfigurations[i].ks;
             var configs = ksConfigurations[i].configs;
+            // PATCH for Edge to support license persistence
+            var systemString = keySystem.systemString;
+            if (systemString === 'com.microsoft.playready') {
+                systemString += '.recommendation';
+            }
             logger.debug('DRM: Request KeySystem access, config = ' + JSON.stringify(configs));
-            navigator.requestMediaKeySystemAccess(keySystem.systemString, configs).then(function (mediaKeySystemAccess) {
+            navigator.requestMediaKeySystemAccess(systemString, configs).then(function (mediaKeySystemAccess) {
                 // Chrome 40 does not currently implement MediaKeySystemAccess.getConfiguration()
                 var configuration = typeof mediaKeySystemAccess.getConfiguration === 'function' ? mediaKeySystemAccess.getConfiguration() : null;
                 var keySystemAccess = new _voKeySystemAccess2['default'](keySystem, configuration);

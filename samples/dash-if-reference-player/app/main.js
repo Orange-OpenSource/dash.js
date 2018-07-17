@@ -320,9 +320,9 @@ app.controller('DashController', function ($scope, sources, contributors, dashif
     $scope.player.on(dashjs.MediaPlayer.events.KEY_SESSION_CREATED, function (e) { /* jshint ignore:line */
         if (e.data) {
             var session = e.data;
-            // if (session.getSessionType() === 'persistent-license') {
+            if (session.getSessionType() === 'persistent-license') {
                 $scope.persistentSessionId[$scope.selectedItem.url] = session.getSessionID();
-            // }
+            }
         }
     }, $scope);
 
