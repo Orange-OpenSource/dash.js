@@ -1,4 +1,4 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
+(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(_dereq_,module,exports){
 /* $Date: 2007-06-12 18:02:31 $ */
 
 // from: http://bannister.us/weblog/2007/06/09/simple-base64-encodedecode-javascript/
@@ -1992,19 +1992,19 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'd
 
 var _index_mediaplayerOnly = _dereq_(5);
 
-var _srcStreamingMetricsMetricsReporting = _dereq_(117);
+var _srcStreamingMetricsMetricsReporting = _dereq_(118);
 
 var _srcStreamingMetricsMetricsReporting2 = _interopRequireDefault(_srcStreamingMetricsMetricsReporting);
 
-var _srcStreamingProtectionProtection = _dereq_(151);
+var _srcStreamingProtectionProtection = _dereq_(152);
 
 var _srcStreamingProtectionProtection2 = _interopRequireDefault(_srcStreamingProtectionProtection);
 
-var _srcStreamingMediaPlayerFactory = _dereq_(95);
+var _srcStreamingMediaPlayerFactory = _dereq_(96);
 
 var _srcStreamingMediaPlayerFactory2 = _interopRequireDefault(_srcStreamingMediaPlayerFactory);
 
-var _srcCoreDebug = _dereq_(46);
+var _srcCoreDebug = _dereq_(47);
 
 var _srcCoreDebug2 = _interopRequireDefault(_srcCoreDebug);
 
@@ -2020,7 +2020,7 @@ exports.MetricsReporting = _srcStreamingMetricsMetricsReporting2['default'];
 exports.MediaPlayerFactory = _srcStreamingMediaPlayerFactory2['default'];
 exports.Debug = _srcCoreDebug2['default'];
 
-},{"117":117,"151":151,"46":46,"5":5,"95":95}],5:[function(_dereq_,module,exports){
+},{"118":118,"152":152,"47":47,"5":5,"96":96}],5:[function(_dereq_,module,exports){
 (function (global){
 /**
  * The copyright in this software is being made available under the BSD License,
@@ -2061,19 +2061,19 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _srcStreamingMediaPlayer = _dereq_(93);
+var _srcStreamingMediaPlayer = _dereq_(94);
 
 var _srcStreamingMediaPlayer2 = _interopRequireDefault(_srcStreamingMediaPlayer);
 
-var _srcCoreFactoryMaker = _dereq_(48);
+var _srcCoreFactoryMaker = _dereq_(49);
 
 var _srcCoreFactoryMaker2 = _interopRequireDefault(_srcCoreFactoryMaker);
 
-var _srcCoreDebug = _dereq_(46);
+var _srcCoreDebug = _dereq_(47);
 
 var _srcCoreDebug2 = _interopRequireDefault(_srcCoreDebug);
 
-var _srcCoreVersion = _dereq_(49);
+var _srcCoreVersion = _dereq_(50);
 
 // Shove both of these into the global scope
 var context = typeof window !== 'undefined' && window || global;
@@ -2095,8 +2095,1942 @@ exports.Debug = _srcCoreDebug2['default'];
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"46":46,"48":48,"49":49,"93":93}],6:[function(_dereq_,module,exports){
-/*! codem-isoboxer v0.3.5 https://github.com/madebyhiro/codem-isoboxer/blob/master/LICENSE.txt */
+},{"47":47,"49":49,"50":50,"94":94}],6:[function(_dereq_,module,exports){
+'use strict'
+
+exports.byteLength = byteLength
+exports.toByteArray = toByteArray
+exports.fromByteArray = fromByteArray
+
+var lookup = []
+var revLookup = []
+var Arr = typeof Uint8Array !== 'undefined' ? Uint8Array : Array
+
+var code = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+for (var i = 0, len = code.length; i < len; ++i) {
+  lookup[i] = code[i]
+  revLookup[code.charCodeAt(i)] = i
+}
+
+// Support decoding URL-safe base64 strings, as Node.js does.
+// See: https://en.wikipedia.org/wiki/Base64#URL_applications
+revLookup['-'.charCodeAt(0)] = 62
+revLookup['_'.charCodeAt(0)] = 63
+
+function getLens (b64) {
+  var len = b64.length
+
+  if (len % 4 > 0) {
+    throw new Error('Invalid string. Length must be a multiple of 4')
+  }
+
+  // Trim off extra bytes after placeholder bytes are found
+  // See: https://github.com/beatgammit/base64-js/issues/42
+  var validLen = b64.indexOf('=')
+  if (validLen === -1) validLen = len
+
+  var placeHoldersLen = validLen === len
+    ? 0
+    : 4 - (validLen % 4)
+
+  return [validLen, placeHoldersLen]
+}
+
+// base64 is 4/3 + up to two characters of the original data
+function byteLength (b64) {
+  var lens = getLens(b64)
+  var validLen = lens[0]
+  var placeHoldersLen = lens[1]
+  return ((validLen + placeHoldersLen) * 3 / 4) - placeHoldersLen
+}
+
+function _byteLength (b64, validLen, placeHoldersLen) {
+  return ((validLen + placeHoldersLen) * 3 / 4) - placeHoldersLen
+}
+
+function toByteArray (b64) {
+  var tmp
+  var lens = getLens(b64)
+  var validLen = lens[0]
+  var placeHoldersLen = lens[1]
+
+  var arr = new Arr(_byteLength(b64, validLen, placeHoldersLen))
+
+  var curByte = 0
+
+  // if there are placeholders, only get up to the last complete 4 chars
+  var len = placeHoldersLen > 0
+    ? validLen - 4
+    : validLen
+
+  for (var i = 0; i < len; i += 4) {
+    tmp =
+      (revLookup[b64.charCodeAt(i)] << 18) |
+      (revLookup[b64.charCodeAt(i + 1)] << 12) |
+      (revLookup[b64.charCodeAt(i + 2)] << 6) |
+      revLookup[b64.charCodeAt(i + 3)]
+    arr[curByte++] = (tmp >> 16) & 0xFF
+    arr[curByte++] = (tmp >> 8) & 0xFF
+    arr[curByte++] = tmp & 0xFF
+  }
+
+  if (placeHoldersLen === 2) {
+    tmp =
+      (revLookup[b64.charCodeAt(i)] << 2) |
+      (revLookup[b64.charCodeAt(i + 1)] >> 4)
+    arr[curByte++] = tmp & 0xFF
+  }
+
+  if (placeHoldersLen === 1) {
+    tmp =
+      (revLookup[b64.charCodeAt(i)] << 10) |
+      (revLookup[b64.charCodeAt(i + 1)] << 4) |
+      (revLookup[b64.charCodeAt(i + 2)] >> 2)
+    arr[curByte++] = (tmp >> 8) & 0xFF
+    arr[curByte++] = tmp & 0xFF
+  }
+
+  return arr
+}
+
+function tripletToBase64 (num) {
+  return lookup[num >> 18 & 0x3F] +
+    lookup[num >> 12 & 0x3F] +
+    lookup[num >> 6 & 0x3F] +
+    lookup[num & 0x3F]
+}
+
+function encodeChunk (uint8, start, end) {
+  var tmp
+  var output = []
+  for (var i = start; i < end; i += 3) {
+    tmp =
+      ((uint8[i] << 16) & 0xFF0000) +
+      ((uint8[i + 1] << 8) & 0xFF00) +
+      (uint8[i + 2] & 0xFF)
+    output.push(tripletToBase64(tmp))
+  }
+  return output.join('')
+}
+
+function fromByteArray (uint8) {
+  var tmp
+  var len = uint8.length
+  var extraBytes = len % 3 // if we have 1 byte left, pad 2 bytes
+  var parts = []
+  var maxChunkLength = 16383 // must be multiple of 3
+
+  // go through the array every three bytes, we'll deal with trailing stuff later
+  for (var i = 0, len2 = len - extraBytes; i < len2; i += maxChunkLength) {
+    parts.push(encodeChunk(
+      uint8, i, (i + maxChunkLength) > len2 ? len2 : (i + maxChunkLength)
+    ))
+  }
+
+  // pad the end with zeros, but make sure to not forget the extra bytes
+  if (extraBytes === 1) {
+    tmp = uint8[len - 1]
+    parts.push(
+      lookup[tmp >> 2] +
+      lookup[(tmp << 4) & 0x3F] +
+      '=='
+    )
+  } else if (extraBytes === 2) {
+    tmp = (uint8[len - 2] << 8) + uint8[len - 1]
+    parts.push(
+      lookup[tmp >> 10] +
+      lookup[(tmp >> 4) & 0x3F] +
+      lookup[(tmp << 2) & 0x3F] +
+      '='
+    )
+  }
+
+  return parts.join('')
+}
+
+},{}],7:[function(_dereq_,module,exports){
+
+},{}],8:[function(_dereq_,module,exports){
+/*!
+ * The buffer module from node.js, for the browser.
+ *
+ * @author   Feross Aboukhadijeh <https://feross.org>
+ * @license  MIT
+ */
+/* eslint-disable no-proto */
+
+'use strict'
+
+var base64 = _dereq_(6)
+var ieee754 = _dereq_(12)
+
+exports.Buffer = Buffer
+exports.SlowBuffer = SlowBuffer
+exports.INSPECT_MAX_BYTES = 50
+
+var K_MAX_LENGTH = 0x7fffffff
+exports.kMaxLength = K_MAX_LENGTH
+
+/**
+ * If `Buffer.TYPED_ARRAY_SUPPORT`:
+ *   === true    Use Uint8Array implementation (fastest)
+ *   === false   Print warning and recommend using `buffer` v4.x which has an Object
+ *               implementation (most compatible, even IE6)
+ *
+ * Browsers that support typed arrays are IE 10+, Firefox 4+, Chrome 7+, Safari 5.1+,
+ * Opera 11.6+, iOS 4.2+.
+ *
+ * We report that the browser does not support typed arrays if the are not subclassable
+ * using __proto__. Firefox 4-29 lacks support for adding new properties to `Uint8Array`
+ * (See: https://bugzilla.mozilla.org/show_bug.cgi?id=695438). IE 10 lacks support
+ * for __proto__ and has a buggy typed array implementation.
+ */
+Buffer.TYPED_ARRAY_SUPPORT = typedArraySupport()
+
+if (!Buffer.TYPED_ARRAY_SUPPORT && typeof console !== 'undefined' &&
+    typeof console.error === 'function') {
+  console.error(
+    'This browser lacks typed array (Uint8Array) support which is required by ' +
+    '`buffer` v5.x. Use `buffer` v4.x if you require old browser support.'
+  )
+}
+
+function typedArraySupport () {
+  // Can typed array instances can be augmented?
+  try {
+    var arr = new Uint8Array(1)
+    arr.__proto__ = { __proto__: Uint8Array.prototype, foo: function () { return 42 } }
+    return arr.foo() === 42
+  } catch (e) {
+    return false
+  }
+}
+
+Object.defineProperty(Buffer.prototype, 'parent', {
+  enumerable: true,
+  get: function () {
+    if (!Buffer.isBuffer(this)) return undefined
+    return this.buffer
+  }
+})
+
+Object.defineProperty(Buffer.prototype, 'offset', {
+  enumerable: true,
+  get: function () {
+    if (!Buffer.isBuffer(this)) return undefined
+    return this.byteOffset
+  }
+})
+
+function createBuffer (length) {
+  if (length > K_MAX_LENGTH) {
+    throw new RangeError('The value "' + length + '" is invalid for option "size"')
+  }
+  // Return an augmented `Uint8Array` instance
+  var buf = new Uint8Array(length)
+  buf.__proto__ = Buffer.prototype
+  return buf
+}
+
+/**
+ * The Buffer constructor returns instances of `Uint8Array` that have their
+ * prototype changed to `Buffer.prototype`. Furthermore, `Buffer` is a subclass of
+ * `Uint8Array`, so the returned instances will have all the node `Buffer` methods
+ * and the `Uint8Array` methods. Square bracket notation works as expected -- it
+ * returns a single octet.
+ *
+ * The `Uint8Array` prototype remains unmodified.
+ */
+
+function Buffer (arg, encodingOrOffset, length) {
+  // Common case.
+  if (typeof arg === 'number') {
+    if (typeof encodingOrOffset === 'string') {
+      throw new TypeError(
+        'The "string" argument must be of type string. Received type number'
+      )
+    }
+    return allocUnsafe(arg)
+  }
+  return from(arg, encodingOrOffset, length)
+}
+
+// Fix subarray() in ES2016. See: https://github.com/feross/buffer/pull/97
+if (typeof Symbol !== 'undefined' && Symbol.species != null &&
+    Buffer[Symbol.species] === Buffer) {
+  Object.defineProperty(Buffer, Symbol.species, {
+    value: null,
+    configurable: true,
+    enumerable: false,
+    writable: false
+  })
+}
+
+Buffer.poolSize = 8192 // not used by this implementation
+
+function from (value, encodingOrOffset, length) {
+  if (typeof value === 'string') {
+    return fromString(value, encodingOrOffset)
+  }
+
+  if (ArrayBuffer.isView(value)) {
+    return fromArrayLike(value)
+  }
+
+  if (value == null) {
+    throw TypeError(
+      'The first argument must be one of type string, Buffer, ArrayBuffer, Array, ' +
+      'or Array-like Object. Received type ' + (typeof value)
+    )
+  }
+
+  if (isInstance(value, ArrayBuffer) ||
+      (value && isInstance(value.buffer, ArrayBuffer))) {
+    return fromArrayBuffer(value, encodingOrOffset, length)
+  }
+
+  if (typeof value === 'number') {
+    throw new TypeError(
+      'The "value" argument must not be of type number. Received type number'
+    )
+  }
+
+  var valueOf = value.valueOf && value.valueOf()
+  if (valueOf != null && valueOf !== value) {
+    return Buffer.from(valueOf, encodingOrOffset, length)
+  }
+
+  var b = fromObject(value)
+  if (b) return b
+
+  if (typeof Symbol !== 'undefined' && Symbol.toPrimitive != null &&
+      typeof value[Symbol.toPrimitive] === 'function') {
+    return Buffer.from(
+      value[Symbol.toPrimitive]('string'), encodingOrOffset, length
+    )
+  }
+
+  throw new TypeError(
+    'The first argument must be one of type string, Buffer, ArrayBuffer, Array, ' +
+    'or Array-like Object. Received type ' + (typeof value)
+  )
+}
+
+/**
+ * Functionally equivalent to Buffer(arg, encoding) but throws a TypeError
+ * if value is a number.
+ * Buffer.from(str[, encoding])
+ * Buffer.from(array)
+ * Buffer.from(buffer)
+ * Buffer.from(arrayBuffer[, byteOffset[, length]])
+ **/
+Buffer.from = function (value, encodingOrOffset, length) {
+  return from(value, encodingOrOffset, length)
+}
+
+// Note: Change prototype *after* Buffer.from is defined to workaround Chrome bug:
+// https://github.com/feross/buffer/pull/148
+Buffer.prototype.__proto__ = Uint8Array.prototype
+Buffer.__proto__ = Uint8Array
+
+function assertSize (size) {
+  if (typeof size !== 'number') {
+    throw new TypeError('"size" argument must be of type number')
+  } else if (size < 0) {
+    throw new RangeError('The value "' + size + '" is invalid for option "size"')
+  }
+}
+
+function alloc (size, fill, encoding) {
+  assertSize(size)
+  if (size <= 0) {
+    return createBuffer(size)
+  }
+  if (fill !== undefined) {
+    // Only pay attention to encoding if it's a string. This
+    // prevents accidentally sending in a number that would
+    // be interpretted as a start offset.
+    return typeof encoding === 'string'
+      ? createBuffer(size).fill(fill, encoding)
+      : createBuffer(size).fill(fill)
+  }
+  return createBuffer(size)
+}
+
+/**
+ * Creates a new filled Buffer instance.
+ * alloc(size[, fill[, encoding]])
+ **/
+Buffer.alloc = function (size, fill, encoding) {
+  return alloc(size, fill, encoding)
+}
+
+function allocUnsafe (size) {
+  assertSize(size)
+  return createBuffer(size < 0 ? 0 : checked(size) | 0)
+}
+
+/**
+ * Equivalent to Buffer(num), by default creates a non-zero-filled Buffer instance.
+ * */
+Buffer.allocUnsafe = function (size) {
+  return allocUnsafe(size)
+}
+/**
+ * Equivalent to SlowBuffer(num), by default creates a non-zero-filled Buffer instance.
+ */
+Buffer.allocUnsafeSlow = function (size) {
+  return allocUnsafe(size)
+}
+
+function fromString (string, encoding) {
+  if (typeof encoding !== 'string' || encoding === '') {
+    encoding = 'utf8'
+  }
+
+  if (!Buffer.isEncoding(encoding)) {
+    throw new TypeError('Unknown encoding: ' + encoding)
+  }
+
+  var length = byteLength(string, encoding) | 0
+  var buf = createBuffer(length)
+
+  var actual = buf.write(string, encoding)
+
+  if (actual !== length) {
+    // Writing a hex string, for example, that contains invalid characters will
+    // cause everything after the first invalid character to be ignored. (e.g.
+    // 'abxxcd' will be treated as 'ab')
+    buf = buf.slice(0, actual)
+  }
+
+  return buf
+}
+
+function fromArrayLike (array) {
+  var length = array.length < 0 ? 0 : checked(array.length) | 0
+  var buf = createBuffer(length)
+  for (var i = 0; i < length; i += 1) {
+    buf[i] = array[i] & 255
+  }
+  return buf
+}
+
+function fromArrayBuffer (array, byteOffset, length) {
+  if (byteOffset < 0 || array.byteLength < byteOffset) {
+    throw new RangeError('"offset" is outside of buffer bounds')
+  }
+
+  if (array.byteLength < byteOffset + (length || 0)) {
+    throw new RangeError('"length" is outside of buffer bounds')
+  }
+
+  var buf
+  if (byteOffset === undefined && length === undefined) {
+    buf = new Uint8Array(array)
+  } else if (length === undefined) {
+    buf = new Uint8Array(array, byteOffset)
+  } else {
+    buf = new Uint8Array(array, byteOffset, length)
+  }
+
+  // Return an augmented `Uint8Array` instance
+  buf.__proto__ = Buffer.prototype
+  return buf
+}
+
+function fromObject (obj) {
+  if (Buffer.isBuffer(obj)) {
+    var len = checked(obj.length) | 0
+    var buf = createBuffer(len)
+
+    if (buf.length === 0) {
+      return buf
+    }
+
+    obj.copy(buf, 0, 0, len)
+    return buf
+  }
+
+  if (obj.length !== undefined) {
+    if (typeof obj.length !== 'number' || numberIsNaN(obj.length)) {
+      return createBuffer(0)
+    }
+    return fromArrayLike(obj)
+  }
+
+  if (obj.type === 'Buffer' && Array.isArray(obj.data)) {
+    return fromArrayLike(obj.data)
+  }
+}
+
+function checked (length) {
+  // Note: cannot use `length < K_MAX_LENGTH` here because that fails when
+  // length is NaN (which is otherwise coerced to zero.)
+  if (length >= K_MAX_LENGTH) {
+    throw new RangeError('Attempt to allocate Buffer larger than maximum ' +
+                         'size: 0x' + K_MAX_LENGTH.toString(16) + ' bytes')
+  }
+  return length | 0
+}
+
+function SlowBuffer (length) {
+  if (+length != length) { // eslint-disable-line eqeqeq
+    length = 0
+  }
+  return Buffer.alloc(+length)
+}
+
+Buffer.isBuffer = function isBuffer (b) {
+  return b != null && b._isBuffer === true &&
+    b !== Buffer.prototype // so Buffer.isBuffer(Buffer.prototype) will be false
+}
+
+Buffer.compare = function compare (a, b) {
+  if (isInstance(a, Uint8Array)) a = Buffer.from(a, a.offset, a.byteLength)
+  if (isInstance(b, Uint8Array)) b = Buffer.from(b, b.offset, b.byteLength)
+  if (!Buffer.isBuffer(a) || !Buffer.isBuffer(b)) {
+    throw new TypeError(
+      'The "buf1", "buf2" arguments must be one of type Buffer or Uint8Array'
+    )
+  }
+
+  if (a === b) return 0
+
+  var x = a.length
+  var y = b.length
+
+  for (var i = 0, len = Math.min(x, y); i < len; ++i) {
+    if (a[i] !== b[i]) {
+      x = a[i]
+      y = b[i]
+      break
+    }
+  }
+
+  if (x < y) return -1
+  if (y < x) return 1
+  return 0
+}
+
+Buffer.isEncoding = function isEncoding (encoding) {
+  switch (String(encoding).toLowerCase()) {
+    case 'hex':
+    case 'utf8':
+    case 'utf-8':
+    case 'ascii':
+    case 'latin1':
+    case 'binary':
+    case 'base64':
+    case 'ucs2':
+    case 'ucs-2':
+    case 'utf16le':
+    case 'utf-16le':
+      return true
+    default:
+      return false
+  }
+}
+
+Buffer.concat = function concat (list, length) {
+  if (!Array.isArray(list)) {
+    throw new TypeError('"list" argument must be an Array of Buffers')
+  }
+
+  if (list.length === 0) {
+    return Buffer.alloc(0)
+  }
+
+  var i
+  if (length === undefined) {
+    length = 0
+    for (i = 0; i < list.length; ++i) {
+      length += list[i].length
+    }
+  }
+
+  var buffer = Buffer.allocUnsafe(length)
+  var pos = 0
+  for (i = 0; i < list.length; ++i) {
+    var buf = list[i]
+    if (isInstance(buf, Uint8Array)) {
+      buf = Buffer.from(buf)
+    }
+    if (!Buffer.isBuffer(buf)) {
+      throw new TypeError('"list" argument must be an Array of Buffers')
+    }
+    buf.copy(buffer, pos)
+    pos += buf.length
+  }
+  return buffer
+}
+
+function byteLength (string, encoding) {
+  if (Buffer.isBuffer(string)) {
+    return string.length
+  }
+  if (ArrayBuffer.isView(string) || isInstance(string, ArrayBuffer)) {
+    return string.byteLength
+  }
+  if (typeof string !== 'string') {
+    throw new TypeError(
+      'The "string" argument must be one of type string, Buffer, or ArrayBuffer. ' +
+      'Received type ' + typeof string
+    )
+  }
+
+  var len = string.length
+  var mustMatch = (arguments.length > 2 && arguments[2] === true)
+  if (!mustMatch && len === 0) return 0
+
+  // Use a for loop to avoid recursion
+  var loweredCase = false
+  for (;;) {
+    switch (encoding) {
+      case 'ascii':
+      case 'latin1':
+      case 'binary':
+        return len
+      case 'utf8':
+      case 'utf-8':
+        return utf8ToBytes(string).length
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return len * 2
+      case 'hex':
+        return len >>> 1
+      case 'base64':
+        return base64ToBytes(string).length
+      default:
+        if (loweredCase) {
+          return mustMatch ? -1 : utf8ToBytes(string).length // assume utf8
+        }
+        encoding = ('' + encoding).toLowerCase()
+        loweredCase = true
+    }
+  }
+}
+Buffer.byteLength = byteLength
+
+function slowToString (encoding, start, end) {
+  var loweredCase = false
+
+  // No need to verify that "this.length <= MAX_UINT32" since it's a read-only
+  // property of a typed array.
+
+  // This behaves neither like String nor Uint8Array in that we set start/end
+  // to their upper/lower bounds if the value passed is out of range.
+  // undefined is handled specially as per ECMA-262 6th Edition,
+  // Section 13.3.3.7 Runtime Semantics: KeyedBindingInitialization.
+  if (start === undefined || start < 0) {
+    start = 0
+  }
+  // Return early if start > this.length. Done here to prevent potential uint32
+  // coercion fail below.
+  if (start > this.length) {
+    return ''
+  }
+
+  if (end === undefined || end > this.length) {
+    end = this.length
+  }
+
+  if (end <= 0) {
+    return ''
+  }
+
+  // Force coersion to uint32. This will also coerce falsey/NaN values to 0.
+  end >>>= 0
+  start >>>= 0
+
+  if (end <= start) {
+    return ''
+  }
+
+  if (!encoding) encoding = 'utf8'
+
+  while (true) {
+    switch (encoding) {
+      case 'hex':
+        return hexSlice(this, start, end)
+
+      case 'utf8':
+      case 'utf-8':
+        return utf8Slice(this, start, end)
+
+      case 'ascii':
+        return asciiSlice(this, start, end)
+
+      case 'latin1':
+      case 'binary':
+        return latin1Slice(this, start, end)
+
+      case 'base64':
+        return base64Slice(this, start, end)
+
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return utf16leSlice(this, start, end)
+
+      default:
+        if (loweredCase) throw new TypeError('Unknown encoding: ' + encoding)
+        encoding = (encoding + '').toLowerCase()
+        loweredCase = true
+    }
+  }
+}
+
+// This property is used by `Buffer.isBuffer` (and the `is-buffer` npm package)
+// to detect a Buffer instance. It's not possible to use `instanceof Buffer`
+// reliably in a browserify context because there could be multiple different
+// copies of the 'buffer' package in use. This method works even for Buffer
+// instances that were created from another copy of the `buffer` package.
+// See: https://github.com/feross/buffer/issues/154
+Buffer.prototype._isBuffer = true
+
+function swap (b, n, m) {
+  var i = b[n]
+  b[n] = b[m]
+  b[m] = i
+}
+
+Buffer.prototype.swap16 = function swap16 () {
+  var len = this.length
+  if (len % 2 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 16-bits')
+  }
+  for (var i = 0; i < len; i += 2) {
+    swap(this, i, i + 1)
+  }
+  return this
+}
+
+Buffer.prototype.swap32 = function swap32 () {
+  var len = this.length
+  if (len % 4 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 32-bits')
+  }
+  for (var i = 0; i < len; i += 4) {
+    swap(this, i, i + 3)
+    swap(this, i + 1, i + 2)
+  }
+  return this
+}
+
+Buffer.prototype.swap64 = function swap64 () {
+  var len = this.length
+  if (len % 8 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 64-bits')
+  }
+  for (var i = 0; i < len; i += 8) {
+    swap(this, i, i + 7)
+    swap(this, i + 1, i + 6)
+    swap(this, i + 2, i + 5)
+    swap(this, i + 3, i + 4)
+  }
+  return this
+}
+
+Buffer.prototype.toString = function toString () {
+  var length = this.length
+  if (length === 0) return ''
+  if (arguments.length === 0) return utf8Slice(this, 0, length)
+  return slowToString.apply(this, arguments)
+}
+
+Buffer.prototype.toLocaleString = Buffer.prototype.toString
+
+Buffer.prototype.equals = function equals (b) {
+  if (!Buffer.isBuffer(b)) throw new TypeError('Argument must be a Buffer')
+  if (this === b) return true
+  return Buffer.compare(this, b) === 0
+}
+
+Buffer.prototype.inspect = function inspect () {
+  var str = ''
+  var max = exports.INSPECT_MAX_BYTES
+  str = this.toString('hex', 0, max).replace(/(.{2})/g, '$1 ').trim()
+  if (this.length > max) str += ' ... '
+  return '<Buffer ' + str + '>'
+}
+
+Buffer.prototype.compare = function compare (target, start, end, thisStart, thisEnd) {
+  if (isInstance(target, Uint8Array)) {
+    target = Buffer.from(target, target.offset, target.byteLength)
+  }
+  if (!Buffer.isBuffer(target)) {
+    throw new TypeError(
+      'The "target" argument must be one of type Buffer or Uint8Array. ' +
+      'Received type ' + (typeof target)
+    )
+  }
+
+  if (start === undefined) {
+    start = 0
+  }
+  if (end === undefined) {
+    end = target ? target.length : 0
+  }
+  if (thisStart === undefined) {
+    thisStart = 0
+  }
+  if (thisEnd === undefined) {
+    thisEnd = this.length
+  }
+
+  if (start < 0 || end > target.length || thisStart < 0 || thisEnd > this.length) {
+    throw new RangeError('out of range index')
+  }
+
+  if (thisStart >= thisEnd && start >= end) {
+    return 0
+  }
+  if (thisStart >= thisEnd) {
+    return -1
+  }
+  if (start >= end) {
+    return 1
+  }
+
+  start >>>= 0
+  end >>>= 0
+  thisStart >>>= 0
+  thisEnd >>>= 0
+
+  if (this === target) return 0
+
+  var x = thisEnd - thisStart
+  var y = end - start
+  var len = Math.min(x, y)
+
+  var thisCopy = this.slice(thisStart, thisEnd)
+  var targetCopy = target.slice(start, end)
+
+  for (var i = 0; i < len; ++i) {
+    if (thisCopy[i] !== targetCopy[i]) {
+      x = thisCopy[i]
+      y = targetCopy[i]
+      break
+    }
+  }
+
+  if (x < y) return -1
+  if (y < x) return 1
+  return 0
+}
+
+// Finds either the first index of `val` in `buffer` at offset >= `byteOffset`,
+// OR the last index of `val` in `buffer` at offset <= `byteOffset`.
+//
+// Arguments:
+// - buffer - a Buffer to search
+// - val - a string, Buffer, or number
+// - byteOffset - an index into `buffer`; will be clamped to an int32
+// - encoding - an optional encoding, relevant is val is a string
+// - dir - true for indexOf, false for lastIndexOf
+function bidirectionalIndexOf (buffer, val, byteOffset, encoding, dir) {
+  // Empty buffer means no match
+  if (buffer.length === 0) return -1
+
+  // Normalize byteOffset
+  if (typeof byteOffset === 'string') {
+    encoding = byteOffset
+    byteOffset = 0
+  } else if (byteOffset > 0x7fffffff) {
+    byteOffset = 0x7fffffff
+  } else if (byteOffset < -0x80000000) {
+    byteOffset = -0x80000000
+  }
+  byteOffset = +byteOffset // Coerce to Number.
+  if (numberIsNaN(byteOffset)) {
+    // byteOffset: it it's undefined, null, NaN, "foo", etc, search whole buffer
+    byteOffset = dir ? 0 : (buffer.length - 1)
+  }
+
+  // Normalize byteOffset: negative offsets start from the end of the buffer
+  if (byteOffset < 0) byteOffset = buffer.length + byteOffset
+  if (byteOffset >= buffer.length) {
+    if (dir) return -1
+    else byteOffset = buffer.length - 1
+  } else if (byteOffset < 0) {
+    if (dir) byteOffset = 0
+    else return -1
+  }
+
+  // Normalize val
+  if (typeof val === 'string') {
+    val = Buffer.from(val, encoding)
+  }
+
+  // Finally, search either indexOf (if dir is true) or lastIndexOf
+  if (Buffer.isBuffer(val)) {
+    // Special case: looking for empty string/buffer always fails
+    if (val.length === 0) {
+      return -1
+    }
+    return arrayIndexOf(buffer, val, byteOffset, encoding, dir)
+  } else if (typeof val === 'number') {
+    val = val & 0xFF // Search for a byte value [0-255]
+    if (typeof Uint8Array.prototype.indexOf === 'function') {
+      if (dir) {
+        return Uint8Array.prototype.indexOf.call(buffer, val, byteOffset)
+      } else {
+        return Uint8Array.prototype.lastIndexOf.call(buffer, val, byteOffset)
+      }
+    }
+    return arrayIndexOf(buffer, [ val ], byteOffset, encoding, dir)
+  }
+
+  throw new TypeError('val must be string, number or Buffer')
+}
+
+function arrayIndexOf (arr, val, byteOffset, encoding, dir) {
+  var indexSize = 1
+  var arrLength = arr.length
+  var valLength = val.length
+
+  if (encoding !== undefined) {
+    encoding = String(encoding).toLowerCase()
+    if (encoding === 'ucs2' || encoding === 'ucs-2' ||
+        encoding === 'utf16le' || encoding === 'utf-16le') {
+      if (arr.length < 2 || val.length < 2) {
+        return -1
+      }
+      indexSize = 2
+      arrLength /= 2
+      valLength /= 2
+      byteOffset /= 2
+    }
+  }
+
+  function read (buf, i) {
+    if (indexSize === 1) {
+      return buf[i]
+    } else {
+      return buf.readUInt16BE(i * indexSize)
+    }
+  }
+
+  var i
+  if (dir) {
+    var foundIndex = -1
+    for (i = byteOffset; i < arrLength; i++) {
+      if (read(arr, i) === read(val, foundIndex === -1 ? 0 : i - foundIndex)) {
+        if (foundIndex === -1) foundIndex = i
+        if (i - foundIndex + 1 === valLength) return foundIndex * indexSize
+      } else {
+        if (foundIndex !== -1) i -= i - foundIndex
+        foundIndex = -1
+      }
+    }
+  } else {
+    if (byteOffset + valLength > arrLength) byteOffset = arrLength - valLength
+    for (i = byteOffset; i >= 0; i--) {
+      var found = true
+      for (var j = 0; j < valLength; j++) {
+        if (read(arr, i + j) !== read(val, j)) {
+          found = false
+          break
+        }
+      }
+      if (found) return i
+    }
+  }
+
+  return -1
+}
+
+Buffer.prototype.includes = function includes (val, byteOffset, encoding) {
+  return this.indexOf(val, byteOffset, encoding) !== -1
+}
+
+Buffer.prototype.indexOf = function indexOf (val, byteOffset, encoding) {
+  return bidirectionalIndexOf(this, val, byteOffset, encoding, true)
+}
+
+Buffer.prototype.lastIndexOf = function lastIndexOf (val, byteOffset, encoding) {
+  return bidirectionalIndexOf(this, val, byteOffset, encoding, false)
+}
+
+function hexWrite (buf, string, offset, length) {
+  offset = Number(offset) || 0
+  var remaining = buf.length - offset
+  if (!length) {
+    length = remaining
+  } else {
+    length = Number(length)
+    if (length > remaining) {
+      length = remaining
+    }
+  }
+
+  var strLen = string.length
+
+  if (length > strLen / 2) {
+    length = strLen / 2
+  }
+  for (var i = 0; i < length; ++i) {
+    var parsed = parseInt(string.substr(i * 2, 2), 16)
+    if (numberIsNaN(parsed)) return i
+    buf[offset + i] = parsed
+  }
+  return i
+}
+
+function utf8Write (buf, string, offset, length) {
+  return blitBuffer(utf8ToBytes(string, buf.length - offset), buf, offset, length)
+}
+
+function asciiWrite (buf, string, offset, length) {
+  return blitBuffer(asciiToBytes(string), buf, offset, length)
+}
+
+function latin1Write (buf, string, offset, length) {
+  return asciiWrite(buf, string, offset, length)
+}
+
+function base64Write (buf, string, offset, length) {
+  return blitBuffer(base64ToBytes(string), buf, offset, length)
+}
+
+function ucs2Write (buf, string, offset, length) {
+  return blitBuffer(utf16leToBytes(string, buf.length - offset), buf, offset, length)
+}
+
+Buffer.prototype.write = function write (string, offset, length, encoding) {
+  // Buffer#write(string)
+  if (offset === undefined) {
+    encoding = 'utf8'
+    length = this.length
+    offset = 0
+  // Buffer#write(string, encoding)
+  } else if (length === undefined && typeof offset === 'string') {
+    encoding = offset
+    length = this.length
+    offset = 0
+  // Buffer#write(string, offset[, length][, encoding])
+  } else if (isFinite(offset)) {
+    offset = offset >>> 0
+    if (isFinite(length)) {
+      length = length >>> 0
+      if (encoding === undefined) encoding = 'utf8'
+    } else {
+      encoding = length
+      length = undefined
+    }
+  } else {
+    throw new Error(
+      'Buffer.write(string, encoding, offset[, length]) is no longer supported'
+    )
+  }
+
+  var remaining = this.length - offset
+  if (length === undefined || length > remaining) length = remaining
+
+  if ((string.length > 0 && (length < 0 || offset < 0)) || offset > this.length) {
+    throw new RangeError('Attempt to write outside buffer bounds')
+  }
+
+  if (!encoding) encoding = 'utf8'
+
+  var loweredCase = false
+  for (;;) {
+    switch (encoding) {
+      case 'hex':
+        return hexWrite(this, string, offset, length)
+
+      case 'utf8':
+      case 'utf-8':
+        return utf8Write(this, string, offset, length)
+
+      case 'ascii':
+        return asciiWrite(this, string, offset, length)
+
+      case 'latin1':
+      case 'binary':
+        return latin1Write(this, string, offset, length)
+
+      case 'base64':
+        // Warning: maxLength not taken into account in base64Write
+        return base64Write(this, string, offset, length)
+
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return ucs2Write(this, string, offset, length)
+
+      default:
+        if (loweredCase) throw new TypeError('Unknown encoding: ' + encoding)
+        encoding = ('' + encoding).toLowerCase()
+        loweredCase = true
+    }
+  }
+}
+
+Buffer.prototype.toJSON = function toJSON () {
+  return {
+    type: 'Buffer',
+    data: Array.prototype.slice.call(this._arr || this, 0)
+  }
+}
+
+function base64Slice (buf, start, end) {
+  if (start === 0 && end === buf.length) {
+    return base64.fromByteArray(buf)
+  } else {
+    return base64.fromByteArray(buf.slice(start, end))
+  }
+}
+
+function utf8Slice (buf, start, end) {
+  end = Math.min(buf.length, end)
+  var res = []
+
+  var i = start
+  while (i < end) {
+    var firstByte = buf[i]
+    var codePoint = null
+    var bytesPerSequence = (firstByte > 0xEF) ? 4
+      : (firstByte > 0xDF) ? 3
+        : (firstByte > 0xBF) ? 2
+          : 1
+
+    if (i + bytesPerSequence <= end) {
+      var secondByte, thirdByte, fourthByte, tempCodePoint
+
+      switch (bytesPerSequence) {
+        case 1:
+          if (firstByte < 0x80) {
+            codePoint = firstByte
+          }
+          break
+        case 2:
+          secondByte = buf[i + 1]
+          if ((secondByte & 0xC0) === 0x80) {
+            tempCodePoint = (firstByte & 0x1F) << 0x6 | (secondByte & 0x3F)
+            if (tempCodePoint > 0x7F) {
+              codePoint = tempCodePoint
+            }
+          }
+          break
+        case 3:
+          secondByte = buf[i + 1]
+          thirdByte = buf[i + 2]
+          if ((secondByte & 0xC0) === 0x80 && (thirdByte & 0xC0) === 0x80) {
+            tempCodePoint = (firstByte & 0xF) << 0xC | (secondByte & 0x3F) << 0x6 | (thirdByte & 0x3F)
+            if (tempCodePoint > 0x7FF && (tempCodePoint < 0xD800 || tempCodePoint > 0xDFFF)) {
+              codePoint = tempCodePoint
+            }
+          }
+          break
+        case 4:
+          secondByte = buf[i + 1]
+          thirdByte = buf[i + 2]
+          fourthByte = buf[i + 3]
+          if ((secondByte & 0xC0) === 0x80 && (thirdByte & 0xC0) === 0x80 && (fourthByte & 0xC0) === 0x80) {
+            tempCodePoint = (firstByte & 0xF) << 0x12 | (secondByte & 0x3F) << 0xC | (thirdByte & 0x3F) << 0x6 | (fourthByte & 0x3F)
+            if (tempCodePoint > 0xFFFF && tempCodePoint < 0x110000) {
+              codePoint = tempCodePoint
+            }
+          }
+      }
+    }
+
+    if (codePoint === null) {
+      // we did not generate a valid codePoint so insert a
+      // replacement char (U+FFFD) and advance only 1 byte
+      codePoint = 0xFFFD
+      bytesPerSequence = 1
+    } else if (codePoint > 0xFFFF) {
+      // encode to utf16 (surrogate pair dance)
+      codePoint -= 0x10000
+      res.push(codePoint >>> 10 & 0x3FF | 0xD800)
+      codePoint = 0xDC00 | codePoint & 0x3FF
+    }
+
+    res.push(codePoint)
+    i += bytesPerSequence
+  }
+
+  return decodeCodePointsArray(res)
+}
+
+// Based on http://stackoverflow.com/a/22747272/680742, the browser with
+// the lowest limit is Chrome, with 0x10000 args.
+// We go 1 magnitude less, for safety
+var MAX_ARGUMENTS_LENGTH = 0x1000
+
+function decodeCodePointsArray (codePoints) {
+  var len = codePoints.length
+  if (len <= MAX_ARGUMENTS_LENGTH) {
+    return String.fromCharCode.apply(String, codePoints) // avoid extra slice()
+  }
+
+  // Decode in chunks to avoid "call stack size exceeded".
+  var res = ''
+  var i = 0
+  while (i < len) {
+    res += String.fromCharCode.apply(
+      String,
+      codePoints.slice(i, i += MAX_ARGUMENTS_LENGTH)
+    )
+  }
+  return res
+}
+
+function asciiSlice (buf, start, end) {
+  var ret = ''
+  end = Math.min(buf.length, end)
+
+  for (var i = start; i < end; ++i) {
+    ret += String.fromCharCode(buf[i] & 0x7F)
+  }
+  return ret
+}
+
+function latin1Slice (buf, start, end) {
+  var ret = ''
+  end = Math.min(buf.length, end)
+
+  for (var i = start; i < end; ++i) {
+    ret += String.fromCharCode(buf[i])
+  }
+  return ret
+}
+
+function hexSlice (buf, start, end) {
+  var len = buf.length
+
+  if (!start || start < 0) start = 0
+  if (!end || end < 0 || end > len) end = len
+
+  var out = ''
+  for (var i = start; i < end; ++i) {
+    out += toHex(buf[i])
+  }
+  return out
+}
+
+function utf16leSlice (buf, start, end) {
+  var bytes = buf.slice(start, end)
+  var res = ''
+  for (var i = 0; i < bytes.length; i += 2) {
+    res += String.fromCharCode(bytes[i] + (bytes[i + 1] * 256))
+  }
+  return res
+}
+
+Buffer.prototype.slice = function slice (start, end) {
+  var len = this.length
+  start = ~~start
+  end = end === undefined ? len : ~~end
+
+  if (start < 0) {
+    start += len
+    if (start < 0) start = 0
+  } else if (start > len) {
+    start = len
+  }
+
+  if (end < 0) {
+    end += len
+    if (end < 0) end = 0
+  } else if (end > len) {
+    end = len
+  }
+
+  if (end < start) end = start
+
+  var newBuf = this.subarray(start, end)
+  // Return an augmented `Uint8Array` instance
+  newBuf.__proto__ = Buffer.prototype
+  return newBuf
+}
+
+/*
+ * Need to make sure that buffer isn't trying to write out of bounds.
+ */
+function checkOffset (offset, ext, length) {
+  if ((offset % 1) !== 0 || offset < 0) throw new RangeError('offset is not uint')
+  if (offset + ext > length) throw new RangeError('Trying to access beyond buffer length')
+}
+
+Buffer.prototype.readUIntLE = function readUIntLE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) checkOffset(offset, byteLength, this.length)
+
+  var val = this[offset]
+  var mul = 1
+  var i = 0
+  while (++i < byteLength && (mul *= 0x100)) {
+    val += this[offset + i] * mul
+  }
+
+  return val
+}
+
+Buffer.prototype.readUIntBE = function readUIntBE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) {
+    checkOffset(offset, byteLength, this.length)
+  }
+
+  var val = this[offset + --byteLength]
+  var mul = 1
+  while (byteLength > 0 && (mul *= 0x100)) {
+    val += this[offset + --byteLength] * mul
+  }
+
+  return val
+}
+
+Buffer.prototype.readUInt8 = function readUInt8 (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 1, this.length)
+  return this[offset]
+}
+
+Buffer.prototype.readUInt16LE = function readUInt16LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  return this[offset] | (this[offset + 1] << 8)
+}
+
+Buffer.prototype.readUInt16BE = function readUInt16BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  return (this[offset] << 8) | this[offset + 1]
+}
+
+Buffer.prototype.readUInt32LE = function readUInt32LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return ((this[offset]) |
+      (this[offset + 1] << 8) |
+      (this[offset + 2] << 16)) +
+      (this[offset + 3] * 0x1000000)
+}
+
+Buffer.prototype.readUInt32BE = function readUInt32BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return (this[offset] * 0x1000000) +
+    ((this[offset + 1] << 16) |
+    (this[offset + 2] << 8) |
+    this[offset + 3])
+}
+
+Buffer.prototype.readIntLE = function readIntLE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) checkOffset(offset, byteLength, this.length)
+
+  var val = this[offset]
+  var mul = 1
+  var i = 0
+  while (++i < byteLength && (mul *= 0x100)) {
+    val += this[offset + i] * mul
+  }
+  mul *= 0x80
+
+  if (val >= mul) val -= Math.pow(2, 8 * byteLength)
+
+  return val
+}
+
+Buffer.prototype.readIntBE = function readIntBE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) checkOffset(offset, byteLength, this.length)
+
+  var i = byteLength
+  var mul = 1
+  var val = this[offset + --i]
+  while (i > 0 && (mul *= 0x100)) {
+    val += this[offset + --i] * mul
+  }
+  mul *= 0x80
+
+  if (val >= mul) val -= Math.pow(2, 8 * byteLength)
+
+  return val
+}
+
+Buffer.prototype.readInt8 = function readInt8 (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 1, this.length)
+  if (!(this[offset] & 0x80)) return (this[offset])
+  return ((0xff - this[offset] + 1) * -1)
+}
+
+Buffer.prototype.readInt16LE = function readInt16LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  var val = this[offset] | (this[offset + 1] << 8)
+  return (val & 0x8000) ? val | 0xFFFF0000 : val
+}
+
+Buffer.prototype.readInt16BE = function readInt16BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  var val = this[offset + 1] | (this[offset] << 8)
+  return (val & 0x8000) ? val | 0xFFFF0000 : val
+}
+
+Buffer.prototype.readInt32LE = function readInt32LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return (this[offset]) |
+    (this[offset + 1] << 8) |
+    (this[offset + 2] << 16) |
+    (this[offset + 3] << 24)
+}
+
+Buffer.prototype.readInt32BE = function readInt32BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return (this[offset] << 24) |
+    (this[offset + 1] << 16) |
+    (this[offset + 2] << 8) |
+    (this[offset + 3])
+}
+
+Buffer.prototype.readFloatLE = function readFloatLE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+  return ieee754.read(this, offset, true, 23, 4)
+}
+
+Buffer.prototype.readFloatBE = function readFloatBE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+  return ieee754.read(this, offset, false, 23, 4)
+}
+
+Buffer.prototype.readDoubleLE = function readDoubleLE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 8, this.length)
+  return ieee754.read(this, offset, true, 52, 8)
+}
+
+Buffer.prototype.readDoubleBE = function readDoubleBE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 8, this.length)
+  return ieee754.read(this, offset, false, 52, 8)
+}
+
+function checkInt (buf, value, offset, ext, max, min) {
+  if (!Buffer.isBuffer(buf)) throw new TypeError('"buffer" argument must be a Buffer instance')
+  if (value > max || value < min) throw new RangeError('"value" argument is out of bounds')
+  if (offset + ext > buf.length) throw new RangeError('Index out of range')
+}
+
+Buffer.prototype.writeUIntLE = function writeUIntLE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) {
+    var maxBytes = Math.pow(2, 8 * byteLength) - 1
+    checkInt(this, value, offset, byteLength, maxBytes, 0)
+  }
+
+  var mul = 1
+  var i = 0
+  this[offset] = value & 0xFF
+  while (++i < byteLength && (mul *= 0x100)) {
+    this[offset + i] = (value / mul) & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeUIntBE = function writeUIntBE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) {
+    var maxBytes = Math.pow(2, 8 * byteLength) - 1
+    checkInt(this, value, offset, byteLength, maxBytes, 0)
+  }
+
+  var i = byteLength - 1
+  var mul = 1
+  this[offset + i] = value & 0xFF
+  while (--i >= 0 && (mul *= 0x100)) {
+    this[offset + i] = (value / mul) & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeUInt8 = function writeUInt8 (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 1, 0xff, 0)
+  this[offset] = (value & 0xff)
+  return offset + 1
+}
+
+Buffer.prototype.writeUInt16LE = function writeUInt16LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
+  this[offset] = (value & 0xff)
+  this[offset + 1] = (value >>> 8)
+  return offset + 2
+}
+
+Buffer.prototype.writeUInt16BE = function writeUInt16BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
+  this[offset] = (value >>> 8)
+  this[offset + 1] = (value & 0xff)
+  return offset + 2
+}
+
+Buffer.prototype.writeUInt32LE = function writeUInt32LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
+  this[offset + 3] = (value >>> 24)
+  this[offset + 2] = (value >>> 16)
+  this[offset + 1] = (value >>> 8)
+  this[offset] = (value & 0xff)
+  return offset + 4
+}
+
+Buffer.prototype.writeUInt32BE = function writeUInt32BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
+  this[offset] = (value >>> 24)
+  this[offset + 1] = (value >>> 16)
+  this[offset + 2] = (value >>> 8)
+  this[offset + 3] = (value & 0xff)
+  return offset + 4
+}
+
+Buffer.prototype.writeIntLE = function writeIntLE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    var limit = Math.pow(2, (8 * byteLength) - 1)
+
+    checkInt(this, value, offset, byteLength, limit - 1, -limit)
+  }
+
+  var i = 0
+  var mul = 1
+  var sub = 0
+  this[offset] = value & 0xFF
+  while (++i < byteLength && (mul *= 0x100)) {
+    if (value < 0 && sub === 0 && this[offset + i - 1] !== 0) {
+      sub = 1
+    }
+    this[offset + i] = ((value / mul) >> 0) - sub & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeIntBE = function writeIntBE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    var limit = Math.pow(2, (8 * byteLength) - 1)
+
+    checkInt(this, value, offset, byteLength, limit - 1, -limit)
+  }
+
+  var i = byteLength - 1
+  var mul = 1
+  var sub = 0
+  this[offset + i] = value & 0xFF
+  while (--i >= 0 && (mul *= 0x100)) {
+    if (value < 0 && sub === 0 && this[offset + i + 1] !== 0) {
+      sub = 1
+    }
+    this[offset + i] = ((value / mul) >> 0) - sub & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeInt8 = function writeInt8 (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 1, 0x7f, -0x80)
+  if (value < 0) value = 0xff + value + 1
+  this[offset] = (value & 0xff)
+  return offset + 1
+}
+
+Buffer.prototype.writeInt16LE = function writeInt16LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
+  this[offset] = (value & 0xff)
+  this[offset + 1] = (value >>> 8)
+  return offset + 2
+}
+
+Buffer.prototype.writeInt16BE = function writeInt16BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
+  this[offset] = (value >>> 8)
+  this[offset + 1] = (value & 0xff)
+  return offset + 2
+}
+
+Buffer.prototype.writeInt32LE = function writeInt32LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
+  this[offset] = (value & 0xff)
+  this[offset + 1] = (value >>> 8)
+  this[offset + 2] = (value >>> 16)
+  this[offset + 3] = (value >>> 24)
+  return offset + 4
+}
+
+Buffer.prototype.writeInt32BE = function writeInt32BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
+  if (value < 0) value = 0xffffffff + value + 1
+  this[offset] = (value >>> 24)
+  this[offset + 1] = (value >>> 16)
+  this[offset + 2] = (value >>> 8)
+  this[offset + 3] = (value & 0xff)
+  return offset + 4
+}
+
+function checkIEEE754 (buf, value, offset, ext, max, min) {
+  if (offset + ext > buf.length) throw new RangeError('Index out of range')
+  if (offset < 0) throw new RangeError('Index out of range')
+}
+
+function writeFloat (buf, value, offset, littleEndian, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    checkIEEE754(buf, value, offset, 4, 3.4028234663852886e+38, -3.4028234663852886e+38)
+  }
+  ieee754.write(buf, value, offset, littleEndian, 23, 4)
+  return offset + 4
+}
+
+Buffer.prototype.writeFloatLE = function writeFloatLE (value, offset, noAssert) {
+  return writeFloat(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeFloatBE = function writeFloatBE (value, offset, noAssert) {
+  return writeFloat(this, value, offset, false, noAssert)
+}
+
+function writeDouble (buf, value, offset, littleEndian, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    checkIEEE754(buf, value, offset, 8, 1.7976931348623157E+308, -1.7976931348623157E+308)
+  }
+  ieee754.write(buf, value, offset, littleEndian, 52, 8)
+  return offset + 8
+}
+
+Buffer.prototype.writeDoubleLE = function writeDoubleLE (value, offset, noAssert) {
+  return writeDouble(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeDoubleBE = function writeDoubleBE (value, offset, noAssert) {
+  return writeDouble(this, value, offset, false, noAssert)
+}
+
+// copy(targetBuffer, targetStart=0, sourceStart=0, sourceEnd=buffer.length)
+Buffer.prototype.copy = function copy (target, targetStart, start, end) {
+  if (!Buffer.isBuffer(target)) throw new TypeError('argument should be a Buffer')
+  if (!start) start = 0
+  if (!end && end !== 0) end = this.length
+  if (targetStart >= target.length) targetStart = target.length
+  if (!targetStart) targetStart = 0
+  if (end > 0 && end < start) end = start
+
+  // Copy 0 bytes; we're done
+  if (end === start) return 0
+  if (target.length === 0 || this.length === 0) return 0
+
+  // Fatal error conditions
+  if (targetStart < 0) {
+    throw new RangeError('targetStart out of bounds')
+  }
+  if (start < 0 || start >= this.length) throw new RangeError('Index out of range')
+  if (end < 0) throw new RangeError('sourceEnd out of bounds')
+
+  // Are we oob?
+  if (end > this.length) end = this.length
+  if (target.length - targetStart < end - start) {
+    end = target.length - targetStart + start
+  }
+
+  var len = end - start
+
+  if (this === target && typeof Uint8Array.prototype.copyWithin === 'function') {
+    // Use built-in when available, missing from IE11
+    this.copyWithin(targetStart, start, end)
+  } else if (this === target && start < targetStart && targetStart < end) {
+    // descending copy from end
+    for (var i = len - 1; i >= 0; --i) {
+      target[i + targetStart] = this[i + start]
+    }
+  } else {
+    Uint8Array.prototype.set.call(
+      target,
+      this.subarray(start, end),
+      targetStart
+    )
+  }
+
+  return len
+}
+
+// Usage:
+//    buffer.fill(number[, offset[, end]])
+//    buffer.fill(buffer[, offset[, end]])
+//    buffer.fill(string[, offset[, end]][, encoding])
+Buffer.prototype.fill = function fill (val, start, end, encoding) {
+  // Handle string cases:
+  if (typeof val === 'string') {
+    if (typeof start === 'string') {
+      encoding = start
+      start = 0
+      end = this.length
+    } else if (typeof end === 'string') {
+      encoding = end
+      end = this.length
+    }
+    if (encoding !== undefined && typeof encoding !== 'string') {
+      throw new TypeError('encoding must be a string')
+    }
+    if (typeof encoding === 'string' && !Buffer.isEncoding(encoding)) {
+      throw new TypeError('Unknown encoding: ' + encoding)
+    }
+    if (val.length === 1) {
+      var code = val.charCodeAt(0)
+      if ((encoding === 'utf8' && code < 128) ||
+          encoding === 'latin1') {
+        // Fast path: If `val` fits into a single byte, use that numeric value.
+        val = code
+      }
+    }
+  } else if (typeof val === 'number') {
+    val = val & 255
+  }
+
+  // Invalid ranges are not set to a default, so can range check early.
+  if (start < 0 || this.length < start || this.length < end) {
+    throw new RangeError('Out of range index')
+  }
+
+  if (end <= start) {
+    return this
+  }
+
+  start = start >>> 0
+  end = end === undefined ? this.length : end >>> 0
+
+  if (!val) val = 0
+
+  var i
+  if (typeof val === 'number') {
+    for (i = start; i < end; ++i) {
+      this[i] = val
+    }
+  } else {
+    var bytes = Buffer.isBuffer(val)
+      ? val
+      : Buffer.from(val, encoding)
+    var len = bytes.length
+    if (len === 0) {
+      throw new TypeError('The value "' + val +
+        '" is invalid for argument "value"')
+    }
+    for (i = 0; i < end - start; ++i) {
+      this[i + start] = bytes[i % len]
+    }
+  }
+
+  return this
+}
+
+// HELPER FUNCTIONS
+// ================
+
+var INVALID_BASE64_RE = /[^+/0-9A-Za-z-_]/g
+
+function base64clean (str) {
+  // Node takes equal signs as end of the Base64 encoding
+  str = str.split('=')[0]
+  // Node strips out invalid characters like \n and \t from the string, base64-js does not
+  str = str.trim().replace(INVALID_BASE64_RE, '')
+  // Node converts strings with length < 2 to ''
+  if (str.length < 2) return ''
+  // Node allows for non-padded base64 strings (missing trailing ===), base64-js does not
+  while (str.length % 4 !== 0) {
+    str = str + '='
+  }
+  return str
+}
+
+function toHex (n) {
+  if (n < 16) return '0' + n.toString(16)
+  return n.toString(16)
+}
+
+function utf8ToBytes (string, units) {
+  units = units || Infinity
+  var codePoint
+  var length = string.length
+  var leadSurrogate = null
+  var bytes = []
+
+  for (var i = 0; i < length; ++i) {
+    codePoint = string.charCodeAt(i)
+
+    // is surrogate component
+    if (codePoint > 0xD7FF && codePoint < 0xE000) {
+      // last char was a lead
+      if (!leadSurrogate) {
+        // no lead yet
+        if (codePoint > 0xDBFF) {
+          // unexpected trail
+          if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+          continue
+        } else if (i + 1 === length) {
+          // unpaired lead
+          if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+          continue
+        }
+
+        // valid lead
+        leadSurrogate = codePoint
+
+        continue
+      }
+
+      // 2 leads in a row
+      if (codePoint < 0xDC00) {
+        if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+        leadSurrogate = codePoint
+        continue
+      }
+
+      // valid surrogate pair
+      codePoint = (leadSurrogate - 0xD800 << 10 | codePoint - 0xDC00) + 0x10000
+    } else if (leadSurrogate) {
+      // valid bmp char, but last char was a lead
+      if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+    }
+
+    leadSurrogate = null
+
+    // encode utf8
+    if (codePoint < 0x80) {
+      if ((units -= 1) < 0) break
+      bytes.push(codePoint)
+    } else if (codePoint < 0x800) {
+      if ((units -= 2) < 0) break
+      bytes.push(
+        codePoint >> 0x6 | 0xC0,
+        codePoint & 0x3F | 0x80
+      )
+    } else if (codePoint < 0x10000) {
+      if ((units -= 3) < 0) break
+      bytes.push(
+        codePoint >> 0xC | 0xE0,
+        codePoint >> 0x6 & 0x3F | 0x80,
+        codePoint & 0x3F | 0x80
+      )
+    } else if (codePoint < 0x110000) {
+      if ((units -= 4) < 0) break
+      bytes.push(
+        codePoint >> 0x12 | 0xF0,
+        codePoint >> 0xC & 0x3F | 0x80,
+        codePoint >> 0x6 & 0x3F | 0x80,
+        codePoint & 0x3F | 0x80
+      )
+    } else {
+      throw new Error('Invalid code point')
+    }
+  }
+
+  return bytes
+}
+
+function asciiToBytes (str) {
+  var byteArray = []
+  for (var i = 0; i < str.length; ++i) {
+    // Node's code seems to be doing this and not & 0x7F..
+    byteArray.push(str.charCodeAt(i) & 0xFF)
+  }
+  return byteArray
+}
+
+function utf16leToBytes (str, units) {
+  var c, hi, lo
+  var byteArray = []
+  for (var i = 0; i < str.length; ++i) {
+    if ((units -= 2) < 0) break
+
+    c = str.charCodeAt(i)
+    hi = c >> 8
+    lo = c % 256
+    byteArray.push(lo)
+    byteArray.push(hi)
+  }
+
+  return byteArray
+}
+
+function base64ToBytes (str) {
+  return base64.toByteArray(base64clean(str))
+}
+
+function blitBuffer (src, dst, offset, length) {
+  for (var i = 0; i < length; ++i) {
+    if ((i + offset >= dst.length) || (i >= src.length)) break
+    dst[i + offset] = src[i]
+  }
+  return i
+}
+
+// ArrayBuffer or Uint8Array objects from other contexts (i.e. iframes) do not pass
+// the `instanceof` check but they should be treated as of that type.
+// See: https://github.com/feross/buffer/issues/166
+function isInstance (obj, type) {
+  return obj instanceof type ||
+    (obj != null && obj.constructor != null && obj.constructor.name != null &&
+      obj.constructor.name === type.name)
+}
+function numberIsNaN (obj) {
+  // For IE11 support
+  return obj !== obj // eslint-disable-line no-self-compare
+}
+
+},{"12":12,"6":6}],9:[function(_dereq_,module,exports){
+/*! codem-isoboxer v0.3.6 https://github.com/madebyhiro/codem-isoboxer/blob/master/LICENSE.txt */
 var ISOBoxer = {};
 
 ISOBoxer.parseBuffer = function(arrayBuffer) {
@@ -2910,15 +4844,23 @@ ISOBox.prototype._boxProcessors['elst'] = function() {
 // ISO/IEC 23009-1:2014 - 5.10.3.3 Event Message Box
 ISOBox.prototype._boxProcessors['emsg'] = function() {
   this._procFullBox();
-  this._procField('scheme_id_uri',            'string', -1);
-  this._procField('value',                    'string', -1);
-  this._procField('timescale',                'uint',   32);
-  this._procField('presentation_time_delta',  'uint',   32);
-  this._procField('event_duration',           'uint',   32);
-  this._procField('id',                       'uint',   32);
+  if (this.version == 1) {
+    this._procField('timescale',                'uint',   32);
+    this._procField('presentation_time',        'uint',   64);
+    this._procField('event_duration',           'uint',   32);
+    this._procField('id',                       'uint',   32);
+    this._procField('scheme_id_uri',            'string', -1);
+    this._procField('value',                    'string', -1);
+  } else {
+    this._procField('scheme_id_uri',            'string', -1);
+    this._procField('value',                    'string', -1);
+    this._procField('timescale',                'uint',   32);
+    this._procField('presentation_time_delta',  'uint',   32);
+    this._procField('event_duration',           'uint',   32);
+    this._procField('id',                       'uint',   32);
+  }
   this._procField('message_data',             'data',   -1);
 };
-
 // ISO/IEC 14496-12:2012 - 8.1.2 Free Space Box
 ISOBox.prototype._boxProcessors['free'] = ISOBox.prototype._boxProcessors['skip'] = function() {
   this._procField('data', 'data', -1);
@@ -3263,1753 +5205,7 @@ ISOBox.prototype._boxProcessors['vtte'] = function() {
   // Nothing should happen here.
 };
 
-},{}],7:[function(_dereq_,module,exports){
-'use strict';
-
-var isArray = Array.isArray;
-var keyList = Object.keys;
-var hasProp = Object.prototype.hasOwnProperty;
-
-module.exports = function equal(a, b) {
-  if (a === b) return true;
-
-  var arrA = isArray(a)
-    , arrB = isArray(b)
-    , i
-    , length
-    , key;
-
-  if (arrA && arrB) {
-    length = a.length;
-    if (length != b.length) return false;
-    for (i = 0; i < length; i++)
-      if (!equal(a[i], b[i])) return false;
-    return true;
-  }
-
-  if (arrA != arrB) return false;
-
-  var dateA = a instanceof Date
-    , dateB = b instanceof Date;
-  if (dateA != dateB) return false;
-  if (dateA && dateB) return a.getTime() == b.getTime();
-
-  var regexpA = a instanceof RegExp
-    , regexpB = b instanceof RegExp;
-  if (regexpA != regexpB) return false;
-  if (regexpA && regexpB) return a.toString() == b.toString();
-
-  if (a instanceof Object && b instanceof Object) {
-    var keys = keyList(a);
-    length = keys.length;
-
-    if (length !== keyList(b).length)
-      return false;
-
-    for (i = 0; i < length; i++)
-      if (!hasProp.call(b, keys[i])) return false;
-
-    for (i = 0; i < length; i++) {
-      key = keys[i];
-      if (!equal(a[key], b[key])) return false;
-    }
-
-    return true;
-  }
-
-  return false;
-};
-
-},{}],8:[function(_dereq_,module,exports){
-var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-
-;(function (exports) {
-	'use strict';
-
-  var Arr = (typeof Uint8Array !== 'undefined')
-    ? Uint8Array
-    : Array
-
-	var PLUS   = '+'.charCodeAt(0)
-	var SLASH  = '/'.charCodeAt(0)
-	var NUMBER = '0'.charCodeAt(0)
-	var LOWER  = 'a'.charCodeAt(0)
-	var UPPER  = 'A'.charCodeAt(0)
-	var PLUS_URL_SAFE = '-'.charCodeAt(0)
-	var SLASH_URL_SAFE = '_'.charCodeAt(0)
-
-	function decode (elt) {
-		var code = elt.charCodeAt(0)
-		if (code === PLUS ||
-		    code === PLUS_URL_SAFE)
-			return 62 // '+'
-		if (code === SLASH ||
-		    code === SLASH_URL_SAFE)
-			return 63 // '/'
-		if (code < NUMBER)
-			return -1 //no match
-		if (code < NUMBER + 10)
-			return code - NUMBER + 26 + 26
-		if (code < UPPER + 26)
-			return code - UPPER
-		if (code < LOWER + 26)
-			return code - LOWER + 26
-	}
-
-	function b64ToByteArray (b64) {
-		var i, j, l, tmp, placeHolders, arr
-
-		if (b64.length % 4 > 0) {
-			throw new Error('Invalid string. Length must be a multiple of 4')
-		}
-
-		// the number of equal signs (place holders)
-		// if there are two placeholders, than the two characters before it
-		// represent one byte
-		// if there is only one, then the three characters before it represent 2 bytes
-		// this is just a cheap hack to not do indexOf twice
-		var len = b64.length
-		placeHolders = '=' === b64.charAt(len - 2) ? 2 : '=' === b64.charAt(len - 1) ? 1 : 0
-
-		// base64 is 4/3 + up to two characters of the original data
-		arr = new Arr(b64.length * 3 / 4 - placeHolders)
-
-		// if there are placeholders, only get up to the last complete 4 chars
-		l = placeHolders > 0 ? b64.length - 4 : b64.length
-
-		var L = 0
-
-		function push (v) {
-			arr[L++] = v
-		}
-
-		for (i = 0, j = 0; i < l; i += 4, j += 3) {
-			tmp = (decode(b64.charAt(i)) << 18) | (decode(b64.charAt(i + 1)) << 12) | (decode(b64.charAt(i + 2)) << 6) | decode(b64.charAt(i + 3))
-			push((tmp & 0xFF0000) >> 16)
-			push((tmp & 0xFF00) >> 8)
-			push(tmp & 0xFF)
-		}
-
-		if (placeHolders === 2) {
-			tmp = (decode(b64.charAt(i)) << 2) | (decode(b64.charAt(i + 1)) >> 4)
-			push(tmp & 0xFF)
-		} else if (placeHolders === 1) {
-			tmp = (decode(b64.charAt(i)) << 10) | (decode(b64.charAt(i + 1)) << 4) | (decode(b64.charAt(i + 2)) >> 2)
-			push((tmp >> 8) & 0xFF)
-			push(tmp & 0xFF)
-		}
-
-		return arr
-	}
-
-	function uint8ToBase64 (uint8) {
-		var i,
-			extraBytes = uint8.length % 3, // if we have 1 byte left, pad 2 bytes
-			output = "",
-			temp, length
-
-		function encode (num) {
-			return lookup.charAt(num)
-		}
-
-		function tripletToBase64 (num) {
-			return encode(num >> 18 & 0x3F) + encode(num >> 12 & 0x3F) + encode(num >> 6 & 0x3F) + encode(num & 0x3F)
-		}
-
-		// go through the array every three bytes, we'll deal with trailing stuff later
-		for (i = 0, length = uint8.length - extraBytes; i < length; i += 3) {
-			temp = (uint8[i] << 16) + (uint8[i + 1] << 8) + (uint8[i + 2])
-			output += tripletToBase64(temp)
-		}
-
-		// pad the end with zeros, but make sure to not forget the extra bytes
-		switch (extraBytes) {
-			case 1:
-				temp = uint8[uint8.length - 1]
-				output += encode(temp >> 2)
-				output += encode((temp << 4) & 0x3F)
-				output += '=='
-				break
-			case 2:
-				temp = (uint8[uint8.length - 2] << 8) + (uint8[uint8.length - 1])
-				output += encode(temp >> 10)
-				output += encode((temp >> 4) & 0x3F)
-				output += encode((temp << 2) & 0x3F)
-				output += '='
-				break
-		}
-
-		return output
-	}
-
-	exports.toByteArray = b64ToByteArray
-	exports.fromByteArray = uint8ToBase64
-}(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
-
-},{}],9:[function(_dereq_,module,exports){
-
 },{}],10:[function(_dereq_,module,exports){
-(function (global){
-/*!
- * The buffer module from node.js, for the browser.
- *
- * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
- * @license  MIT
- */
-/* eslint-disable no-proto */
-
-'use strict'
-
-var base64 = _dereq_(8)
-var ieee754 = _dereq_(14)
-var isArray = _dereq_(11)
-
-exports.Buffer = Buffer
-exports.SlowBuffer = SlowBuffer
-exports.INSPECT_MAX_BYTES = 50
-Buffer.poolSize = 8192 // not used by this implementation
-
-var rootParent = {}
-
-/**
- * If `Buffer.TYPED_ARRAY_SUPPORT`:
- *   === true    Use Uint8Array implementation (fastest)
- *   === false   Use Object implementation (most compatible, even IE6)
- *
- * Browsers that support typed arrays are IE 10+, Firefox 4+, Chrome 7+, Safari 5.1+,
- * Opera 11.6+, iOS 4.2+.
- *
- * Due to various browser bugs, sometimes the Object implementation will be used even
- * when the browser supports typed arrays.
- *
- * Note:
- *
- *   - Firefox 4-29 lacks support for adding new properties to `Uint8Array` instances,
- *     See: https://bugzilla.mozilla.org/show_bug.cgi?id=695438.
- *
- *   - Safari 5-7 lacks support for changing the `Object.prototype.constructor` property
- *     on objects.
- *
- *   - Chrome 9-10 is missing the `TypedArray.prototype.subarray` function.
- *
- *   - IE10 has a broken `TypedArray.prototype.subarray` function which returns arrays of
- *     incorrect length in some situations.
-
- * We detect these buggy browsers and set `Buffer.TYPED_ARRAY_SUPPORT` to `false` so they
- * get the Object implementation, which is slower but behaves correctly.
- */
-Buffer.TYPED_ARRAY_SUPPORT = global.TYPED_ARRAY_SUPPORT !== undefined
-  ? global.TYPED_ARRAY_SUPPORT
-  : typedArraySupport()
-
-function typedArraySupport () {
-  function Bar () {}
-  try {
-    var arr = new Uint8Array(1)
-    arr.foo = function () { return 42 }
-    arr.constructor = Bar
-    return arr.foo() === 42 && // typed array instances can be augmented
-        arr.constructor === Bar && // constructor can be set
-        typeof arr.subarray === 'function' && // chrome 9-10 lack `subarray`
-        arr.subarray(1, 1).byteLength === 0 // ie10 has broken `subarray`
-  } catch (e) {
-    return false
-  }
-}
-
-function kMaxLength () {
-  return Buffer.TYPED_ARRAY_SUPPORT
-    ? 0x7fffffff
-    : 0x3fffffff
-}
-
-/**
- * Class: Buffer
- * =============
- *
- * The Buffer constructor returns instances of `Uint8Array` that are augmented
- * with function properties for all the node `Buffer` API functions. We use
- * `Uint8Array` so that square bracket notation works as expected -- it returns
- * a single octet.
- *
- * By augmenting the instances, we can avoid modifying the `Uint8Array`
- * prototype.
- */
-function Buffer (arg) {
-  if (!(this instanceof Buffer)) {
-    // Avoid going through an ArgumentsAdaptorTrampoline in the common case.
-    if (arguments.length > 1) return new Buffer(arg, arguments[1])
-    return new Buffer(arg)
-  }
-
-  if (!Buffer.TYPED_ARRAY_SUPPORT) {
-    this.length = 0
-    this.parent = undefined
-  }
-
-  // Common case.
-  if (typeof arg === 'number') {
-    return fromNumber(this, arg)
-  }
-
-  // Slightly less common case.
-  if (typeof arg === 'string') {
-    return fromString(this, arg, arguments.length > 1 ? arguments[1] : 'utf8')
-  }
-
-  // Unusual.
-  return fromObject(this, arg)
-}
-
-function fromNumber (that, length) {
-  that = allocate(that, length < 0 ? 0 : checked(length) | 0)
-  if (!Buffer.TYPED_ARRAY_SUPPORT) {
-    for (var i = 0; i < length; i++) {
-      that[i] = 0
-    }
-  }
-  return that
-}
-
-function fromString (that, string, encoding) {
-  if (typeof encoding !== 'string' || encoding === '') encoding = 'utf8'
-
-  // Assumption: byteLength() return value is always < kMaxLength.
-  var length = byteLength(string, encoding) | 0
-  that = allocate(that, length)
-
-  that.write(string, encoding)
-  return that
-}
-
-function fromObject (that, object) {
-  if (Buffer.isBuffer(object)) return fromBuffer(that, object)
-
-  if (isArray(object)) return fromArray(that, object)
-
-  if (object == null) {
-    throw new TypeError('must start with number, buffer, array or string')
-  }
-
-  if (typeof ArrayBuffer !== 'undefined') {
-    if (object.buffer instanceof ArrayBuffer) {
-      return fromTypedArray(that, object)
-    }
-    if (object instanceof ArrayBuffer) {
-      return fromArrayBuffer(that, object)
-    }
-  }
-
-  if (object.length) return fromArrayLike(that, object)
-
-  return fromJsonObject(that, object)
-}
-
-function fromBuffer (that, buffer) {
-  var length = checked(buffer.length) | 0
-  that = allocate(that, length)
-  buffer.copy(that, 0, 0, length)
-  return that
-}
-
-function fromArray (that, array) {
-  var length = checked(array.length) | 0
-  that = allocate(that, length)
-  for (var i = 0; i < length; i += 1) {
-    that[i] = array[i] & 255
-  }
-  return that
-}
-
-// Duplicate of fromArray() to keep fromArray() monomorphic.
-function fromTypedArray (that, array) {
-  var length = checked(array.length) | 0
-  that = allocate(that, length)
-  // Truncating the elements is probably not what people expect from typed
-  // arrays with BYTES_PER_ELEMENT > 1 but it's compatible with the behavior
-  // of the old Buffer constructor.
-  for (var i = 0; i < length; i += 1) {
-    that[i] = array[i] & 255
-  }
-  return that
-}
-
-function fromArrayBuffer (that, array) {
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    // Return an augmented `Uint8Array` instance, for best performance
-    array.byteLength
-    that = Buffer._augment(new Uint8Array(array))
-  } else {
-    // Fallback: Return an object instance of the Buffer class
-    that = fromTypedArray(that, new Uint8Array(array))
-  }
-  return that
-}
-
-function fromArrayLike (that, array) {
-  var length = checked(array.length) | 0
-  that = allocate(that, length)
-  for (var i = 0; i < length; i += 1) {
-    that[i] = array[i] & 255
-  }
-  return that
-}
-
-// Deserialize { type: 'Buffer', data: [1,2,3,...] } into a Buffer object.
-// Returns a zero-length buffer for inputs that don't conform to the spec.
-function fromJsonObject (that, object) {
-  var array
-  var length = 0
-
-  if (object.type === 'Buffer' && isArray(object.data)) {
-    array = object.data
-    length = checked(array.length) | 0
-  }
-  that = allocate(that, length)
-
-  for (var i = 0; i < length; i += 1) {
-    that[i] = array[i] & 255
-  }
-  return that
-}
-
-if (Buffer.TYPED_ARRAY_SUPPORT) {
-  Buffer.prototype.__proto__ = Uint8Array.prototype
-  Buffer.__proto__ = Uint8Array
-} else {
-  // pre-set for values that may exist in the future
-  Buffer.prototype.length = undefined
-  Buffer.prototype.parent = undefined
-}
-
-function allocate (that, length) {
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    // Return an augmented `Uint8Array` instance, for best performance
-    that = Buffer._augment(new Uint8Array(length))
-    that.__proto__ = Buffer.prototype
-  } else {
-    // Fallback: Return an object instance of the Buffer class
-    that.length = length
-    that._isBuffer = true
-  }
-
-  var fromPool = length !== 0 && length <= Buffer.poolSize >>> 1
-  if (fromPool) that.parent = rootParent
-
-  return that
-}
-
-function checked (length) {
-  // Note: cannot use `length < kMaxLength` here because that fails when
-  // length is NaN (which is otherwise coerced to zero.)
-  if (length >= kMaxLength()) {
-    throw new RangeError('Attempt to allocate Buffer larger than maximum ' +
-                         'size: 0x' + kMaxLength().toString(16) + ' bytes')
-  }
-  return length | 0
-}
-
-function SlowBuffer (subject, encoding) {
-  if (!(this instanceof SlowBuffer)) return new SlowBuffer(subject, encoding)
-
-  var buf = new Buffer(subject, encoding)
-  delete buf.parent
-  return buf
-}
-
-Buffer.isBuffer = function isBuffer (b) {
-  return !!(b != null && b._isBuffer)
-}
-
-Buffer.compare = function compare (a, b) {
-  if (!Buffer.isBuffer(a) || !Buffer.isBuffer(b)) {
-    throw new TypeError('Arguments must be Buffers')
-  }
-
-  if (a === b) return 0
-
-  var x = a.length
-  var y = b.length
-
-  var i = 0
-  var len = Math.min(x, y)
-  while (i < len) {
-    if (a[i] !== b[i]) break
-
-    ++i
-  }
-
-  if (i !== len) {
-    x = a[i]
-    y = b[i]
-  }
-
-  if (x < y) return -1
-  if (y < x) return 1
-  return 0
-}
-
-Buffer.isEncoding = function isEncoding (encoding) {
-  switch (String(encoding).toLowerCase()) {
-    case 'hex':
-    case 'utf8':
-    case 'utf-8':
-    case 'ascii':
-    case 'binary':
-    case 'base64':
-    case 'raw':
-    case 'ucs2':
-    case 'ucs-2':
-    case 'utf16le':
-    case 'utf-16le':
-      return true
-    default:
-      return false
-  }
-}
-
-Buffer.concat = function concat (list, length) {
-  if (!isArray(list)) throw new TypeError('list argument must be an Array of Buffers.')
-
-  if (list.length === 0) {
-    return new Buffer(0)
-  }
-
-  var i
-  if (length === undefined) {
-    length = 0
-    for (i = 0; i < list.length; i++) {
-      length += list[i].length
-    }
-  }
-
-  var buf = new Buffer(length)
-  var pos = 0
-  for (i = 0; i < list.length; i++) {
-    var item = list[i]
-    item.copy(buf, pos)
-    pos += item.length
-  }
-  return buf
-}
-
-function byteLength (string, encoding) {
-  if (typeof string !== 'string') string = '' + string
-
-  var len = string.length
-  if (len === 0) return 0
-
-  // Use a for loop to avoid recursion
-  var loweredCase = false
-  for (;;) {
-    switch (encoding) {
-      case 'ascii':
-      case 'binary':
-      // Deprecated
-      case 'raw':
-      case 'raws':
-        return len
-      case 'utf8':
-      case 'utf-8':
-        return utf8ToBytes(string).length
-      case 'ucs2':
-      case 'ucs-2':
-      case 'utf16le':
-      case 'utf-16le':
-        return len * 2
-      case 'hex':
-        return len >>> 1
-      case 'base64':
-        return base64ToBytes(string).length
-      default:
-        if (loweredCase) return utf8ToBytes(string).length // assume utf8
-        encoding = ('' + encoding).toLowerCase()
-        loweredCase = true
-    }
-  }
-}
-Buffer.byteLength = byteLength
-
-function slowToString (encoding, start, end) {
-  var loweredCase = false
-
-  start = start | 0
-  end = end === undefined || end === Infinity ? this.length : end | 0
-
-  if (!encoding) encoding = 'utf8'
-  if (start < 0) start = 0
-  if (end > this.length) end = this.length
-  if (end <= start) return ''
-
-  while (true) {
-    switch (encoding) {
-      case 'hex':
-        return hexSlice(this, start, end)
-
-      case 'utf8':
-      case 'utf-8':
-        return utf8Slice(this, start, end)
-
-      case 'ascii':
-        return asciiSlice(this, start, end)
-
-      case 'binary':
-        return binarySlice(this, start, end)
-
-      case 'base64':
-        return base64Slice(this, start, end)
-
-      case 'ucs2':
-      case 'ucs-2':
-      case 'utf16le':
-      case 'utf-16le':
-        return utf16leSlice(this, start, end)
-
-      default:
-        if (loweredCase) throw new TypeError('Unknown encoding: ' + encoding)
-        encoding = (encoding + '').toLowerCase()
-        loweredCase = true
-    }
-  }
-}
-
-Buffer.prototype.toString = function toString () {
-  var length = this.length | 0
-  if (length === 0) return ''
-  if (arguments.length === 0) return utf8Slice(this, 0, length)
-  return slowToString.apply(this, arguments)
-}
-
-Buffer.prototype.equals = function equals (b) {
-  if (!Buffer.isBuffer(b)) throw new TypeError('Argument must be a Buffer')
-  if (this === b) return true
-  return Buffer.compare(this, b) === 0
-}
-
-Buffer.prototype.inspect = function inspect () {
-  var str = ''
-  var max = exports.INSPECT_MAX_BYTES
-  if (this.length > 0) {
-    str = this.toString('hex', 0, max).match(/.{2}/g).join(' ')
-    if (this.length > max) str += ' ... '
-  }
-  return '<Buffer ' + str + '>'
-}
-
-Buffer.prototype.compare = function compare (b) {
-  if (!Buffer.isBuffer(b)) throw new TypeError('Argument must be a Buffer')
-  if (this === b) return 0
-  return Buffer.compare(this, b)
-}
-
-Buffer.prototype.indexOf = function indexOf (val, byteOffset) {
-  if (byteOffset > 0x7fffffff) byteOffset = 0x7fffffff
-  else if (byteOffset < -0x80000000) byteOffset = -0x80000000
-  byteOffset >>= 0
-
-  if (this.length === 0) return -1
-  if (byteOffset >= this.length) return -1
-
-  // Negative offsets start from the end of the buffer
-  if (byteOffset < 0) byteOffset = Math.max(this.length + byteOffset, 0)
-
-  if (typeof val === 'string') {
-    if (val.length === 0) return -1 // special case: looking for empty string always fails
-    return String.prototype.indexOf.call(this, val, byteOffset)
-  }
-  if (Buffer.isBuffer(val)) {
-    return arrayIndexOf(this, val, byteOffset)
-  }
-  if (typeof val === 'number') {
-    if (Buffer.TYPED_ARRAY_SUPPORT && Uint8Array.prototype.indexOf === 'function') {
-      return Uint8Array.prototype.indexOf.call(this, val, byteOffset)
-    }
-    return arrayIndexOf(this, [ val ], byteOffset)
-  }
-
-  function arrayIndexOf (arr, val, byteOffset) {
-    var foundIndex = -1
-    for (var i = 0; byteOffset + i < arr.length; i++) {
-      if (arr[byteOffset + i] === val[foundIndex === -1 ? 0 : i - foundIndex]) {
-        if (foundIndex === -1) foundIndex = i
-        if (i - foundIndex + 1 === val.length) return byteOffset + foundIndex
-      } else {
-        foundIndex = -1
-      }
-    }
-    return -1
-  }
-
-  throw new TypeError('val must be string, number or Buffer')
-}
-
-// `get` is deprecated
-Buffer.prototype.get = function get (offset) {
-  console.log('.get() is deprecated. Access using array indexes instead.')
-  return this.readUInt8(offset)
-}
-
-// `set` is deprecated
-Buffer.prototype.set = function set (v, offset) {
-  console.log('.set() is deprecated. Access using array indexes instead.')
-  return this.writeUInt8(v, offset)
-}
-
-function hexWrite (buf, string, offset, length) {
-  offset = Number(offset) || 0
-  var remaining = buf.length - offset
-  if (!length) {
-    length = remaining
-  } else {
-    length = Number(length)
-    if (length > remaining) {
-      length = remaining
-    }
-  }
-
-  // must be an even number of digits
-  var strLen = string.length
-  if (strLen % 2 !== 0) throw new Error('Invalid hex string')
-
-  if (length > strLen / 2) {
-    length = strLen / 2
-  }
-  for (var i = 0; i < length; i++) {
-    var parsed = parseInt(string.substr(i * 2, 2), 16)
-    if (isNaN(parsed)) throw new Error('Invalid hex string')
-    buf[offset + i] = parsed
-  }
-  return i
-}
-
-function utf8Write (buf, string, offset, length) {
-  return blitBuffer(utf8ToBytes(string, buf.length - offset), buf, offset, length)
-}
-
-function asciiWrite (buf, string, offset, length) {
-  return blitBuffer(asciiToBytes(string), buf, offset, length)
-}
-
-function binaryWrite (buf, string, offset, length) {
-  return asciiWrite(buf, string, offset, length)
-}
-
-function base64Write (buf, string, offset, length) {
-  return blitBuffer(base64ToBytes(string), buf, offset, length)
-}
-
-function ucs2Write (buf, string, offset, length) {
-  return blitBuffer(utf16leToBytes(string, buf.length - offset), buf, offset, length)
-}
-
-Buffer.prototype.write = function write (string, offset, length, encoding) {
-  // Buffer#write(string)
-  if (offset === undefined) {
-    encoding = 'utf8'
-    length = this.length
-    offset = 0
-  // Buffer#write(string, encoding)
-  } else if (length === undefined && typeof offset === 'string') {
-    encoding = offset
-    length = this.length
-    offset = 0
-  // Buffer#write(string, offset[, length][, encoding])
-  } else if (isFinite(offset)) {
-    offset = offset | 0
-    if (isFinite(length)) {
-      length = length | 0
-      if (encoding === undefined) encoding = 'utf8'
-    } else {
-      encoding = length
-      length = undefined
-    }
-  // legacy write(string, encoding, offset, length) - remove in v0.13
-  } else {
-    var swap = encoding
-    encoding = offset
-    offset = length | 0
-    length = swap
-  }
-
-  var remaining = this.length - offset
-  if (length === undefined || length > remaining) length = remaining
-
-  if ((string.length > 0 && (length < 0 || offset < 0)) || offset > this.length) {
-    throw new RangeError('attempt to write outside buffer bounds')
-  }
-
-  if (!encoding) encoding = 'utf8'
-
-  var loweredCase = false
-  for (;;) {
-    switch (encoding) {
-      case 'hex':
-        return hexWrite(this, string, offset, length)
-
-      case 'utf8':
-      case 'utf-8':
-        return utf8Write(this, string, offset, length)
-
-      case 'ascii':
-        return asciiWrite(this, string, offset, length)
-
-      case 'binary':
-        return binaryWrite(this, string, offset, length)
-
-      case 'base64':
-        // Warning: maxLength not taken into account in base64Write
-        return base64Write(this, string, offset, length)
-
-      case 'ucs2':
-      case 'ucs-2':
-      case 'utf16le':
-      case 'utf-16le':
-        return ucs2Write(this, string, offset, length)
-
-      default:
-        if (loweredCase) throw new TypeError('Unknown encoding: ' + encoding)
-        encoding = ('' + encoding).toLowerCase()
-        loweredCase = true
-    }
-  }
-}
-
-Buffer.prototype.toJSON = function toJSON () {
-  return {
-    type: 'Buffer',
-    data: Array.prototype.slice.call(this._arr || this, 0)
-  }
-}
-
-function base64Slice (buf, start, end) {
-  if (start === 0 && end === buf.length) {
-    return base64.fromByteArray(buf)
-  } else {
-    return base64.fromByteArray(buf.slice(start, end))
-  }
-}
-
-function utf8Slice (buf, start, end) {
-  end = Math.min(buf.length, end)
-  var res = []
-
-  var i = start
-  while (i < end) {
-    var firstByte = buf[i]
-    var codePoint = null
-    var bytesPerSequence = (firstByte > 0xEF) ? 4
-      : (firstByte > 0xDF) ? 3
-      : (firstByte > 0xBF) ? 2
-      : 1
-
-    if (i + bytesPerSequence <= end) {
-      var secondByte, thirdByte, fourthByte, tempCodePoint
-
-      switch (bytesPerSequence) {
-        case 1:
-          if (firstByte < 0x80) {
-            codePoint = firstByte
-          }
-          break
-        case 2:
-          secondByte = buf[i + 1]
-          if ((secondByte & 0xC0) === 0x80) {
-            tempCodePoint = (firstByte & 0x1F) << 0x6 | (secondByte & 0x3F)
-            if (tempCodePoint > 0x7F) {
-              codePoint = tempCodePoint
-            }
-          }
-          break
-        case 3:
-          secondByte = buf[i + 1]
-          thirdByte = buf[i + 2]
-          if ((secondByte & 0xC0) === 0x80 && (thirdByte & 0xC0) === 0x80) {
-            tempCodePoint = (firstByte & 0xF) << 0xC | (secondByte & 0x3F) << 0x6 | (thirdByte & 0x3F)
-            if (tempCodePoint > 0x7FF && (tempCodePoint < 0xD800 || tempCodePoint > 0xDFFF)) {
-              codePoint = tempCodePoint
-            }
-          }
-          break
-        case 4:
-          secondByte = buf[i + 1]
-          thirdByte = buf[i + 2]
-          fourthByte = buf[i + 3]
-          if ((secondByte & 0xC0) === 0x80 && (thirdByte & 0xC0) === 0x80 && (fourthByte & 0xC0) === 0x80) {
-            tempCodePoint = (firstByte & 0xF) << 0x12 | (secondByte & 0x3F) << 0xC | (thirdByte & 0x3F) << 0x6 | (fourthByte & 0x3F)
-            if (tempCodePoint > 0xFFFF && tempCodePoint < 0x110000) {
-              codePoint = tempCodePoint
-            }
-          }
-      }
-    }
-
-    if (codePoint === null) {
-      // we did not generate a valid codePoint so insert a
-      // replacement char (U+FFFD) and advance only 1 byte
-      codePoint = 0xFFFD
-      bytesPerSequence = 1
-    } else if (codePoint > 0xFFFF) {
-      // encode to utf16 (surrogate pair dance)
-      codePoint -= 0x10000
-      res.push(codePoint >>> 10 & 0x3FF | 0xD800)
-      codePoint = 0xDC00 | codePoint & 0x3FF
-    }
-
-    res.push(codePoint)
-    i += bytesPerSequence
-  }
-
-  return decodeCodePointsArray(res)
-}
-
-// Based on http://stackoverflow.com/a/22747272/680742, the browser with
-// the lowest limit is Chrome, with 0x10000 args.
-// We go 1 magnitude less, for safety
-var MAX_ARGUMENTS_LENGTH = 0x1000
-
-function decodeCodePointsArray (codePoints) {
-  var len = codePoints.length
-  if (len <= MAX_ARGUMENTS_LENGTH) {
-    return String.fromCharCode.apply(String, codePoints) // avoid extra slice()
-  }
-
-  // Decode in chunks to avoid "call stack size exceeded".
-  var res = ''
-  var i = 0
-  while (i < len) {
-    res += String.fromCharCode.apply(
-      String,
-      codePoints.slice(i, i += MAX_ARGUMENTS_LENGTH)
-    )
-  }
-  return res
-}
-
-function asciiSlice (buf, start, end) {
-  var ret = ''
-  end = Math.min(buf.length, end)
-
-  for (var i = start; i < end; i++) {
-    ret += String.fromCharCode(buf[i] & 0x7F)
-  }
-  return ret
-}
-
-function binarySlice (buf, start, end) {
-  var ret = ''
-  end = Math.min(buf.length, end)
-
-  for (var i = start; i < end; i++) {
-    ret += String.fromCharCode(buf[i])
-  }
-  return ret
-}
-
-function hexSlice (buf, start, end) {
-  var len = buf.length
-
-  if (!start || start < 0) start = 0
-  if (!end || end < 0 || end > len) end = len
-
-  var out = ''
-  for (var i = start; i < end; i++) {
-    out += toHex(buf[i])
-  }
-  return out
-}
-
-function utf16leSlice (buf, start, end) {
-  var bytes = buf.slice(start, end)
-  var res = ''
-  for (var i = 0; i < bytes.length; i += 2) {
-    res += String.fromCharCode(bytes[i] + bytes[i + 1] * 256)
-  }
-  return res
-}
-
-Buffer.prototype.slice = function slice (start, end) {
-  var len = this.length
-  start = ~~start
-  end = end === undefined ? len : ~~end
-
-  if (start < 0) {
-    start += len
-    if (start < 0) start = 0
-  } else if (start > len) {
-    start = len
-  }
-
-  if (end < 0) {
-    end += len
-    if (end < 0) end = 0
-  } else if (end > len) {
-    end = len
-  }
-
-  if (end < start) end = start
-
-  var newBuf
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    newBuf = Buffer._augment(this.subarray(start, end))
-  } else {
-    var sliceLen = end - start
-    newBuf = new Buffer(sliceLen, undefined)
-    for (var i = 0; i < sliceLen; i++) {
-      newBuf[i] = this[i + start]
-    }
-  }
-
-  if (newBuf.length) newBuf.parent = this.parent || this
-
-  return newBuf
-}
-
-/*
- * Need to make sure that buffer isn't trying to write out of bounds.
- */
-function checkOffset (offset, ext, length) {
-  if ((offset % 1) !== 0 || offset < 0) throw new RangeError('offset is not uint')
-  if (offset + ext > length) throw new RangeError('Trying to access beyond buffer length')
-}
-
-Buffer.prototype.readUIntLE = function readUIntLE (offset, byteLength, noAssert) {
-  offset = offset | 0
-  byteLength = byteLength | 0
-  if (!noAssert) checkOffset(offset, byteLength, this.length)
-
-  var val = this[offset]
-  var mul = 1
-  var i = 0
-  while (++i < byteLength && (mul *= 0x100)) {
-    val += this[offset + i] * mul
-  }
-
-  return val
-}
-
-Buffer.prototype.readUIntBE = function readUIntBE (offset, byteLength, noAssert) {
-  offset = offset | 0
-  byteLength = byteLength | 0
-  if (!noAssert) {
-    checkOffset(offset, byteLength, this.length)
-  }
-
-  var val = this[offset + --byteLength]
-  var mul = 1
-  while (byteLength > 0 && (mul *= 0x100)) {
-    val += this[offset + --byteLength] * mul
-  }
-
-  return val
-}
-
-Buffer.prototype.readUInt8 = function readUInt8 (offset, noAssert) {
-  if (!noAssert) checkOffset(offset, 1, this.length)
-  return this[offset]
-}
-
-Buffer.prototype.readUInt16LE = function readUInt16LE (offset, noAssert) {
-  if (!noAssert) checkOffset(offset, 2, this.length)
-  return this[offset] | (this[offset + 1] << 8)
-}
-
-Buffer.prototype.readUInt16BE = function readUInt16BE (offset, noAssert) {
-  if (!noAssert) checkOffset(offset, 2, this.length)
-  return (this[offset] << 8) | this[offset + 1]
-}
-
-Buffer.prototype.readUInt32LE = function readUInt32LE (offset, noAssert) {
-  if (!noAssert) checkOffset(offset, 4, this.length)
-
-  return ((this[offset]) |
-      (this[offset + 1] << 8) |
-      (this[offset + 2] << 16)) +
-      (this[offset + 3] * 0x1000000)
-}
-
-Buffer.prototype.readUInt32BE = function readUInt32BE (offset, noAssert) {
-  if (!noAssert) checkOffset(offset, 4, this.length)
-
-  return (this[offset] * 0x1000000) +
-    ((this[offset + 1] << 16) |
-    (this[offset + 2] << 8) |
-    this[offset + 3])
-}
-
-Buffer.prototype.readIntLE = function readIntLE (offset, byteLength, noAssert) {
-  offset = offset | 0
-  byteLength = byteLength | 0
-  if (!noAssert) checkOffset(offset, byteLength, this.length)
-
-  var val = this[offset]
-  var mul = 1
-  var i = 0
-  while (++i < byteLength && (mul *= 0x100)) {
-    val += this[offset + i] * mul
-  }
-  mul *= 0x80
-
-  if (val >= mul) val -= Math.pow(2, 8 * byteLength)
-
-  return val
-}
-
-Buffer.prototype.readIntBE = function readIntBE (offset, byteLength, noAssert) {
-  offset = offset | 0
-  byteLength = byteLength | 0
-  if (!noAssert) checkOffset(offset, byteLength, this.length)
-
-  var i = byteLength
-  var mul = 1
-  var val = this[offset + --i]
-  while (i > 0 && (mul *= 0x100)) {
-    val += this[offset + --i] * mul
-  }
-  mul *= 0x80
-
-  if (val >= mul) val -= Math.pow(2, 8 * byteLength)
-
-  return val
-}
-
-Buffer.prototype.readInt8 = function readInt8 (offset, noAssert) {
-  if (!noAssert) checkOffset(offset, 1, this.length)
-  if (!(this[offset] & 0x80)) return (this[offset])
-  return ((0xff - this[offset] + 1) * -1)
-}
-
-Buffer.prototype.readInt16LE = function readInt16LE (offset, noAssert) {
-  if (!noAssert) checkOffset(offset, 2, this.length)
-  var val = this[offset] | (this[offset + 1] << 8)
-  return (val & 0x8000) ? val | 0xFFFF0000 : val
-}
-
-Buffer.prototype.readInt16BE = function readInt16BE (offset, noAssert) {
-  if (!noAssert) checkOffset(offset, 2, this.length)
-  var val = this[offset + 1] | (this[offset] << 8)
-  return (val & 0x8000) ? val | 0xFFFF0000 : val
-}
-
-Buffer.prototype.readInt32LE = function readInt32LE (offset, noAssert) {
-  if (!noAssert) checkOffset(offset, 4, this.length)
-
-  return (this[offset]) |
-    (this[offset + 1] << 8) |
-    (this[offset + 2] << 16) |
-    (this[offset + 3] << 24)
-}
-
-Buffer.prototype.readInt32BE = function readInt32BE (offset, noAssert) {
-  if (!noAssert) checkOffset(offset, 4, this.length)
-
-  return (this[offset] << 24) |
-    (this[offset + 1] << 16) |
-    (this[offset + 2] << 8) |
-    (this[offset + 3])
-}
-
-Buffer.prototype.readFloatLE = function readFloatLE (offset, noAssert) {
-  if (!noAssert) checkOffset(offset, 4, this.length)
-  return ieee754.read(this, offset, true, 23, 4)
-}
-
-Buffer.prototype.readFloatBE = function readFloatBE (offset, noAssert) {
-  if (!noAssert) checkOffset(offset, 4, this.length)
-  return ieee754.read(this, offset, false, 23, 4)
-}
-
-Buffer.prototype.readDoubleLE = function readDoubleLE (offset, noAssert) {
-  if (!noAssert) checkOffset(offset, 8, this.length)
-  return ieee754.read(this, offset, true, 52, 8)
-}
-
-Buffer.prototype.readDoubleBE = function readDoubleBE (offset, noAssert) {
-  if (!noAssert) checkOffset(offset, 8, this.length)
-  return ieee754.read(this, offset, false, 52, 8)
-}
-
-function checkInt (buf, value, offset, ext, max, min) {
-  if (!Buffer.isBuffer(buf)) throw new TypeError('buffer must be a Buffer instance')
-  if (value > max || value < min) throw new RangeError('value is out of bounds')
-  if (offset + ext > buf.length) throw new RangeError('index out of range')
-}
-
-Buffer.prototype.writeUIntLE = function writeUIntLE (value, offset, byteLength, noAssert) {
-  value = +value
-  offset = offset | 0
-  byteLength = byteLength | 0
-  if (!noAssert) checkInt(this, value, offset, byteLength, Math.pow(2, 8 * byteLength), 0)
-
-  var mul = 1
-  var i = 0
-  this[offset] = value & 0xFF
-  while (++i < byteLength && (mul *= 0x100)) {
-    this[offset + i] = (value / mul) & 0xFF
-  }
-
-  return offset + byteLength
-}
-
-Buffer.prototype.writeUIntBE = function writeUIntBE (value, offset, byteLength, noAssert) {
-  value = +value
-  offset = offset | 0
-  byteLength = byteLength | 0
-  if (!noAssert) checkInt(this, value, offset, byteLength, Math.pow(2, 8 * byteLength), 0)
-
-  var i = byteLength - 1
-  var mul = 1
-  this[offset + i] = value & 0xFF
-  while (--i >= 0 && (mul *= 0x100)) {
-    this[offset + i] = (value / mul) & 0xFF
-  }
-
-  return offset + byteLength
-}
-
-Buffer.prototype.writeUInt8 = function writeUInt8 (value, offset, noAssert) {
-  value = +value
-  offset = offset | 0
-  if (!noAssert) checkInt(this, value, offset, 1, 0xff, 0)
-  if (!Buffer.TYPED_ARRAY_SUPPORT) value = Math.floor(value)
-  this[offset] = (value & 0xff)
-  return offset + 1
-}
-
-function objectWriteUInt16 (buf, value, offset, littleEndian) {
-  if (value < 0) value = 0xffff + value + 1
-  for (var i = 0, j = Math.min(buf.length - offset, 2); i < j; i++) {
-    buf[offset + i] = (value & (0xff << (8 * (littleEndian ? i : 1 - i)))) >>>
-      (littleEndian ? i : 1 - i) * 8
-  }
-}
-
-Buffer.prototype.writeUInt16LE = function writeUInt16LE (value, offset, noAssert) {
-  value = +value
-  offset = offset | 0
-  if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value & 0xff)
-    this[offset + 1] = (value >>> 8)
-  } else {
-    objectWriteUInt16(this, value, offset, true)
-  }
-  return offset + 2
-}
-
-Buffer.prototype.writeUInt16BE = function writeUInt16BE (value, offset, noAssert) {
-  value = +value
-  offset = offset | 0
-  if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value >>> 8)
-    this[offset + 1] = (value & 0xff)
-  } else {
-    objectWriteUInt16(this, value, offset, false)
-  }
-  return offset + 2
-}
-
-function objectWriteUInt32 (buf, value, offset, littleEndian) {
-  if (value < 0) value = 0xffffffff + value + 1
-  for (var i = 0, j = Math.min(buf.length - offset, 4); i < j; i++) {
-    buf[offset + i] = (value >>> (littleEndian ? i : 3 - i) * 8) & 0xff
-  }
-}
-
-Buffer.prototype.writeUInt32LE = function writeUInt32LE (value, offset, noAssert) {
-  value = +value
-  offset = offset | 0
-  if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset + 3] = (value >>> 24)
-    this[offset + 2] = (value >>> 16)
-    this[offset + 1] = (value >>> 8)
-    this[offset] = (value & 0xff)
-  } else {
-    objectWriteUInt32(this, value, offset, true)
-  }
-  return offset + 4
-}
-
-Buffer.prototype.writeUInt32BE = function writeUInt32BE (value, offset, noAssert) {
-  value = +value
-  offset = offset | 0
-  if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value >>> 24)
-    this[offset + 1] = (value >>> 16)
-    this[offset + 2] = (value >>> 8)
-    this[offset + 3] = (value & 0xff)
-  } else {
-    objectWriteUInt32(this, value, offset, false)
-  }
-  return offset + 4
-}
-
-Buffer.prototype.writeIntLE = function writeIntLE (value, offset, byteLength, noAssert) {
-  value = +value
-  offset = offset | 0
-  if (!noAssert) {
-    var limit = Math.pow(2, 8 * byteLength - 1)
-
-    checkInt(this, value, offset, byteLength, limit - 1, -limit)
-  }
-
-  var i = 0
-  var mul = 1
-  var sub = value < 0 ? 1 : 0
-  this[offset] = value & 0xFF
-  while (++i < byteLength && (mul *= 0x100)) {
-    this[offset + i] = ((value / mul) >> 0) - sub & 0xFF
-  }
-
-  return offset + byteLength
-}
-
-Buffer.prototype.writeIntBE = function writeIntBE (value, offset, byteLength, noAssert) {
-  value = +value
-  offset = offset | 0
-  if (!noAssert) {
-    var limit = Math.pow(2, 8 * byteLength - 1)
-
-    checkInt(this, value, offset, byteLength, limit - 1, -limit)
-  }
-
-  var i = byteLength - 1
-  var mul = 1
-  var sub = value < 0 ? 1 : 0
-  this[offset + i] = value & 0xFF
-  while (--i >= 0 && (mul *= 0x100)) {
-    this[offset + i] = ((value / mul) >> 0) - sub & 0xFF
-  }
-
-  return offset + byteLength
-}
-
-Buffer.prototype.writeInt8 = function writeInt8 (value, offset, noAssert) {
-  value = +value
-  offset = offset | 0
-  if (!noAssert) checkInt(this, value, offset, 1, 0x7f, -0x80)
-  if (!Buffer.TYPED_ARRAY_SUPPORT) value = Math.floor(value)
-  if (value < 0) value = 0xff + value + 1
-  this[offset] = (value & 0xff)
-  return offset + 1
-}
-
-Buffer.prototype.writeInt16LE = function writeInt16LE (value, offset, noAssert) {
-  value = +value
-  offset = offset | 0
-  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value & 0xff)
-    this[offset + 1] = (value >>> 8)
-  } else {
-    objectWriteUInt16(this, value, offset, true)
-  }
-  return offset + 2
-}
-
-Buffer.prototype.writeInt16BE = function writeInt16BE (value, offset, noAssert) {
-  value = +value
-  offset = offset | 0
-  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value >>> 8)
-    this[offset + 1] = (value & 0xff)
-  } else {
-    objectWriteUInt16(this, value, offset, false)
-  }
-  return offset + 2
-}
-
-Buffer.prototype.writeInt32LE = function writeInt32LE (value, offset, noAssert) {
-  value = +value
-  offset = offset | 0
-  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value & 0xff)
-    this[offset + 1] = (value >>> 8)
-    this[offset + 2] = (value >>> 16)
-    this[offset + 3] = (value >>> 24)
-  } else {
-    objectWriteUInt32(this, value, offset, true)
-  }
-  return offset + 4
-}
-
-Buffer.prototype.writeInt32BE = function writeInt32BE (value, offset, noAssert) {
-  value = +value
-  offset = offset | 0
-  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
-  if (value < 0) value = 0xffffffff + value + 1
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value >>> 24)
-    this[offset + 1] = (value >>> 16)
-    this[offset + 2] = (value >>> 8)
-    this[offset + 3] = (value & 0xff)
-  } else {
-    objectWriteUInt32(this, value, offset, false)
-  }
-  return offset + 4
-}
-
-function checkIEEE754 (buf, value, offset, ext, max, min) {
-  if (value > max || value < min) throw new RangeError('value is out of bounds')
-  if (offset + ext > buf.length) throw new RangeError('index out of range')
-  if (offset < 0) throw new RangeError('index out of range')
-}
-
-function writeFloat (buf, value, offset, littleEndian, noAssert) {
-  if (!noAssert) {
-    checkIEEE754(buf, value, offset, 4, 3.4028234663852886e+38, -3.4028234663852886e+38)
-  }
-  ieee754.write(buf, value, offset, littleEndian, 23, 4)
-  return offset + 4
-}
-
-Buffer.prototype.writeFloatLE = function writeFloatLE (value, offset, noAssert) {
-  return writeFloat(this, value, offset, true, noAssert)
-}
-
-Buffer.prototype.writeFloatBE = function writeFloatBE (value, offset, noAssert) {
-  return writeFloat(this, value, offset, false, noAssert)
-}
-
-function writeDouble (buf, value, offset, littleEndian, noAssert) {
-  if (!noAssert) {
-    checkIEEE754(buf, value, offset, 8, 1.7976931348623157E+308, -1.7976931348623157E+308)
-  }
-  ieee754.write(buf, value, offset, littleEndian, 52, 8)
-  return offset + 8
-}
-
-Buffer.prototype.writeDoubleLE = function writeDoubleLE (value, offset, noAssert) {
-  return writeDouble(this, value, offset, true, noAssert)
-}
-
-Buffer.prototype.writeDoubleBE = function writeDoubleBE (value, offset, noAssert) {
-  return writeDouble(this, value, offset, false, noAssert)
-}
-
-// copy(targetBuffer, targetStart=0, sourceStart=0, sourceEnd=buffer.length)
-Buffer.prototype.copy = function copy (target, targetStart, start, end) {
-  if (!start) start = 0
-  if (!end && end !== 0) end = this.length
-  if (targetStart >= target.length) targetStart = target.length
-  if (!targetStart) targetStart = 0
-  if (end > 0 && end < start) end = start
-
-  // Copy 0 bytes; we're done
-  if (end === start) return 0
-  if (target.length === 0 || this.length === 0) return 0
-
-  // Fatal error conditions
-  if (targetStart < 0) {
-    throw new RangeError('targetStart out of bounds')
-  }
-  if (start < 0 || start >= this.length) throw new RangeError('sourceStart out of bounds')
-  if (end < 0) throw new RangeError('sourceEnd out of bounds')
-
-  // Are we oob?
-  if (end > this.length) end = this.length
-  if (target.length - targetStart < end - start) {
-    end = target.length - targetStart + start
-  }
-
-  var len = end - start
-  var i
-
-  if (this === target && start < targetStart && targetStart < end) {
-    // descending copy from end
-    for (i = len - 1; i >= 0; i--) {
-      target[i + targetStart] = this[i + start]
-    }
-  } else if (len < 1000 || !Buffer.TYPED_ARRAY_SUPPORT) {
-    // ascending copy from start
-    for (i = 0; i < len; i++) {
-      target[i + targetStart] = this[i + start]
-    }
-  } else {
-    target._set(this.subarray(start, start + len), targetStart)
-  }
-
-  return len
-}
-
-// fill(value, start=0, end=buffer.length)
-Buffer.prototype.fill = function fill (value, start, end) {
-  if (!value) value = 0
-  if (!start) start = 0
-  if (!end) end = this.length
-
-  if (end < start) throw new RangeError('end < start')
-
-  // Fill 0 bytes; we're done
-  if (end === start) return
-  if (this.length === 0) return
-
-  if (start < 0 || start >= this.length) throw new RangeError('start out of bounds')
-  if (end < 0 || end > this.length) throw new RangeError('end out of bounds')
-
-  var i
-  if (typeof value === 'number') {
-    for (i = start; i < end; i++) {
-      this[i] = value
-    }
-  } else {
-    var bytes = utf8ToBytes(value.toString())
-    var len = bytes.length
-    for (i = start; i < end; i++) {
-      this[i] = bytes[i % len]
-    }
-  }
-
-  return this
-}
-
-/**
- * Creates a new `ArrayBuffer` with the *copied* memory of the buffer instance.
- * Added in Node 0.12. Only available in browsers that support ArrayBuffer.
- */
-Buffer.prototype.toArrayBuffer = function toArrayBuffer () {
-  if (typeof Uint8Array !== 'undefined') {
-    if (Buffer.TYPED_ARRAY_SUPPORT) {
-      return (new Buffer(this)).buffer
-    } else {
-      var buf = new Uint8Array(this.length)
-      for (var i = 0, len = buf.length; i < len; i += 1) {
-        buf[i] = this[i]
-      }
-      return buf.buffer
-    }
-  } else {
-    throw new TypeError('Buffer.toArrayBuffer not supported in this browser')
-  }
-}
-
-// HELPER FUNCTIONS
-// ================
-
-var BP = Buffer.prototype
-
-/**
- * Augment a Uint8Array *instance* (not the Uint8Array class!) with Buffer methods
- */
-Buffer._augment = function _augment (arr) {
-  arr.constructor = Buffer
-  arr._isBuffer = true
-
-  // save reference to original Uint8Array set method before overwriting
-  arr._set = arr.set
-
-  // deprecated
-  arr.get = BP.get
-  arr.set = BP.set
-
-  arr.write = BP.write
-  arr.toString = BP.toString
-  arr.toLocaleString = BP.toString
-  arr.toJSON = BP.toJSON
-  arr.equals = BP.equals
-  arr.compare = BP.compare
-  arr.indexOf = BP.indexOf
-  arr.copy = BP.copy
-  arr.slice = BP.slice
-  arr.readUIntLE = BP.readUIntLE
-  arr.readUIntBE = BP.readUIntBE
-  arr.readUInt8 = BP.readUInt8
-  arr.readUInt16LE = BP.readUInt16LE
-  arr.readUInt16BE = BP.readUInt16BE
-  arr.readUInt32LE = BP.readUInt32LE
-  arr.readUInt32BE = BP.readUInt32BE
-  arr.readIntLE = BP.readIntLE
-  arr.readIntBE = BP.readIntBE
-  arr.readInt8 = BP.readInt8
-  arr.readInt16LE = BP.readInt16LE
-  arr.readInt16BE = BP.readInt16BE
-  arr.readInt32LE = BP.readInt32LE
-  arr.readInt32BE = BP.readInt32BE
-  arr.readFloatLE = BP.readFloatLE
-  arr.readFloatBE = BP.readFloatBE
-  arr.readDoubleLE = BP.readDoubleLE
-  arr.readDoubleBE = BP.readDoubleBE
-  arr.writeUInt8 = BP.writeUInt8
-  arr.writeUIntLE = BP.writeUIntLE
-  arr.writeUIntBE = BP.writeUIntBE
-  arr.writeUInt16LE = BP.writeUInt16LE
-  arr.writeUInt16BE = BP.writeUInt16BE
-  arr.writeUInt32LE = BP.writeUInt32LE
-  arr.writeUInt32BE = BP.writeUInt32BE
-  arr.writeIntLE = BP.writeIntLE
-  arr.writeIntBE = BP.writeIntBE
-  arr.writeInt8 = BP.writeInt8
-  arr.writeInt16LE = BP.writeInt16LE
-  arr.writeInt16BE = BP.writeInt16BE
-  arr.writeInt32LE = BP.writeInt32LE
-  arr.writeInt32BE = BP.writeInt32BE
-  arr.writeFloatLE = BP.writeFloatLE
-  arr.writeFloatBE = BP.writeFloatBE
-  arr.writeDoubleLE = BP.writeDoubleLE
-  arr.writeDoubleBE = BP.writeDoubleBE
-  arr.fill = BP.fill
-  arr.inspect = BP.inspect
-  arr.toArrayBuffer = BP.toArrayBuffer
-
-  return arr
-}
-
-var INVALID_BASE64_RE = /[^+\/0-9A-Za-z-_]/g
-
-function base64clean (str) {
-  // Node strips out invalid characters like \n and \t from the string, base64-js does not
-  str = stringtrim(str).replace(INVALID_BASE64_RE, '')
-  // Node converts strings with length < 2 to ''
-  if (str.length < 2) return ''
-  // Node allows for non-padded base64 strings (missing trailing ===), base64-js does not
-  while (str.length % 4 !== 0) {
-    str = str + '='
-  }
-  return str
-}
-
-function stringtrim (str) {
-  if (str.trim) return str.trim()
-  return str.replace(/^\s+|\s+$/g, '')
-}
-
-function toHex (n) {
-  if (n < 16) return '0' + n.toString(16)
-  return n.toString(16)
-}
-
-function utf8ToBytes (string, units) {
-  units = units || Infinity
-  var codePoint
-  var length = string.length
-  var leadSurrogate = null
-  var bytes = []
-
-  for (var i = 0; i < length; i++) {
-    codePoint = string.charCodeAt(i)
-
-    // is surrogate component
-    if (codePoint > 0xD7FF && codePoint < 0xE000) {
-      // last char was a lead
-      if (!leadSurrogate) {
-        // no lead yet
-        if (codePoint > 0xDBFF) {
-          // unexpected trail
-          if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
-          continue
-        } else if (i + 1 === length) {
-          // unpaired lead
-          if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
-          continue
-        }
-
-        // valid lead
-        leadSurrogate = codePoint
-
-        continue
-      }
-
-      // 2 leads in a row
-      if (codePoint < 0xDC00) {
-        if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
-        leadSurrogate = codePoint
-        continue
-      }
-
-      // valid surrogate pair
-      codePoint = (leadSurrogate - 0xD800 << 10 | codePoint - 0xDC00) + 0x10000
-    } else if (leadSurrogate) {
-      // valid bmp char, but last char was a lead
-      if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
-    }
-
-    leadSurrogate = null
-
-    // encode utf8
-    if (codePoint < 0x80) {
-      if ((units -= 1) < 0) break
-      bytes.push(codePoint)
-    } else if (codePoint < 0x800) {
-      if ((units -= 2) < 0) break
-      bytes.push(
-        codePoint >> 0x6 | 0xC0,
-        codePoint & 0x3F | 0x80
-      )
-    } else if (codePoint < 0x10000) {
-      if ((units -= 3) < 0) break
-      bytes.push(
-        codePoint >> 0xC | 0xE0,
-        codePoint >> 0x6 & 0x3F | 0x80,
-        codePoint & 0x3F | 0x80
-      )
-    } else if (codePoint < 0x110000) {
-      if ((units -= 4) < 0) break
-      bytes.push(
-        codePoint >> 0x12 | 0xF0,
-        codePoint >> 0xC & 0x3F | 0x80,
-        codePoint >> 0x6 & 0x3F | 0x80,
-        codePoint & 0x3F | 0x80
-      )
-    } else {
-      throw new Error('Invalid code point')
-    }
-  }
-
-  return bytes
-}
-
-function asciiToBytes (str) {
-  var byteArray = []
-  for (var i = 0; i < str.length; i++) {
-    // Node's code seems to be doing this and not & 0x7F..
-    byteArray.push(str.charCodeAt(i) & 0xFF)
-  }
-  return byteArray
-}
-
-function utf16leToBytes (str, units) {
-  var c, hi, lo
-  var byteArray = []
-  for (var i = 0; i < str.length; i++) {
-    if ((units -= 2) < 0) break
-
-    c = str.charCodeAt(i)
-    hi = c >> 8
-    lo = c % 256
-    byteArray.push(lo)
-    byteArray.push(hi)
-  }
-
-  return byteArray
-}
-
-function base64ToBytes (str) {
-  return base64.toByteArray(base64clean(str))
-}
-
-function blitBuffer (src, dst, offset, length) {
-  for (var i = 0; i < length; i++) {
-    if ((i + offset >= dst.length) || (i >= src.length)) break
-    dst[i + offset] = src[i]
-  }
-  return i
-}
-
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-
-},{"11":11,"14":14,"8":8}],11:[function(_dereq_,module,exports){
-var toString = {}.toString;
-
-module.exports = Array.isArray || function (arr) {
-  return toString.call(arr) == '[object Array]';
-};
-
-},{}],12:[function(_dereq_,module,exports){
-(function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -5031,119 +5227,16 @@ module.exports = Array.isArray || function (arr) {
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 // USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-// NOTE: These type checking functions intentionally don't use `instanceof`
-// because it is fragile and can be easily faked with `Object.create()`.
-
-function isArray(arg) {
-  if (Array.isArray) {
-    return Array.isArray(arg);
-  }
-  return objectToString(arg) === '[object Array]';
-}
-exports.isArray = isArray;
-
-function isBoolean(arg) {
-  return typeof arg === 'boolean';
-}
-exports.isBoolean = isBoolean;
-
-function isNull(arg) {
-  return arg === null;
-}
-exports.isNull = isNull;
-
-function isNullOrUndefined(arg) {
-  return arg == null;
-}
-exports.isNullOrUndefined = isNullOrUndefined;
-
-function isNumber(arg) {
-  return typeof arg === 'number';
-}
-exports.isNumber = isNumber;
-
-function isString(arg) {
-  return typeof arg === 'string';
-}
-exports.isString = isString;
-
-function isSymbol(arg) {
-  return typeof arg === 'symbol';
-}
-exports.isSymbol = isSymbol;
-
-function isUndefined(arg) {
-  return arg === void 0;
-}
-exports.isUndefined = isUndefined;
-
-function isRegExp(re) {
-  return objectToString(re) === '[object RegExp]';
-}
-exports.isRegExp = isRegExp;
-
-function isObject(arg) {
-  return typeof arg === 'object' && arg !== null;
-}
-exports.isObject = isObject;
-
-function isDate(d) {
-  return objectToString(d) === '[object Date]';
-}
-exports.isDate = isDate;
-
-function isError(e) {
-  return (objectToString(e) === '[object Error]' || e instanceof Error);
-}
-exports.isError = isError;
-
-function isFunction(arg) {
-  return typeof arg === 'function';
-}
-exports.isFunction = isFunction;
-
-function isPrimitive(arg) {
-  return arg === null ||
-         typeof arg === 'boolean' ||
-         typeof arg === 'number' ||
-         typeof arg === 'string' ||
-         typeof arg === 'symbol' ||  // ES6 symbol
-         typeof arg === 'undefined';
-}
-exports.isPrimitive = isPrimitive;
-
-exports.isBuffer = Buffer.isBuffer;
-
-function objectToString(o) {
-  return Object.prototype.toString.call(o);
-}
-
-}).call(this,{"isBuffer":_dereq_(16)})
-
-},{"16":16}],13:[function(_dereq_,module,exports){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
+var objectCreate = Object.create || objectCreatePolyfill
+var objectKeys = Object.keys || objectKeysPolyfill
+var bind = Function.prototype.bind || functionBindPolyfill
 
 function EventEmitter() {
-  this._events = this._events || {};
+  if (!this._events || !Object.prototype.hasOwnProperty.call(this, '_events')) {
+    this._events = objectCreate(null);
+    this._eventsCount = 0;
+  }
+
   this._maxListeners = this._maxListeners || undefined;
 }
 module.exports = EventEmitter;
@@ -5156,274 +5249,545 @@ EventEmitter.prototype._maxListeners = undefined;
 
 // By default EventEmitters will print a warning if more than 10 listeners are
 // added to it. This is a useful default which helps finding memory leaks.
-EventEmitter.defaultMaxListeners = 10;
+var defaultMaxListeners = 10;
+
+var hasDefineProperty;
+try {
+  var o = {};
+  if (Object.defineProperty) Object.defineProperty(o, 'x', { value: 0 });
+  hasDefineProperty = o.x === 0;
+} catch (err) { hasDefineProperty = false }
+if (hasDefineProperty) {
+  Object.defineProperty(EventEmitter, 'defaultMaxListeners', {
+    enumerable: true,
+    get: function() {
+      return defaultMaxListeners;
+    },
+    set: function(arg) {
+      // check whether the input is a positive number (whose value is zero or
+      // greater and not a NaN).
+      if (typeof arg !== 'number' || arg < 0 || arg !== arg)
+        throw new TypeError('"defaultMaxListeners" must be a positive number');
+      defaultMaxListeners = arg;
+    }
+  });
+} else {
+  EventEmitter.defaultMaxListeners = defaultMaxListeners;
+}
 
 // Obviously not all Emitters should be limited to 10. This function allows
 // that to be increased. Set to zero for unlimited.
-EventEmitter.prototype.setMaxListeners = function(n) {
-  if (!isNumber(n) || n < 0 || isNaN(n))
-    throw TypeError('n must be a positive number');
+EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
+  if (typeof n !== 'number' || n < 0 || isNaN(n))
+    throw new TypeError('"n" argument must be a positive number');
   this._maxListeners = n;
   return this;
 };
 
-EventEmitter.prototype.emit = function(type) {
-  var er, handler, len, args, i, listeners;
+function $getMaxListeners(that) {
+  if (that._maxListeners === undefined)
+    return EventEmitter.defaultMaxListeners;
+  return that._maxListeners;
+}
 
-  if (!this._events)
-    this._events = {};
+EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
+  return $getMaxListeners(this);
+};
 
-  // If there is no 'error' event listener then throw.
-  if (type === 'error') {
-    if (!this._events.error ||
-        (isObject(this._events.error) && !this._events.error.length)) {
-      er = arguments[1];
-      if (er instanceof Error) {
-        throw er; // Unhandled 'error' event
-      }
-      throw TypeError('Uncaught, unspecified "error" event.');
-    }
+// These standalone emit* functions are used to optimize calling of event
+// handlers for fast cases because emit() itself often has a variable number of
+// arguments and can be deoptimized because of that. These functions always have
+// the same number of arguments and thus do not get deoptimized, so the code
+// inside them can execute faster.
+function emitNone(handler, isFn, self) {
+  if (isFn)
+    handler.call(self);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self);
   }
+}
+function emitOne(handler, isFn, self, arg1) {
+  if (isFn)
+    handler.call(self, arg1);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1);
+  }
+}
+function emitTwo(handler, isFn, self, arg1, arg2) {
+  if (isFn)
+    handler.call(self, arg1, arg2);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1, arg2);
+  }
+}
+function emitThree(handler, isFn, self, arg1, arg2, arg3) {
+  if (isFn)
+    handler.call(self, arg1, arg2, arg3);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1, arg2, arg3);
+  }
+}
 
-  handler = this._events[type];
+function emitMany(handler, isFn, self, args) {
+  if (isFn)
+    handler.apply(self, args);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].apply(self, args);
+  }
+}
 
-  if (isUndefined(handler))
+EventEmitter.prototype.emit = function emit(type) {
+  var er, handler, len, args, i, events;
+  var doError = (type === 'error');
+
+  events = this._events;
+  if (events)
+    doError = (doError && events.error == null);
+  else if (!doError)
     return false;
 
-  if (isFunction(handler)) {
-    switch (arguments.length) {
-      // fast cases
-      case 1:
-        handler.call(this);
-        break;
-      case 2:
-        handler.call(this, arguments[1]);
-        break;
-      case 3:
-        handler.call(this, arguments[1], arguments[2]);
-        break;
-      // slower
-      default:
-        len = arguments.length;
-        args = new Array(len - 1);
-        for (i = 1; i < len; i++)
-          args[i - 1] = arguments[i];
-        handler.apply(this, args);
+  // If there is no 'error' event listener then throw.
+  if (doError) {
+    if (arguments.length > 1)
+      er = arguments[1];
+    if (er instanceof Error) {
+      throw er; // Unhandled 'error' event
+    } else {
+      // At least give some kind of context to the user
+      var err = new Error('Unhandled "error" event. (' + er + ')');
+      err.context = er;
+      throw err;
     }
-  } else if (isObject(handler)) {
-    len = arguments.length;
-    args = new Array(len - 1);
-    for (i = 1; i < len; i++)
-      args[i - 1] = arguments[i];
+    return false;
+  }
 
-    listeners = handler.slice();
-    len = listeners.length;
-    for (i = 0; i < len; i++)
-      listeners[i].apply(this, args);
+  handler = events[type];
+
+  if (!handler)
+    return false;
+
+  var isFn = typeof handler === 'function';
+  len = arguments.length;
+  switch (len) {
+      // fast cases
+    case 1:
+      emitNone(handler, isFn, this);
+      break;
+    case 2:
+      emitOne(handler, isFn, this, arguments[1]);
+      break;
+    case 3:
+      emitTwo(handler, isFn, this, arguments[1], arguments[2]);
+      break;
+    case 4:
+      emitThree(handler, isFn, this, arguments[1], arguments[2], arguments[3]);
+      break;
+      // slower
+    default:
+      args = new Array(len - 1);
+      for (i = 1; i < len; i++)
+        args[i - 1] = arguments[i];
+      emitMany(handler, isFn, this, args);
   }
 
   return true;
 };
 
-EventEmitter.prototype.addListener = function(type, listener) {
+function _addListener(target, type, listener, prepend) {
   var m;
+  var events;
+  var existing;
 
-  if (!isFunction(listener))
-    throw TypeError('listener must be a function');
+  if (typeof listener !== 'function')
+    throw new TypeError('"listener" argument must be a function');
 
-  if (!this._events)
-    this._events = {};
+  events = target._events;
+  if (!events) {
+    events = target._events = objectCreate(null);
+    target._eventsCount = 0;
+  } else {
+    // To avoid recursion in the case that type === "newListener"! Before
+    // adding it to the listeners, first emit "newListener".
+    if (events.newListener) {
+      target.emit('newListener', type,
+          listener.listener ? listener.listener : listener);
 
-  // To avoid recursion in the case that type === "newListener"! Before
-  // adding it to the listeners, first emit "newListener".
-  if (this._events.newListener)
-    this.emit('newListener', type,
-              isFunction(listener.listener) ?
-              listener.listener : listener);
+      // Re-assign `events` because a newListener handler could have caused the
+      // this._events to be assigned to a new object
+      events = target._events;
+    }
+    existing = events[type];
+  }
 
-  if (!this._events[type])
+  if (!existing) {
     // Optimize the case of one listener. Don't need the extra array object.
-    this._events[type] = listener;
-  else if (isObject(this._events[type]))
-    // If we've already got an array, just append.
-    this._events[type].push(listener);
-  else
-    // Adding the second element, need to change to array.
-    this._events[type] = [this._events[type], listener];
-
-  // Check for listener leak
-  if (isObject(this._events[type]) && !this._events[type].warned) {
-    var m;
-    if (!isUndefined(this._maxListeners)) {
-      m = this._maxListeners;
+    existing = events[type] = listener;
+    ++target._eventsCount;
+  } else {
+    if (typeof existing === 'function') {
+      // Adding the second element, need to change to array.
+      existing = events[type] =
+          prepend ? [listener, existing] : [existing, listener];
     } else {
-      m = EventEmitter.defaultMaxListeners;
+      // If we've already got an array, just append.
+      if (prepend) {
+        existing.unshift(listener);
+      } else {
+        existing.push(listener);
+      }
     }
 
-    if (m && m > 0 && this._events[type].length > m) {
-      this._events[type].warned = true;
-      console.error('(node) warning: possible EventEmitter memory ' +
-                    'leak detected. %d listeners added. ' +
-                    'Use emitter.setMaxListeners() to increase limit.',
-                    this._events[type].length);
-      if (typeof console.trace === 'function') {
-        // not supported in IE 10
-        console.trace();
+    // Check for listener leak
+    if (!existing.warned) {
+      m = $getMaxListeners(target);
+      if (m && m > 0 && existing.length > m) {
+        existing.warned = true;
+        var w = new Error('Possible EventEmitter memory leak detected. ' +
+            existing.length + ' "' + String(type) + '" listeners ' +
+            'added. Use emitter.setMaxListeners() to ' +
+            'increase limit.');
+        w.name = 'MaxListenersExceededWarning';
+        w.emitter = target;
+        w.type = type;
+        w.count = existing.length;
+        if (typeof console === 'object' && console.warn) {
+          console.warn('%s: %s', w.name, w.message);
+        }
       }
     }
   }
 
-  return this;
+  return target;
+}
+
+EventEmitter.prototype.addListener = function addListener(type, listener) {
+  return _addListener(this, type, listener, false);
 };
 
 EventEmitter.prototype.on = EventEmitter.prototype.addListener;
 
-EventEmitter.prototype.once = function(type, listener) {
-  if (!isFunction(listener))
-    throw TypeError('listener must be a function');
+EventEmitter.prototype.prependListener =
+    function prependListener(type, listener) {
+      return _addListener(this, type, listener, true);
+    };
 
-  var fired = false;
-
-  function g() {
-    this.removeListener(type, g);
-
-    if (!fired) {
-      fired = true;
-      listener.apply(this, arguments);
+function onceWrapper() {
+  if (!this.fired) {
+    this.target.removeListener(this.type, this.wrapFn);
+    this.fired = true;
+    switch (arguments.length) {
+      case 0:
+        return this.listener.call(this.target);
+      case 1:
+        return this.listener.call(this.target, arguments[0]);
+      case 2:
+        return this.listener.call(this.target, arguments[0], arguments[1]);
+      case 3:
+        return this.listener.call(this.target, arguments[0], arguments[1],
+            arguments[2]);
+      default:
+        var args = new Array(arguments.length);
+        for (var i = 0; i < args.length; ++i)
+          args[i] = arguments[i];
+        this.listener.apply(this.target, args);
     }
   }
+}
 
-  g.listener = listener;
-  this.on(type, g);
+function _onceWrap(target, type, listener) {
+  var state = { fired: false, wrapFn: undefined, target: target, type: type, listener: listener };
+  var wrapped = bind.call(onceWrapper, state);
+  wrapped.listener = listener;
+  state.wrapFn = wrapped;
+  return wrapped;
+}
 
+EventEmitter.prototype.once = function once(type, listener) {
+  if (typeof listener !== 'function')
+    throw new TypeError('"listener" argument must be a function');
+  this.on(type, _onceWrap(this, type, listener));
   return this;
 };
 
-// emits a 'removeListener' event iff the listener was removed
-EventEmitter.prototype.removeListener = function(type, listener) {
-  var list, position, length, i;
-
-  if (!isFunction(listener))
-    throw TypeError('listener must be a function');
-
-  if (!this._events || !this._events[type])
-    return this;
-
-  list = this._events[type];
-  length = list.length;
-  position = -1;
-
-  if (list === listener ||
-      (isFunction(list.listener) && list.listener === listener)) {
-    delete this._events[type];
-    if (this._events.removeListener)
-      this.emit('removeListener', type, listener);
-
-  } else if (isObject(list)) {
-    for (i = length; i-- > 0;) {
-      if (list[i] === listener ||
-          (list[i].listener && list[i].listener === listener)) {
-        position = i;
-        break;
-      }
-    }
-
-    if (position < 0)
+EventEmitter.prototype.prependOnceListener =
+    function prependOnceListener(type, listener) {
+      if (typeof listener !== 'function')
+        throw new TypeError('"listener" argument must be a function');
+      this.prependListener(type, _onceWrap(this, type, listener));
       return this;
+    };
 
-    if (list.length === 1) {
-      list.length = 0;
-      delete this._events[type];
-    } else {
-      list.splice(position, 1);
-    }
+// Emits a 'removeListener' event if and only if the listener was removed.
+EventEmitter.prototype.removeListener =
+    function removeListener(type, listener) {
+      var list, events, position, i, originalListener;
 
-    if (this._events.removeListener)
-      this.emit('removeListener', type, listener);
-  }
+      if (typeof listener !== 'function')
+        throw new TypeError('"listener" argument must be a function');
 
-  return this;
+      events = this._events;
+      if (!events)
+        return this;
+
+      list = events[type];
+      if (!list)
+        return this;
+
+      if (list === listener || list.listener === listener) {
+        if (--this._eventsCount === 0)
+          this._events = objectCreate(null);
+        else {
+          delete events[type];
+          if (events.removeListener)
+            this.emit('removeListener', type, list.listener || listener);
+        }
+      } else if (typeof list !== 'function') {
+        position = -1;
+
+        for (i = list.length - 1; i >= 0; i--) {
+          if (list[i] === listener || list[i].listener === listener) {
+            originalListener = list[i].listener;
+            position = i;
+            break;
+          }
+        }
+
+        if (position < 0)
+          return this;
+
+        if (position === 0)
+          list.shift();
+        else
+          spliceOne(list, position);
+
+        if (list.length === 1)
+          events[type] = list[0];
+
+        if (events.removeListener)
+          this.emit('removeListener', type, originalListener || listener);
+      }
+
+      return this;
+    };
+
+EventEmitter.prototype.removeAllListeners =
+    function removeAllListeners(type) {
+      var listeners, events, i;
+
+      events = this._events;
+      if (!events)
+        return this;
+
+      // not listening for removeListener, no need to emit
+      if (!events.removeListener) {
+        if (arguments.length === 0) {
+          this._events = objectCreate(null);
+          this._eventsCount = 0;
+        } else if (events[type]) {
+          if (--this._eventsCount === 0)
+            this._events = objectCreate(null);
+          else
+            delete events[type];
+        }
+        return this;
+      }
+
+      // emit removeListener for all listeners on all events
+      if (arguments.length === 0) {
+        var keys = objectKeys(events);
+        var key;
+        for (i = 0; i < keys.length; ++i) {
+          key = keys[i];
+          if (key === 'removeListener') continue;
+          this.removeAllListeners(key);
+        }
+        this.removeAllListeners('removeListener');
+        this._events = objectCreate(null);
+        this._eventsCount = 0;
+        return this;
+      }
+
+      listeners = events[type];
+
+      if (typeof listeners === 'function') {
+        this.removeListener(type, listeners);
+      } else if (listeners) {
+        // LIFO order
+        for (i = listeners.length - 1; i >= 0; i--) {
+          this.removeListener(type, listeners[i]);
+        }
+      }
+
+      return this;
+    };
+
+function _listeners(target, type, unwrap) {
+  var events = target._events;
+
+  if (!events)
+    return [];
+
+  var evlistener = events[type];
+  if (!evlistener)
+    return [];
+
+  if (typeof evlistener === 'function')
+    return unwrap ? [evlistener.listener || evlistener] : [evlistener];
+
+  return unwrap ? unwrapListeners(evlistener) : arrayClone(evlistener, evlistener.length);
+}
+
+EventEmitter.prototype.listeners = function listeners(type) {
+  return _listeners(this, type, true);
 };
 
-EventEmitter.prototype.removeAllListeners = function(type) {
-  var key, listeners;
-
-  if (!this._events)
-    return this;
-
-  // not listening for removeListener, no need to emit
-  if (!this._events.removeListener) {
-    if (arguments.length === 0)
-      this._events = {};
-    else if (this._events[type])
-      delete this._events[type];
-    return this;
-  }
-
-  // emit removeListener for all listeners on all events
-  if (arguments.length === 0) {
-    for (key in this._events) {
-      if (key === 'removeListener') continue;
-      this.removeAllListeners(key);
-    }
-    this.removeAllListeners('removeListener');
-    this._events = {};
-    return this;
-  }
-
-  listeners = this._events[type];
-
-  if (isFunction(listeners)) {
-    this.removeListener(type, listeners);
-  } else {
-    // LIFO order
-    while (listeners.length)
-      this.removeListener(type, listeners[listeners.length - 1]);
-  }
-  delete this._events[type];
-
-  return this;
-};
-
-EventEmitter.prototype.listeners = function(type) {
-  var ret;
-  if (!this._events || !this._events[type])
-    ret = [];
-  else if (isFunction(this._events[type]))
-    ret = [this._events[type]];
-  else
-    ret = this._events[type].slice();
-  return ret;
+EventEmitter.prototype.rawListeners = function rawListeners(type) {
+  return _listeners(this, type, false);
 };
 
 EventEmitter.listenerCount = function(emitter, type) {
-  var ret;
-  if (!emitter._events || !emitter._events[type])
-    ret = 0;
-  else if (isFunction(emitter._events[type]))
-    ret = 1;
-  else
-    ret = emitter._events[type].length;
-  return ret;
+  if (typeof emitter.listenerCount === 'function') {
+    return emitter.listenerCount(type);
+  } else {
+    return listenerCount.call(emitter, type);
+  }
 };
 
-function isFunction(arg) {
-  return typeof arg === 'function';
+EventEmitter.prototype.listenerCount = listenerCount;
+function listenerCount(type) {
+  var events = this._events;
+
+  if (events) {
+    var evlistener = events[type];
+
+    if (typeof evlistener === 'function') {
+      return 1;
+    } else if (evlistener) {
+      return evlistener.length;
+    }
+  }
+
+  return 0;
 }
 
-function isNumber(arg) {
-  return typeof arg === 'number';
+EventEmitter.prototype.eventNames = function eventNames() {
+  return this._eventsCount > 0 ? Reflect.ownKeys(this._events) : [];
+};
+
+// About 1.5x faster than the two-arg version of Array#splice().
+function spliceOne(list, index) {
+  for (var i = index, k = i + 1, n = list.length; k < n; i += 1, k += 1)
+    list[i] = list[k];
+  list.pop();
 }
 
-function isObject(arg) {
-  return typeof arg === 'object' && arg !== null;
+function arrayClone(arr, n) {
+  var copy = new Array(n);
+  for (var i = 0; i < n; ++i)
+    copy[i] = arr[i];
+  return copy;
 }
 
-function isUndefined(arg) {
-  return arg === void 0;
+function unwrapListeners(arr) {
+  var ret = new Array(arr.length);
+  for (var i = 0; i < ret.length; ++i) {
+    ret[i] = arr[i].listener || arr[i];
+  }
+  return ret;
 }
 
-},{}],14:[function(_dereq_,module,exports){
+function objectCreatePolyfill(proto) {
+  var F = function() {};
+  F.prototype = proto;
+  return new F;
+}
+function objectKeysPolyfill(obj) {
+  var keys = [];
+  for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) {
+    keys.push(k);
+  }
+  return k;
+}
+function functionBindPolyfill(context) {
+  var fn = this;
+  return function () {
+    return fn.apply(context, arguments);
+  };
+}
+
+},{}],11:[function(_dereq_,module,exports){
+'use strict';
+
+var isArray = Array.isArray;
+var keyList = Object.keys;
+var hasProp = Object.prototype.hasOwnProperty;
+
+module.exports = function equal(a, b) {
+  if (a === b) return true;
+
+  if (a && b && typeof a == 'object' && typeof b == 'object') {
+    var arrA = isArray(a)
+      , arrB = isArray(b)
+      , i
+      , length
+      , key;
+
+    if (arrA && arrB) {
+      length = a.length;
+      if (length != b.length) return false;
+      for (i = length; i-- !== 0;)
+        if (!equal(a[i], b[i])) return false;
+      return true;
+    }
+
+    if (arrA != arrB) return false;
+
+    var dateA = a instanceof Date
+      , dateB = b instanceof Date;
+    if (dateA != dateB) return false;
+    if (dateA && dateB) return a.getTime() == b.getTime();
+
+    var regexpA = a instanceof RegExp
+      , regexpB = b instanceof RegExp;
+    if (regexpA != regexpB) return false;
+    if (regexpA && regexpB) return a.toString() == b.toString();
+
+    var keys = keyList(a);
+    length = keys.length;
+
+    if (length !== keyList(b).length)
+      return false;
+
+    for (i = length; i-- !== 0;)
+      if (!hasProp.call(b, keys[i])) return false;
+
+    for (i = length; i-- !== 0;) {
+      key = keys[i];
+      if (!equal(a[key], b[key])) return false;
+    }
+
+    return true;
+  }
+
+  return a!==a && b!==b;
+};
+
+},{}],12:[function(_dereq_,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = (nBytes * 8) - mLen - 1
@@ -5509,32 +5873,4620 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],15:[function(_dereq_,module,exports){
-if (typeof Object.create === 'function') {
-  // implementation from standard node.js 'util' module
-  module.exports = function inherits(ctor, superCtor) {
-    ctor.super_ = superCtor
-    ctor.prototype = Object.create(superCtor.prototype, {
-      constructor: {
-        value: ctor,
-        enumerable: false,
-        writable: true,
-        configurable: true
-      }
-    });
-  };
-} else {
-  // old school shim for old browsers
-  module.exports = function inherits(ctor, superCtor) {
-    ctor.super_ = superCtor
-    var TempCtor = function () {}
-    TempCtor.prototype = superCtor.prototype
-    ctor.prototype = new TempCtor()
-    ctor.prototype.constructor = ctor
-  }
-}
+},{}],13:[function(_dereq_,module,exports){
+/* 
+ * Copyright (c) 2016, Pierre-Anthony Lemieux <pal@sandflow.com>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
 
-},{}],16:[function(_dereq_,module,exports){
+/**
+ * @module imscDoc
+ */
+
+;
+(function (imscDoc, sax, imscNames, imscStyles, imscUtils) {
+
+
+    /**
+     * Allows a client to provide callbacks to handle children of the <metadata> element
+     * @typedef {Object} MetadataHandler
+     * @property {?OpenTagCallBack} onOpenTag
+     * @property {?CloseTagCallBack} onCloseTag
+     * @property {?TextCallBack} onText
+     */
+
+    /**
+     * Called when the opening tag of an element node is encountered.
+     * @callback OpenTagCallBack
+     * @param {string} ns Namespace URI of the element
+     * @param {string} name Local name of the element
+     * @param {Object[]} attributes List of attributes, each consisting of a
+     *                              `uri`, `name` and `value`
+     */
+
+    /**
+     * Called when the closing tag of an element node is encountered.
+     * @callback CloseTagCallBack
+     */
+
+    /**
+     * Called when a text node is encountered.
+     * @callback TextCallBack
+     * @param {string} contents Contents of the text node
+     */
+
+    /**
+     * Parses an IMSC1 document into an opaque in-memory representation that exposes
+     * a single method <pre>getMediaTimeEvents()</pre> that returns a list of time
+     * offsets (in seconds) of the ISD, i.e. the points in time where the visual
+     * representation of the document change. `metadataHandler` allows the caller to
+     * be called back when nodes are present in <metadata> elements. 
+     * 
+     * @param {string} xmlstring XML document
+     * @param {?module:imscUtils.ErrorHandler} errorHandler Error callback
+     * @param {?MetadataHandler} metadataHandler Callback for <Metadata> elements
+     * @returns {Object} Opaque in-memory representation of an IMSC1 document
+     */
+
+    imscDoc.fromXML = function (xmlstring, errorHandler, metadataHandler) {
+        var p = sax.parser(true, {xmlns: true});
+        var estack = [];
+        var xmllangstack = [];
+        var xmlspacestack = [];
+        var metadata_depth = 0;
+        var doc = null;
+
+        p.onclosetag = function (node) {
+
+            if (estack[0] instanceof Styling) {
+
+                /* flatten chained referential styling */
+
+                for (var sid in estack[0].styles) {
+
+                    mergeChainedStyles(estack[0], estack[0].styles[sid], errorHandler);
+
+                }
+
+            } else if (estack[0] instanceof P || estack[0] instanceof Span) {
+
+                /* merge anonymous spans */
+
+                if (estack[0].contents.length > 1) {
+
+                    var cs = [estack[0].contents[0]];
+
+                    var c;
+
+                    for (c = 1; c < estack[0].contents.length; c++) {
+
+                        if (estack[0].contents[c] instanceof AnonymousSpan &&
+                                cs[cs.length - 1] instanceof AnonymousSpan) {
+
+                            cs[cs.length - 1].text += estack[0].contents[c].text;
+
+                        } else {
+
+                            cs.push(estack[0].contents[c]);
+
+                        }
+
+                    }
+
+                    estack[0].contents = cs;
+
+                }
+
+                // remove redundant nested anonymous spans (9.3.3(1)(c))
+
+                if (estack[0] instanceof Span &&
+                        estack[0].contents.length === 1 &&
+                        estack[0].contents[0] instanceof AnonymousSpan) {
+
+                    estack[0].text = estack[0].contents[0].text;
+                    delete estack[0].contents;
+
+                }
+
+            } else if (estack[0] instanceof ForeignElement) {
+
+                if (estack[0].node.uri === imscNames.ns_tt &&
+                        estack[0].node.local === 'metadata') {
+
+                    /* leave the metadata element */
+
+                    metadata_depth--;
+
+                } else if (metadata_depth > 0 &&
+                        metadataHandler &&
+                        'onCloseTag' in metadataHandler) {
+
+                    /* end of child of metadata element */
+
+                    metadataHandler.onCloseTag();
+
+                }
+
+            }
+
+            // TODO: delete stylerefs?
+
+            // maintain the xml:space stack
+
+            xmlspacestack.shift();
+
+            // maintain the xml:lang stack
+
+            xmllangstack.shift();
+
+            // prepare for the next element
+
+            estack.shift();
+        };
+
+        p.ontext = function (str) {
+
+            if (estack[0] === undefined) {
+
+                /* ignoring text outside of elements */
+
+            } else if (estack[0] instanceof Span || estack[0] instanceof P) {
+
+                /* create an anonymous span */
+
+                var s = new AnonymousSpan();
+
+                s.initFromText(doc, estack[0], str, xmlspacestack[0], errorHandler);
+
+                estack[0].contents.push(s);
+
+            } else if (estack[0] instanceof ForeignElement &&
+                    metadata_depth > 0 &&
+                    metadataHandler &&
+                    'onText' in metadataHandler) {
+
+                /* text node within a child of metadata element */
+
+                metadataHandler.onText(str);
+
+            }
+
+        };
+
+
+        p.onopentag = function (node) {
+
+            // maintain the xml:space stack
+
+            var xmlspace = node.attributes["xml:space"];
+
+            if (xmlspace) {
+
+                xmlspacestack.unshift(xmlspace.value);
+
+            } else {
+
+                if (xmlspacestack.length === 0) {
+
+                    xmlspacestack.unshift("default");
+
+                } else {
+
+                    xmlspacestack.unshift(xmlspacestack[0]);
+
+                }
+
+            }
+
+            /* maintain the xml:lang stack */
+
+
+            var xmllang = node.attributes["xml:lang"];
+
+            if (xmllang) {
+
+                xmllangstack.unshift(xmllang.value);
+
+            } else {
+
+                if (xmllangstack.length === 0) {
+
+                    xmllangstack.unshift("");
+
+                } else {
+
+                    xmllangstack.unshift(xmllangstack[0]);
+
+                }
+
+            }
+
+
+            /* process the element */
+
+            if (node.uri === imscNames.ns_tt) {
+
+                if (node.local === 'tt') {
+
+                    if (doc !== null) {
+
+                        reportFatal(errorHandler, "Two <tt> elements at (" + this.line + "," + this.column + ")");
+
+                    }
+
+                    doc = new TT();
+
+                    doc.initFromNode(node, errorHandler);
+
+                    estack.unshift(doc);
+
+                } else if (node.local === 'head') {
+
+                    if (!(estack[0] instanceof TT)) {
+                        reportFatal(errorHandler, "Parent of <head> element is not <tt> at (" + this.line + "," + this.column + ")");
+                    }
+
+                    if (doc.head !== null) {
+                        reportFatal("Second <head> element at (" + this.line + "," + this.column + ")");
+                    }
+
+                    doc.head = new Head();
+
+                    estack.unshift(doc.head);
+
+                } else if (node.local === 'styling') {
+
+                    if (!(estack[0] instanceof Head)) {
+                        reportFatal(errorHandler, "Parent of <styling> element is not <head> at (" + this.line + "," + this.column + ")");
+                    }
+
+                    if (doc.head.styling !== null) {
+                        reportFatal("Second <styling> element at (" + this.line + "," + this.column + ")");
+                    }
+
+                    doc.head.styling = new Styling();
+
+                    estack.unshift(doc.head.styling);
+
+                } else if (node.local === 'style') {
+
+                    var s;
+
+                    if (estack[0] instanceof Styling) {
+
+                        s = new Style();
+
+                        s.initFromNode(node, errorHandler);
+
+                        /* ignore <style> element missing @id */
+
+                        if (!s.id) {
+
+                            reportError(errorHandler, "<style> element missing @id attribute");
+
+                        } else {
+
+                            doc.head.styling.styles[s.id] = s;
+
+                        }
+
+                        estack.unshift(s);
+
+                    } else if (estack[0] instanceof Region) {
+
+                        /* nested styles can be merged with specified styles
+                         * immediately, with lower priority
+                         * (see 8.4.4.2(3) at TTML1 )
+                         */
+
+                        s = new Style();
+
+                        s.initFromNode(node, errorHandler);
+
+                        mergeStylesIfNotPresent(s.styleAttrs, estack[0].styleAttrs);
+
+                        estack.unshift(s);
+
+                    } else {
+
+                        reportFatal(errorHandler, "Parent of <style> element is not <styling> or <region> at (" + this.line + "," + this.column + ")");
+
+                    }
+
+                } else if (node.local === 'layout') {
+
+                    if (!(estack[0] instanceof Head)) {
+
+                        reportFatal(errorHandler, "Parent of <layout> element is not <head> at " + this.line + "," + this.column + ")");
+
+                    }
+
+                    if (doc.head.layout !== null) {
+
+                        reportFatal(errorHandler, "Second <layout> element at " + this.line + "," + this.column + ")");
+
+                    }
+
+                    doc.head.layout = new Layout();
+
+                    estack.unshift(doc.head.layout);
+
+                } else if (node.local === 'region') {
+
+                    if (!(estack[0] instanceof Layout)) {
+                        reportFatal(errorHandler, "Parent of <region> element is not <layout> at " + this.line + "," + this.column + ")");
+                    }
+
+                    var r = new Region();
+
+                    r.initFromNode(doc, node, errorHandler);
+
+                    if (!r.id || r.id in doc.head.layout.regions) {
+
+                        reportError(errorHandler, "Ignoring <region> with duplicate or missing @id at " + this.line + "," + this.column + ")");
+
+                    } else {
+
+                        doc.head.layout.regions[r.id] = r;
+
+                    }
+
+                    estack.unshift(r);
+
+                } else if (node.local === 'body') {
+
+                    if (!(estack[0] instanceof TT)) {
+
+                        reportFatal(errorHandler, "Parent of <body> element is not <tt> at " + this.line + "," + this.column + ")");
+
+                    }
+
+                    if (doc.body !== null) {
+
+                        reportFatal(errorHandler, "Second <body> element at " + this.line + "," + this.column + ")");
+
+                    }
+
+                    var b = new Body();
+
+                    b.initFromNode(doc, node, errorHandler);
+
+                    doc.body = b;
+
+                    estack.unshift(b);
+
+                } else if (node.local === 'div') {
+
+                    if (!(estack[0] instanceof Div || estack[0] instanceof Body)) {
+
+                        reportFatal(errorHandler, "Parent of <div> element is not <body> or <div> at " + this.line + "," + this.column + ")");
+
+                    }
+
+                    var d = new Div();
+
+                    d.initFromNode(doc, estack[0], node, errorHandler);
+
+                    estack[0].contents.push(d);
+
+                    estack.unshift(d);
+
+                } else if (node.local === 'p') {
+
+                    if (!(estack[0] instanceof Div)) {
+
+                        reportFatal(errorHandler, "Parent of <p> element is not <div> at " + this.line + "," + this.column + ")");
+
+                    }
+
+                    var p = new P();
+
+                    p.initFromNode(doc, estack[0], node, errorHandler);
+
+                    estack[0].contents.push(p);
+
+                    estack.unshift(p);
+
+                } else if (node.local === 'span') {
+
+                    if (!(estack[0] instanceof Span || estack[0] instanceof P)) {
+
+                        reportFatal(errorHandler, "Parent of <span> element is not <span> or <p> at " + this.line + "," + this.column + ")");
+
+                    }
+
+                    var ns = new Span();
+
+                    ns.initFromNode(doc, estack[0], node, xmlspacestack[0], errorHandler);
+
+                    estack[0].contents.push(ns);
+
+                    estack.unshift(ns);
+
+                } else if (node.local === 'br') {
+
+                    if (!(estack[0] instanceof Span || estack[0] instanceof P)) {
+
+                        reportFatal(errorHandler, "Parent of <br> element is not <span> or <p> at " + this.line + "," + this.column + ")");
+
+                    }
+
+                    var nb = new Br();
+
+                    nb.initFromNode(doc, estack[0], node, errorHandler);
+
+                    estack[0].contents.push(nb);
+
+                    estack.unshift(nb);
+
+                } else if (node.local === 'set') {
+
+                    if (!(estack[0] instanceof Span ||
+                            estack[0] instanceof P ||
+                            estack[0] instanceof Div ||
+                            estack[0] instanceof Body ||
+                            estack[0] instanceof Region ||
+                            estack[0] instanceof Br)) {
+
+                        reportFatal(errorHandler, "Parent of <set> element is not a content element or a region at " + this.line + "," + this.column + ")");
+
+                    }
+
+                    var st = new Set();
+
+                    st.initFromNode(doc, estack[0], node, errorHandler);
+
+                    estack[0].sets.push(st);
+
+                    estack.unshift(st);
+
+                } else {
+
+                    /* element in the TT namespace, but not a content element */
+
+                    estack.unshift(new ForeignElement(node));
+                }
+
+            } else {
+
+                /* ignore elements not in the TTML namespace unless in metadata element */
+
+                estack.unshift(new ForeignElement(node));
+
+            }
+
+            /* handle metadata callbacks */
+
+            if (estack[0] instanceof ForeignElement) {
+
+                if (node.uri === imscNames.ns_tt &&
+                        node.local === 'metadata') {
+
+                    /* enter the metadata element */
+
+                    metadata_depth++;
+
+                } else if (
+                        metadata_depth > 0 &&
+                        metadataHandler &&
+                        'onOpenTag' in metadataHandler
+                        ) {
+
+                    /* start of child of metadata element */
+
+                    var attrs = [];
+
+                    for (var a in node.attributes) {
+                        attrs[node.attributes[a].uri + " " + node.attributes[a].local] =
+                                {
+                                    uri: node.attributes[a].uri,
+                                    local: node.attributes[a].local,
+                                    value: node.attributes[a].value
+                                };
+                    }
+
+                    metadataHandler.onOpenTag(node.uri, node.local, attrs);
+
+                }
+
+            }
+
+        };
+
+        // parse the document
+
+        p.write(xmlstring).close();
+
+        // all referential styling has been flatten, so delete the styling elements if there is a head
+        // otherwise create an empty head
+
+        if (doc.head !== null) {
+            delete doc.head.styling;
+        } else {
+            doc.head = new Head();
+        }
+
+        // create default region if no regions specified
+
+        if (doc.head.layout === null) {
+
+            doc.head.layout = new Layout();
+
+        }
+
+        var hasRegions = false;
+
+        /* AFAIK the only way to determine whether an object has members */
+
+        for (var i in doc.head.layout.regions) {
+
+            hasRegions = true;
+
+            break;
+
+        }
+
+        if (!hasRegions) {
+
+            /* create default region */
+
+            var dr = Region.prototype.createDefaultRegion();
+
+            doc.head.layout.regions[dr.id] = dr;
+
+        }
+
+        /* resolve desired timing for regions */
+
+        for (var region_i in doc.head.layout.regions) {
+
+            resolveTiming(doc, doc.head.layout.regions[region_i], null, null);
+
+        }
+
+        /* resolve desired timing for content elements */
+
+        if (doc.body) {
+            resolveTiming(doc, doc.body, null, null);
+        }
+
+        return doc;
+    };
+
+    function resolveTiming(doc, element, prev_sibling, parent) {
+
+        /* are we in a seq container? */
+
+        var isinseq = parent && parent.timeContainer === "seq";
+
+        /* determine implicit begin */
+
+        var implicit_begin = 0; /* default */
+
+        if (parent) {
+
+            if (isinseq && prev_sibling) {
+
+                /*
+                 * if seq time container, offset from the previous sibling end
+                 */
+
+                implicit_begin = prev_sibling.end;
+
+
+            } else {
+
+                implicit_begin = parent.begin;
+
+            }
+
+        }
+
+        /* compute desired begin */
+
+        element.begin = element.explicit_begin ? element.explicit_begin + implicit_begin : implicit_begin;
+
+
+        /* determine implicit end */
+
+        var implicit_end = element.begin;
+
+        var s = null;
+
+        for (var set_i in element.sets) {
+
+            resolveTiming(doc, element.sets[set_i], s, element);
+
+            if (element.timeContainer === "seq") {
+
+                implicit_end = element.sets[set_i].end;
+
+            } else {
+
+                implicit_end = Math.max(implicit_end, element.sets[set_i].end);
+
+            }
+
+            s = element.sets[set_i];
+
+        }
+
+        if (!('contents' in element)) {
+
+            /* anonymous spans and regions and <set> and <br>s and spans with only children text nodes */
+
+            if (isinseq) {
+
+                /* in seq container, implicit duration is zero */
+
+                implicit_end = element.begin;
+
+            } else {
+
+                /* in par container, implicit duration is indefinite */
+
+                implicit_end = Number.POSITIVE_INFINITY;
+
+            }
+
+        } else {
+
+            for (var content_i in element.contents) {
+
+                resolveTiming(doc, element.contents[content_i], s, element);
+
+                if (element.timeContainer === "seq") {
+
+                    implicit_end = element.contents[content_i].end;
+
+                } else {
+
+                    implicit_end = Math.max(implicit_end, element.contents[content_i].end);
+
+                }
+
+                s = element.contents[content_i];
+
+            }
+
+        }
+
+        /* determine desired end */
+        /* it is never made really clear in SMIL that the explicit end is offset by the implicit begin */
+
+        if (element.explicit_end !== null && element.explicit_dur !== null) {
+
+            element.end = Math.min(element.begin + element.explicit_dur, implicit_begin + element.explicit_end);
+
+        } else if (element.explicit_end === null && element.explicit_dur !== null) {
+
+            element.end = element.begin + element.explicit_dur;
+
+        } else if (element.explicit_end !== null && element.explicit_dur === null) {
+
+            element.end = implicit_begin + element.explicit_end;
+
+        } else {
+
+            element.end = implicit_end;
+        }
+
+        delete element.explicit_begin;
+        delete element.explicit_dur;
+        delete element.explicit_end;
+
+        doc._registerEvent(element);
+
+    }
+
+    function ForeignElement(node) {
+        this.node = node;
+    }
+
+    function TT() {
+        this.events = [];
+        this.head = null;
+        this.body = null;
+    }
+
+    TT.prototype.initFromNode = function (node, errorHandler) {
+
+        /* compute cell resolution */
+
+        this.cellResolution = extractCellResolution(node, errorHandler);
+
+        /* extract frame rate and tick rate */
+
+        var frtr = extractFrameAndTickRate(node, errorHandler);
+
+        this.effectiveFrameRate = frtr.effectiveFrameRate;
+
+        this.tickRate = frtr.tickRate;
+
+        /* extract aspect ratio */
+
+        this.aspectRatio = extractAspectRatio(node, errorHandler);
+
+        /* check timebase */
+
+        var attr = findAttribute(node, imscNames.ns_ttp, "timeBase");
+
+        if (attr !== null && attr !== "media") {
+
+            reportFatal(errorHandler, "Unsupported time base");
+
+        }
+
+        /* retrieve extent */
+
+        var e = extractExtent(node, errorHandler);
+
+        if (e === null) {
+
+            /* TODO: remove once unit tests are ready */
+
+            this.pxDimensions = {'h': 480, 'w': 640};
+
+        } else {
+
+            if (e.h.unit !== "px" || e.w.unit !== "px") {
+                reportFatal(errorHandler, "Extent on TT must be in px or absent");
+            }
+
+            this.pxDimensions = {'h': e.h.value, 'w': e.w.value};
+        }
+
+    };
+
+    /* register a temporal events */
+    TT.prototype._registerEvent = function (elem) {
+
+        /* skip if begin is not < then end */
+
+        if (elem.end <= elem.begin)
+            return;
+
+        /* index the begin time of the event */
+
+        var b_i = indexOf(this.events, elem.begin);
+
+        if (!b_i.found) {
+            this.events.splice(b_i.index, 0, elem.begin);
+        }
+
+        /* index the end time of the event */
+
+        if (elem.end !== Number.POSITIVE_INFINITY) {
+
+            var e_i = indexOf(this.events, elem.end);
+
+            if (!e_i.found) {
+                this.events.splice(e_i.index, 0, elem.end);
+            }
+
+        }
+
+    };
+
+
+    /*
+     * Retrieves the range of ISD times covered by the document
+     * 
+     * @returns {Array} Array of two elements: min_begin_time and max_begin_time
+     * 
+     */
+    TT.prototype.getMediaTimeRange = function () {
+
+        return [this.events[0], this.events[this.events.length - 1]];
+    };
+
+    /*
+     * Returns list of ISD begin times  
+     * 
+     * @returns {Array}
+     */
+    TT.prototype.getMediaTimeEvents = function () {
+
+        return this.events;
+    };
+
+    /*
+     * Represents a TTML Head element
+     */
+
+    function Head() {
+        this.styling = null;
+        this.layout = null;
+    }
+
+    /*
+     * Represents a TTML Styling element
+     */
+
+    function Styling() {
+        this.styles = {};
+    }
+
+    /*
+     * Represents a TTML Style element
+     */
+
+    function Style() {
+        this.id = null;
+        this.styleAttrs = null;
+        this.styleRefs = null;
+    }
+
+    Style.prototype.initFromNode = function (node, errorHandler) {
+        this.id = elementGetXMLID(node);
+        this.styleAttrs = elementGetStyles(node, errorHandler);
+        this.styleRefs = elementGetStyleRefs(node);
+    };
+
+    /*
+     * Represents a TTML Layout element
+     * 
+     */
+
+    function Layout() {
+        this.regions = {};
+    }
+
+    /*
+     * TTML element utility functions
+     * 
+     */
+
+    function ContentElement(kind) {
+        this.kind = kind;
+    }
+
+    function IdentifiedElement(id) {
+        this.id = id;
+    }
+
+    IdentifiedElement.prototype.initFromNode = function (doc, parent, node, errorHandler) {
+        this.id = elementGetXMLID(node);
+    };
+
+    function LayoutElement(id) {
+        this.regionID = id;
+    }
+
+    LayoutElement.prototype.initFromNode = function (doc, parent, node, errorHandler) {
+        this.regionID = elementGetRegionID(node);
+    };
+
+    function StyledElement(styleAttrs) {
+        this.styleAttrs = styleAttrs;
+    }
+
+    StyledElement.prototype.initFromNode = function (doc, parent, node, errorHandler) {
+
+        this.styleAttrs = elementGetStyles(node, errorHandler);
+
+        if (doc.head !== null && doc.head.styling !== null) {
+            mergeReferencedStyles(doc.head.styling, elementGetStyleRefs(node), this.styleAttrs, errorHandler);
+        }
+
+    };
+
+    function AnimatedElement(sets) {
+        this.sets = sets;
+    }
+
+    AnimatedElement.prototype.initFromNode = function (doc, parent, node, errorHandler) {
+        this.sets = [];
+    };
+
+    function ContainerElement(contents) {
+        this.contents = contents;
+    }
+
+    ContainerElement.prototype.initFromNode = function (doc, parent, node, errorHandler) {
+        this.contents = [];
+    };
+
+    function TimedElement(explicit_begin, explicit_end, explicit_dur) {
+        this.explicit_begin = explicit_begin;
+        this.explicit_end = explicit_end;
+        this.explicit_dur = explicit_dur;
+    }
+
+    TimedElement.prototype.initFromNode = function (doc, parent, node, errorHandler) {
+        var t = processTiming(doc, parent, node, errorHandler);
+        this.explicit_begin = t.explicit_begin;
+        this.explicit_end = t.explicit_end;
+        this.explicit_dur = t.explicit_dur;
+
+        this.timeContainer = elementGetTimeContainer(node, errorHandler);
+    };
+
+
+    /*
+     * Represents a TTML body element
+     */
+
+
+
+    function Body() {
+        ContentElement.call(this, 'body');
+    }
+
+
+    Body.prototype.initFromNode = function (doc, node, errorHandler) {
+        StyledElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+        TimedElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+        AnimatedElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+        LayoutElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+        ContainerElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+    };
+
+    /*
+     * Represents a TTML div element
+     */
+
+    function Div() {
+        ContentElement.call(this, 'div');
+    }
+
+    Div.prototype.initFromNode = function (doc, parent, node, errorHandler) {
+        StyledElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        TimedElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        AnimatedElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        LayoutElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        ContainerElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+    };
+
+    /*
+     * Represents a TTML p element
+     */
+
+    function P() {
+        ContentElement.call(this, 'p');
+    }
+
+    P.prototype.initFromNode = function (doc, parent, node, errorHandler) {
+        StyledElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        TimedElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        AnimatedElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        LayoutElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        ContainerElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+    };
+
+    /*
+     * Represents a TTML span element
+     */
+
+    function Span() {
+        ContentElement.call(this, 'span');
+    }
+
+    Span.prototype.initFromNode = function (doc, parent, node, xmlspace, errorHandler) {
+        StyledElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        TimedElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        AnimatedElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        LayoutElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        ContainerElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+
+        this.space = xmlspace;
+    };
+
+    /*
+     * Represents a TTML anonymous span element
+     */
+
+    function AnonymousSpan() {
+        ContentElement.call(this, 'span');
+    }
+
+    AnonymousSpan.prototype.initFromText = function (doc, parent, text, xmlspace, errorHandler) {
+        TimedElement.prototype.initFromNode.call(this, doc, parent, null, errorHandler);
+
+        this.text = text;
+        this.space = xmlspace;
+    };
+
+    /*
+     * Represents a TTML br element
+     */
+
+    function Br() {
+        ContentElement.call(this, 'br');
+    }
+
+    Br.prototype.initFromNode = function (doc, parent, node, errorHandler) {
+        LayoutElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        TimedElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+    };
+
+    /*
+     * Represents a TTML Region element
+     * 
+     */
+
+    function Region() {
+    }
+
+    Region.prototype.createDefaultRegion = function () {
+        var r = new Region();
+
+        IdentifiedElement.call(r, '');
+        StyledElement.call(r, {});
+        AnimatedElement.call(r, []);
+        TimedElement.call(r, 0, Number.POSITIVE_INFINITY, null);
+
+        return r;
+    };
+
+    Region.prototype.initFromNode = function (doc, node, errorHandler) {
+        IdentifiedElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+        StyledElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+        TimedElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+        AnimatedElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+
+        /* immediately merge referenced styles */
+
+        if (doc.head !== null && doc.head.styling !== null) {
+            mergeReferencedStyles(doc.head.styling, elementGetStyleRefs(node), this.styleAttrs, errorHandler);
+        }
+
+    };
+
+    /*
+     * Represents a TTML Set element
+     * 
+     */
+
+    function Set() {
+    }
+
+    Set.prototype.initFromNode = function (doc, parent, node, errorHandler) {
+
+        TimedElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+
+        var styles = elementGetStyles(node, errorHandler);
+
+        this.qname = null;
+        this.value = null;
+
+        for (var qname in styles) {
+
+            if (this.qname) {
+
+                reportError(errorHandler, "More than one style specified on set");
+                break;
+
+            }
+
+            this.qname = qname;
+            this.value = styles[qname];
+
+        }
+
+    };
+
+    /*
+     * Utility functions
+     * 
+     */
+
+
+    function elementGetXMLID(node) {
+        return node && 'xml:id' in node.attributes ? node.attributes['xml:id'].value || null : null;
+    }
+
+    function elementGetRegionID(node) {
+        return node && 'region' in node.attributes ? node.attributes.region.value : '';
+    }
+
+    function elementGetTimeContainer(node, errorHandler) {
+
+        var tc = node && 'timeContainer' in node.attributes ? node.attributes.timeContainer.value : null;
+
+        if ((!tc) || tc === "par") {
+
+            return "par";
+
+        } else if (tc === "seq") {
+
+            return "seq";
+
+        } else {
+
+            reportError(errorHandler, "Illegal value of timeContainer (assuming 'par')");
+
+            return "par";
+
+        }
+
+    }
+
+    function elementGetStyleRefs(node) {
+
+        return node && 'style' in node.attributes ? node.attributes.style.value.split(" ") : [];
+
+    }
+
+    function elementGetStyles(node, errorHandler) {
+
+        var s = {};
+
+        if (node !== null) {
+
+            for (var i in node.attributes) {
+
+                var qname = node.attributes[i].uri + " " + node.attributes[i].local;
+
+                var sa = imscStyles.byQName[qname];
+
+                if (sa !== undefined) {
+
+                    var val = sa.parse(node.attributes[i].value);
+
+                    if (val !== null) {
+
+                        s[qname] = val;
+
+                        /* TODO: consider refactoring errorHandler into parse and compute routines */
+
+                        if (sa === imscStyles.byName.zIndex) {
+                            reportWarning(errorHandler, "zIndex attribute present but not used by IMSC1 since regions do not overlap");
+                        }
+
+                    } else {
+
+                        reportError(errorHandler, "Cannot parse styling attribute " + qname + " --> " + node.attributes[i].value);
+
+                    }
+
+                }
+
+            }
+
+        }
+
+        return s;
+    }
+
+    function findAttribute(node, ns, name) {
+        for (var i in node.attributes) {
+
+            if (node.attributes[i].uri === ns &&
+                    node.attributes[i].local === name) {
+
+                return node.attributes[i].value;
+            }
+        }
+
+        return null;
+    }
+
+    function extractAspectRatio(node, errorHandler) {
+
+        var ar = findAttribute(node, imscNames.ns_ittp, "aspectRatio");
+
+        var rslt = null;
+
+        if (ar !== null) {
+
+            var ASPECT_RATIO_RE = /(\d+) (\d+)/;
+
+            var m = ASPECT_RATIO_RE.exec(ar);
+
+            if (m !== null) {
+
+                var w = parseInt(m[1]);
+
+                var h = parseInt(m[2]);
+
+                if (w !== 0 && h !== 0) {
+
+                    rslt = w / h;
+
+                } else {
+
+                    reportError(errorHandler, "Illegal aspectRatio values (ignoring)");
+                }
+
+            } else {
+
+                reportError(errorHandler, "Malformed aspectRatio attribute (ignoring)");
+            }
+
+        }
+
+        return rslt;
+
+    }
+
+    /*
+     * Returns the cellResolution attribute from a node
+     * 
+     */
+    function extractCellResolution(node, errorHandler) {
+
+        var cr = findAttribute(node, imscNames.ns_ttp, "cellResolution");
+
+        // initial value
+
+        var h = 15;
+        var w = 32;
+
+        if (cr !== null) {
+
+            var CELL_RESOLUTION_RE = /(\d+) (\d+)/;
+
+            var m = CELL_RESOLUTION_RE.exec(cr);
+
+            if (m !== null) {
+
+                w = parseInt(m[1]);
+
+                h = parseInt(m[2]);
+
+            } else {
+
+                reportWarning(errorHandler, "Malformed cellResolution value (using initial value instead)");
+
+            }
+
+        }
+
+        return {'w': w, 'h': h};
+
+    }
+
+
+    function extractFrameAndTickRate(node, errorHandler) {
+
+        // subFrameRate is ignored per IMSC1 specification
+
+        // extract frame rate
+
+        var fps_attr = findAttribute(node, imscNames.ns_ttp, "frameRate");
+
+        // initial value
+
+        var fps = 30;
+
+        // match variable
+
+        var m;
+
+        if (fps_attr !== null) {
+
+            var FRAME_RATE_RE = /(\d+)/;
+
+            m = FRAME_RATE_RE.exec(fps_attr);
+
+            if (m !== null) {
+
+                fps = parseInt(m[1]);
+
+            } else {
+
+                reportWarning(errorHandler, "Malformed frame rate attribute (using initial value instead)");
+            }
+
+        }
+
+        // extract frame rate multiplier
+
+        var frm_attr = findAttribute(node, imscNames.ns_ttp, "frameRateMultiplier");
+
+        // initial value
+
+        var frm = 1;
+
+        if (frm_attr !== null) {
+
+            var FRAME_RATE_MULT_RE = /(\d+) (\d+)/;
+
+            m = FRAME_RATE_MULT_RE.exec(frm_attr);
+
+            if (m !== null) {
+
+                frm = parseInt(m[1]) / parseInt(m[2]);
+
+            } else {
+
+                reportWarning(errorHandler, "Malformed frame rate multiplier attribute (using initial value instead)");
+            }
+
+        }
+
+        var efps = frm * fps;
+
+        // extract tick rate
+
+        var tr = 1;
+
+        var trattr = findAttribute(node, imscNames.ns_ttp, "tickRate");
+
+        if (trattr === null) {
+
+            if (fps_attr !== null)
+                tr = efps;
+
+        } else {
+
+            var TICK_RATE_RE = /(\d+)/;
+
+            m = TICK_RATE_RE.exec(trattr);
+
+            if (m !== null) {
+
+                tr = parseInt(m[1]);
+
+            } else {
+
+                reportWarning(errorHandler, "Malformed tick rate attribute (using initial value instead)");
+            }
+
+        }
+
+        return {effectiveFrameRate: efps, tickRate: tr};
+
+    }
+
+    function extractExtent(node, errorHandler) {
+
+        var attr = findAttribute(node, imscNames.ns_tts, "extent");
+
+        if (attr === null)
+            return null;
+
+        var s = attr.split(" ");
+
+        if (s.length !== 2) {
+
+            reportWarning(errorHandler, "Malformed extent (ignoring)");
+
+            return null;
+        }
+
+        var w = imscUtils.parseLength(s[0]);
+
+        var h = imscUtils.parseLength(s[1]);
+
+        if (!h || !w) {
+
+            reportWarning(errorHandler, "Malformed extent values (ignoring)");
+
+            return null;
+        }
+
+        return {'h': h, 'w': w};
+
+    }
+
+    function parseTimeExpression(tickRate, effectiveFrameRate, str) {
+
+        var CLOCK_TIME_FRACTION_RE = /^(\d{2,}):(\d\d):(\d\d(?:\.\d+)?)$/;
+        var CLOCK_TIME_FRAMES_RE = /^(\d{2,}):(\d\d):(\d\d)\:(\d{2,})$/;
+        var OFFSET_FRAME_RE = /^(\d+(?:\.\d+)?)f$/;
+        var OFFSET_TICK_RE = /^(\d+(?:\.\d+)?)t$/;
+        var OFFSET_MS_RE = /^(\d+(?:\.\d+)?)ms$/;
+        var OFFSET_S_RE = /^(\d+(?:\.\d+)?)s$/;
+        var OFFSET_H_RE = /^(\d+(?:\.\d+)?)h$/;
+        var OFFSET_M_RE = /^(\d+(?:\.\d+)?)m$/;
+        var m;
+        var r = null;
+        if ((m = OFFSET_FRAME_RE.exec(str)) !== null) {
+
+            if (effectiveFrameRate !== null) {
+
+                r = parseFloat(m[1]) / effectiveFrameRate;
+            }
+
+        } else if ((m = OFFSET_TICK_RE.exec(str)) !== null) {
+
+            if (tickRate !== null) {
+
+                r = parseFloat(m[1]) / tickRate;
+            }
+
+        } else if ((m = OFFSET_MS_RE.exec(str)) !== null) {
+
+            r = parseFloat(m[1]) / 1000.0;
+
+        } else if ((m = OFFSET_S_RE.exec(str)) !== null) {
+
+            r = parseFloat(m[1]);
+
+        } else if ((m = OFFSET_H_RE.exec(str)) !== null) {
+
+            r = parseFloat(m[1]) * 3600.0;
+
+        } else if ((m = OFFSET_M_RE.exec(str)) !== null) {
+
+            r = parseFloat(m[1]) * 60.0;
+
+        } else if ((m = CLOCK_TIME_FRACTION_RE.exec(str)) !== null) {
+
+            r = parseInt(m[1]) * 3600 +
+                    parseInt(m[2]) * 60 +
+                    parseFloat(m[3]);
+
+        } else if ((m = CLOCK_TIME_FRAMES_RE.exec(str)) !== null) {
+
+            /* this assumes that HH:MM:SS is a clock-time-with-fraction */
+
+            if (effectiveFrameRate !== null) {
+
+                r = parseInt(m[1]) * 3600 +
+                        parseInt(m[2]) * 60 +
+                        parseInt(m[3]) +
+                        (m[4] === null ? 0 : parseInt(m[4]) / effectiveFrameRate);
+            }
+
+        }
+
+        return r;
+    }
+
+    function processTiming(doc, parent, node, errorHandler) {
+
+        /* determine explicit begin */
+
+        var explicit_begin = null;
+
+        if (node && 'begin' in node.attributes) {
+
+            explicit_begin = parseTimeExpression(doc.tickRate, doc.effectiveFrameRate, node.attributes.begin.value);
+
+            if (explicit_begin === null) {
+
+                reportWarning(errorHandler, "Malformed begin value " + node.attributes.begin.value + " (using 0)");
+
+            }
+
+        }
+
+        /* determine explicit duration */
+
+        var explicit_dur = null;
+
+        if (node && 'dur' in node.attributes) {
+
+            explicit_dur = parseTimeExpression(doc.tickRate, doc.effectiveFrameRate, node.attributes.dur.value);
+
+            if (explicit_dur === null) {
+
+                reportWarning(errorHandler, "Malformed dur value " + node.attributes.dur.value + " (ignoring)");
+
+            }
+
+        }
+
+        /* determine explicit end */
+
+        var explicit_end = null;
+
+        if (node && 'end' in node.attributes) {
+
+            explicit_end = parseTimeExpression(doc.tickRate, doc.effectiveFrameRate, node.attributes.end.value);
+
+            if (explicit_end === null) {
+
+                reportWarning(errorHandler, "Malformed end value (ignoring)");
+
+            }
+
+        }
+
+        return {explicit_begin: explicit_begin,
+            explicit_end: explicit_end,
+            explicit_dur: explicit_dur};
+
+    }
+
+
+
+    function mergeChainedStyles(styling, style, errorHandler) {
+
+        while (style.styleRefs.length > 0) {
+
+            var sref = style.styleRefs.pop();
+
+            if (!(sref in styling.styles)) {
+                reportError(errorHandler, "Non-existant style id referenced");
+                continue;
+            }
+
+            mergeChainedStyles(styling, styling.styles[sref], errorHandler);
+
+            mergeStylesIfNotPresent(styling.styles[sref].styleAttrs, style.styleAttrs);
+
+        }
+
+    }
+
+    function mergeReferencedStyles(styling, stylerefs, styleattrs, errorHandler) {
+
+        for (var i = stylerefs.length - 1; i >= 0; i--) {
+
+            var sref = stylerefs[i];
+
+            if (!(sref in styling.styles)) {
+                reportError(errorHandler, "Non-existant style id referenced");
+                continue;
+            }
+
+            mergeStylesIfNotPresent(styling.styles[sref].styleAttrs, styleattrs);
+
+        }
+
+    }
+
+    function mergeStylesIfNotPresent(from_styles, into_styles) {
+
+        for (var sname in from_styles) {
+
+            if (sname in into_styles)
+                continue;
+
+            into_styles[sname] = from_styles[sname];
+
+        }
+
+    }
+
+    /* TODO: validate style format at parsing */
+
+
+    /*
+     * ERROR HANDLING UTILITY FUNCTIONS
+     * 
+     */
+
+    function reportInfo(errorHandler, msg) {
+
+        if (errorHandler && errorHandler.info && errorHandler.info(msg))
+            throw msg;
+
+    }
+
+    function reportWarning(errorHandler, msg) {
+
+        if (errorHandler && errorHandler.warn && errorHandler.warn(msg))
+            throw msg;
+
+    }
+
+    function reportError(errorHandler, msg) {
+
+        if (errorHandler && errorHandler.error && errorHandler.error(msg))
+            throw msg;
+
+    }
+
+    function reportFatal(errorHandler, msg) {
+
+        if (errorHandler && errorHandler.fatal)
+            errorHandler.fatal(msg);
+
+        throw msg;
+
+    }
+
+    /*
+     * Binary search utility function
+     * 
+     * @typedef {Object} BinarySearchResult
+     * @property {boolean} found Was an exact match found?
+     * @property {number} index Position of the exact match or insert position
+     * 
+     * @returns {BinarySearchResult}
+     */
+
+    function indexOf(arr, searchval) {
+
+        var min = 0;
+        var max = arr.length - 1;
+        var cur;
+
+        while (min <= max) {
+
+            cur = Math.floor((min + max) / 2);
+
+            var curval = arr[cur];
+
+            if (curval < searchval) {
+
+                min = cur + 1;
+
+            } else if (curval > searchval) {
+
+                max = cur - 1;
+
+            } else {
+
+                return {found: true, index: cur};
+
+            }
+
+        }
+
+        return {found: false, index: min};
+    }
+
+
+})(typeof exports === 'undefined' ? this.imscDoc = {} : exports,
+        typeof sax === 'undefined' ? _dereq_(41) : sax,
+        typeof imscNames === 'undefined' ? _dereq_(17) : imscNames,
+        typeof imscStyles === 'undefined' ? _dereq_(18) : imscStyles,
+        typeof imscUtils === 'undefined' ? _dereq_(19) : imscUtils);
+
+},{"17":17,"18":18,"19":19,"41":41}],14:[function(_dereq_,module,exports){
+/* 
+ * Copyright (c) 2016, Pierre-Anthony Lemieux <pal@sandflow.com>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * @module imscHTML
+ */
+
+;
+(function (imscHTML, imscNames, imscStyles) {
+
+    /**
+     * Function that maps <pre>smpte:background</pre> URIs to URLs resolving to image resource
+     * @callback IMGResolver
+     * @param {string} <pre>smpte:background</pre> URI
+     * @return {string} PNG resource URL
+     */
+
+
+    /**
+     * Renders an ISD object (returned by <pre>generateISD()</pre>) into a 
+     * parent element, that must be attached to the DOM. The ISD will be rendered
+     * into a child <pre>div</pre>
+     * with heigh and width equal to the clientHeight and clientWidth of the element,
+     * unless explicitly specified otherwise by the caller. Images URIs specified 
+     * by <pre>smpte:background</pre> attributes are mapped to image resource URLs
+     * by an <pre>imgResolver</pre> function. The latter takes the value of <code>smpte:background</code>
+     * attribute and an <code>img</code> DOM element as input, and is expected to
+     * set the <code>src</code> attribute of the <code>img</code> to the absolute URI of the image.
+     * <pre>displayForcedOnlyMode</pre> sets the (boolean)
+     * value of the IMSC1 displayForcedOnlyMode parameter. The function returns
+     * an opaque object that should passed in <code>previousISDState</code> when this function
+     * is called for the next ISD, otherwise <code>previousISDState</code> should be set to 
+     * <code>null</code>.
+     * 
+     * @param {Object} isd ISD to be rendered
+     * @param {Object} element Element into which the ISD is rendered
+     * @param {?IMGResolver} imgResolver Resolve <pre>smpte:background</pre> URIs into URLs.
+     * @param {?number} eheight Height (in pixel) of the child <div>div</div> or null 
+     *                  to use clientHeight of the parent element
+     * @param {?number} ewidth Width (in pixel) of the child <div>div</div> or null
+     *                  to use clientWidth of the parent element
+     * @param {?boolean} displayForcedOnlyMode Value of the IMSC1 displayForcedOnlyMode parameter,
+     *                   or false if null         
+     * @param {?module:imscUtils.ErrorHandler} errorHandler Error callback
+     * @param {Object} previousISDState State saved during processing of the previous ISD, or null if initial call
+     * @param {?boolean} enableRollUp Enables roll-up animations (see CEA 708)
+     * @return {Object} ISD state to be provided when this funtion is called for the next ISD
+     */
+
+    imscHTML.render = function (isd,
+        element,
+        imgResolver,
+        eheight,
+        ewidth,
+        displayForcedOnlyMode,
+        errorHandler,
+        previousISDState,
+        enableRollUp
+        ) {
+
+        /* maintain aspect ratio if specified */
+
+        var height = eheight || element.clientHeight;
+        var width = ewidth || element.clientWidth;
+
+        if (isd.aspectRatio !== null) {
+
+            var twidth = height * isd.aspectRatio;
+
+            if (twidth > width) {
+
+                height = Math.round(width / isd.aspectRatio);
+
+            } else {
+
+                width = twidth;
+
+            }
+
+        }
+
+        var rootcontainer = document.createElement("div");
+
+        rootcontainer.style.position = "relative";
+        rootcontainer.style.width = width + "px";
+        rootcontainer.style.height = height + "px";
+        rootcontainer.style.margin = "auto";
+        rootcontainer.style.top = 0;
+        rootcontainer.style.bottom = 0;
+        rootcontainer.style.left = 0;
+        rootcontainer.style.right = 0;
+        rootcontainer.style.zIndex = 0;
+
+        var context = {
+            h: height,
+            w: width,
+            regionH: null,
+            regionW: null,
+            imgResolver: imgResolver,
+            displayForcedOnlyMode: displayForcedOnlyMode || false,
+            isd: isd,
+            errorHandler: errorHandler,
+            previousISDState: previousISDState,
+            enableRollUp: enableRollUp || false,
+            currentISDState: {},
+            flg: null, /* current fillLineGap value if active, null otherwise */
+            lp: null, /* current linePadding value if active, null otherwise */
+            mra: null, /* current multiRowAlign value if active, null otherwise */
+            ipd: null, /* inline progression direction (lr, rl, tb) */
+            bpd: null /* block progression direction (lr, rl, tb) */
+        };
+
+        element.appendChild(rootcontainer);
+
+        for (var i in isd.contents) {
+
+            processElement(context, rootcontainer, isd.contents[i]);
+
+        }
+
+        return context.currentISDState;
+
+    };
+
+    function processElement(context, dom_parent, isd_element) {
+
+        var e;
+
+        if (isd_element.kind === 'region') {
+
+            e = document.createElement("div");
+            e.style.position = "absolute";
+
+        } else if (isd_element.kind === 'body') {
+
+            e = document.createElement("div");
+
+        } else if (isd_element.kind === 'div') {
+
+            e = document.createElement("div");
+
+        } else if (isd_element.kind === 'p') {
+
+            e = document.createElement("p");
+
+        } else if (isd_element.kind === 'span') {
+
+            e = document.createElement("span");
+
+            //e.textContent = isd_element.text;
+
+        } else if (isd_element.kind === 'br') {
+
+            e = document.createElement("br");
+
+        }
+
+        if (!e) {
+
+            reportError(context.errorHandler, "Error processing ISD element kind: " + isd_element.kind);
+
+            return;
+
+        }
+
+        /* override UA default margin */
+        /* TODO: should apply to <p> only */
+
+        e.style.margin = "0";
+
+        /* tranform TTML styles to CSS styles */
+
+        for (var i in STYLING_MAP_DEFS) {
+
+            var sm = STYLING_MAP_DEFS[i];
+
+            var attr = isd_element.styleAttrs[sm.qname];
+
+            if (attr !== undefined && sm.map !== null) {
+
+                sm.map(context, e, isd_element, attr);
+
+            }
+
+        }
+
+        var proc_e = e;
+
+        /* remember writing direction */
+
+        if (isd_element.kind === "region") {
+
+            var wdir = isd_element.styleAttrs[imscStyles.byName.writingMode.qname];
+
+            if (wdir === "lrtb" || wdir === "lr") {
+
+                context.ipd = "lr";
+                context.bpd = "tb";
+
+            } else if (wdir === "rltb" || wdir === "rl") {
+
+                context.ipd = "rl";
+                context.bpd = "tb";
+
+            } else if (wdir === "tblr") {
+
+                context.ipd = "tb";
+                context.bpd = "lr";
+
+            } else if (wdir === "tbrl" || wdir === "tb") {
+
+                context.ipd = "tb";
+                context.bpd = "rl";
+
+            }
+
+        }
+
+        /* do we have linePadding ? */
+
+        var lp = isd_element.styleAttrs[imscStyles.byName.linePadding.qname];
+
+        if (lp && lp > 0) {
+
+            /* apply padding to the <p> so that line padding does not cause line wraps */
+
+            var padmeasure = Math.ceil(lp * context.h) + "px";
+
+            if (context.bpd === "tb") {
+
+                proc_e.style.paddingLeft = padmeasure;
+                proc_e.style.paddingRight = padmeasure;
+
+            } else {
+
+                proc_e.style.paddingTop = padmeasure;
+                proc_e.style.paddingBottom = padmeasure;
+
+            }
+
+            context.lp = lp;
+        }
+
+        // do we have multiRowAlign?
+
+        var mra = isd_element.styleAttrs[imscStyles.byName.multiRowAlign.qname];
+
+        if (mra && mra !== "auto") {
+
+            /* create inline block to handle multirowAlign */
+
+            var s = document.createElement("span");
+
+            s.style.display = "inline-block";
+
+            s.style.textAlign = mra;
+
+            e.appendChild(s);
+
+            proc_e = s;
+
+            context.mra = mra;
+
+        }
+
+        /* remember we are filling line gaps */
+
+        if (isd_element.styleAttrs[imscStyles.byName.fillLineGap.qname]) {
+            context.flg = true;
+        }
+
+
+        if (isd_element.kind === "span" && isd_element.text) {
+
+            if (context.lp || context.mra || context.flg) {
+
+                // wrap characters in spans to find the line wrap locations
+
+                var cbuf = '';
+
+                for (var j = 0; j < isd_element.text.length; j++) {
+
+                    cbuf += isd_element.text.charAt(j);
+
+                    var cc = isd_element.text.charCodeAt(j);
+
+                    if (cc < 0xD800 || cc > 0xDBFF || j === isd_element.text.length) {
+
+                        /* wrap the character(s) in a span unless it is a high surrogate */
+
+                        var span = document.createElement("span");
+
+                        span.textContent = cbuf;
+    
+                        e.appendChild(span);
+
+                        cbuf = '';
+
+                    }
+
+                }
+
+            } else {
+
+                e.textContent = isd_element.text;
+
+            }
+        }
+
+        dom_parent.appendChild(e);
+
+        /* process the children of the ISD element */
+
+        for (var k in isd_element.contents) {
+
+            processElement(context, proc_e, isd_element.contents[k]);
+
+        }
+
+        /* list of lines */
+
+        var linelist = [];
+
+
+        /* paragraph processing */
+        /* TODO: linePadding only supported for horizontal scripts */
+
+        if ((context.lp || context.mra || context.flg) && isd_element.kind === "p") {
+
+            constructLineList(context, proc_e, linelist, null);
+
+            /* insert line breaks for multirowalign */
+
+            if (context.mra) {
+
+                applyMultiRowAlign(linelist);
+
+                context.mra = null;
+
+            }
+
+            /* add linepadding */
+
+            if (context.lp) {
+
+                applyLinePadding(linelist, context.lp * context.h, context);
+
+                context.lp = null;
+
+            }
+
+            /* fill line gaps linepadding */
+
+            if (context.flg) {
+
+                var par_edges = rect2edges(proc_e.getBoundingClientRect(), context);
+
+                applyFillLineGap(linelist, par_edges.before, par_edges.after, context);
+
+                context.flg = null;
+
+            }
+
+        }
+
+
+        /* region processing */
+
+        if (isd_element.kind === "region") {
+
+            /* build line list */
+
+            constructLineList(context, proc_e, linelist);
+
+            /* perform roll up if needed */
+
+            if ((context.bpd === "tb") &&
+                context.enableRollUp &&
+                isd_element.contents.length > 0 &&
+                isd_element.styleAttrs[imscStyles.byName.displayAlign.qname] === 'after') {
+
+                /* horrible hack, perhaps default region id should be underscore everywhere? */
+
+                var rid = isd_element.id === '' ? '_' : isd_element.id;
+
+                var rb = new RegionPBuffer(rid, linelist);
+
+                context.currentISDState[rb.id] = rb;
+
+                if (context.previousISDState &&
+                    rb.id in context.previousISDState &&
+                    context.previousISDState[rb.id].plist.length > 0 &&
+                    rb.plist.length > 1 &&
+                    rb.plist[rb.plist.length - 2].text ===
+                    context.previousISDState[rb.id].plist[context.previousISDState[rb.id].plist.length - 1].text) {
+
+                    var body_elem = e.firstElementChild;
+                    
+                    var h = rb.plist[rb.plist.length - 1].after - rb.plist[rb.plist.length - 1].before;
+
+                    body_elem.style.bottom = "-" + h + "px";
+                    body_elem.style.transition = "transform 0.4s";
+                    body_elem.style.position = "relative";
+                    body_elem.style.transform = "translateY(-" + h + "px)";
+
+                }
+
+            }
+
+            /* TODO: clean-up the spans ? */
+
+        }
+    }
+
+    function applyLinePadding(lineList, lp, context) {
+
+        for (var i in lineList) {
+
+            var l = lineList[i].elements.length;
+
+            var se = lineList[i].elements[lineList[i].start_elem];
+
+            var ee = lineList[i].elements[lineList[i].end_elem];
+
+            var pospadpxlen = Math.ceil(lp) + "px";
+
+            var negpadpxlen = "-" + Math.ceil(lp) + "px";
+
+            if (l !== 0) {
+
+                if (context.ipd === "lr") {
+
+                    se.node.style.borderLeftColor = se.bgcolor || "#00000000";
+                    se.node.style.borderLeftStyle = "solid";
+                    se.node.style.borderLeftWidth = pospadpxlen;
+                    se.node.style.marginLeft = negpadpxlen;
+
+                } else if (context.ipd === "rl") {
+
+                    se.node.style.borderRightColor = se.bgcolor || "#00000000";
+                    se.node.style.borderRightStyle = "solid";
+                    se.node.style.borderRightWidth = pospadpxlen;
+                    se.node.style.marginRight = negpadpxlen;
+
+                } else if (context.ipd === "tb") {
+
+                    se.node.style.borderTopColor = se.bgcolor || "#00000000";
+                    se.node.style.borderTopStyle = "solid";
+                    se.node.style.borderTopWidth = pospadpxlen;
+                    se.node.style.marginTop = negpadpxlen;
+
+                }
+
+                if (context.ipd === "lr") {
+
+                    ee.node.style.borderRightColor = ee.bgcolor  || "#00000000";
+                    ee.node.style.borderRightStyle = "solid";
+                    ee.node.style.borderRightWidth = pospadpxlen;
+                    ee.node.style.marginRight = negpadpxlen;
+
+                } else if (context.ipd === "rl") {
+
+                    ee.node.style.borderLeftColor = ee.bgcolor || "#00000000";
+                    ee.node.style.borderLeftStyle = "solid";
+                    ee.node.style.borderLeftWidth = pospadpxlen;
+                    ee.node.style.marginLeft = negpadpxlen;
+
+                } else if (context.ipd === "tb") {
+
+                    ee.node.style.borderBottomColor = ee.bgcolor || "#00000000";
+                    ee.node.style.borderBottomStyle = "solid";
+                    ee.node.style.borderBottomWidth = pospadpxlen;
+                    ee.node.style.marginBottom = negpadpxlen;
+
+                }
+
+            }
+
+        }
+
+    }
+
+    function applyMultiRowAlign(lineList) {
+
+        /* apply an explicit br to all but the last line */
+
+        for (var i = 0; i < lineList.length - 1; i++) {
+
+            var l = lineList[i].elements.length;
+
+            if (l !== 0 && lineList[i].br === false) {
+                var br = document.createElement("br");
+
+                var lastnode = lineList[i].elements[l - 1].node;
+
+                lastnode.parentElement.insertBefore(br, lastnode.nextSibling);
+            }
+
+        }
+
+    }
+
+    function applyFillLineGap(lineList, par_before, par_after, context) {
+
+        /* positive for BPD = lr and tb, negative for BPD = rl */
+        var s = Math.sign(par_after - par_before);
+
+        for (var i = 0; i <= lineList.length; i++) {
+
+            /* compute frontier between lines */
+
+            var frontier;
+
+            if (i === 0) {
+
+                frontier = par_before;
+
+            } else if (i === lineList.length) {
+
+                frontier = par_after;
+
+            } else {
+
+                frontier = (lineList[i].before + lineList[i - 1].after) / 2;
+
+            }
+
+            /* padding amount */
+
+            var pad;
+
+            /* current element */
+
+            var e;
+
+            /* before line */
+
+            if (i > 0) {
+
+                for (var j = 0; j < lineList[i - 1].elements.length; j++) {
+
+                    if (lineList[i - 1].elements[j].bgcolor === null) continue;
+
+                    e = lineList[i - 1].elements[j];
+
+                    if (s * (e.after - frontier) < 0) {
+
+                        pad = Math.ceil(Math.abs(frontier - e.after)) + "px";
+
+                        e.node.style.backgroundColor = e.bgcolor;
+
+                        if (context.bpd === "lr") {
+
+                            e.node.style.paddingRight = pad;
+
+
+                        } else if (context.bpd === "rl") {
+
+                            e.node.style.paddingLeft = pad;
+
+                        } else if (context.bpd === "tb") {
+
+                            e.node.style.paddingBottom = pad;
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+            /* after line */
+
+            if (i < lineList.length) {
+
+                for (var k = 0; k < lineList[i].elements.length; k++) {
+
+                    e = lineList[i].elements[k];
+
+                    if (e.bgcolor === null) continue;
+
+                    if (s * (e.before - frontier) > 0) {
+
+                        pad = Math.ceil(Math.abs(e.before - frontier)) + "px";
+
+                        e.node.style.backgroundColor = e.bgcolor;
+
+                        if (context.bpd === "lr") {
+
+                            e.node.style.paddingLeft = pad;
+
+
+                        } else if (context.bpd === "rl") {
+
+                            e.node.style.paddingRight = pad;
+
+
+                        } else if (context.bpd === "tb") {
+
+                            e.node.style.paddingTop = pad;
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
+
+    function RegionPBuffer(id, lineList) {
+
+        this.id = id;
+
+        this.plist = lineList;
+
+    }
+
+    function pruneEmptySpans(element) {
+
+        var child = element.firstChild;
+
+        while (child) {
+
+            var nchild = child.nextSibling;
+
+            if (child.nodeType === Node.ELEMENT_NODE &&
+                child.localName === 'span') {
+
+                pruneEmptySpans(child);
+
+                if (child.childElementCount === 0 &&
+                    child.textContent.length === 0) {
+
+                    element.removeChild(child);
+
+                }
+            }
+
+            child = nchild;
+        }
+
+    }
+
+    function rect2edges(rect, context) {
+
+        var edges = {before: null, after: null, start: null, end: null};
+
+        if (context.bpd === "tb") {
+
+            edges.before = rect.top;
+            edges.after = rect.bottom;
+
+            if (context.ipd === "lr") {
+
+                edges.start = rect.left;
+                edges.end = rect.right;
+
+            } else {
+
+                edges.start = rect.right;
+                edges.end = rect.left;
+            }
+
+        } else if (context.bpd === "lr") {
+
+            edges.before = rect.left;
+            edges.after = rect.right;
+            edges.start = rect.top;
+            edges.end = rect.bottom;
+
+        } else if (context.bpd === "rl") {
+
+            edges.before = rect.right;
+            edges.after = rect.left;
+            edges.start = rect.top;
+            edges.end = rect.bottom;
+
+        }
+
+        return edges;
+
+    }
+
+    function constructLineList(context, element, llist, bgcolor) {
+
+        var curbgcolor = element.style.backgroundColor || bgcolor;
+
+        if (element.childElementCount === 0) {
+
+            if (element.localName === 'span') {
+
+                var r = element.getBoundingClientRect();
+
+                /* skip if span is not displayed */
+
+                if (r.height === 0 || r.width === 0) return;
+
+                var edges = rect2edges(r, context);
+
+                if (llist.length === 0 ||
+                    (!isSameLine(edges.before, edges.after, llist[llist.length - 1].before, llist[llist.length - 1].after))
+                    ) {
+
+                    llist.push({
+                        before: edges.before,
+                        after: edges.after,
+                        start: edges.start,
+                        end: edges.end,
+                        start_elem: 0,
+                        end_elem: 0,
+                        elements: [],
+                        text: "",
+                        br: false
+                    });
+
+                } else {
+
+                    /* positive for BPD = lr and tb, negative for BPD = rl */
+                    var bpd_dir = Math.sign(edges.after - edges.before);
+
+                    /* positive for IPD = lr and tb, negative for IPD = rl */
+                    var ipd_dir = Math.sign(edges.end - edges.start);
+
+                    /* check if the line height has increased */
+
+                    if (bpd_dir * (edges.before - llist[llist.length - 1].before) < 0) {
+                        llist[llist.length - 1].before = edges.before;
+                    }
+
+                    if (bpd_dir * (edges.after - llist[llist.length - 1].after) > 0) {
+                        llist[llist.length - 1].after = edges.after;
+                    }
+
+                    if (ipd_dir * (edges.start - llist[llist.length - 1].start) < 0) {
+                        llist[llist.length - 1].start = edges.start;
+                        llist[llist.length - 1].start_elem = llist[llist.length - 1].elements.length;
+                    }
+
+                    if (ipd_dir * (edges.end - llist[llist.length - 1].end) > 0) {
+                        llist[llist.length - 1].end = edges.end;
+                        llist[llist.length - 1].end_elem = llist[llist.length - 1].elements.length;
+                    }
+
+                }
+
+                llist[llist.length - 1].text += element.textContent;
+
+                llist[llist.length - 1].elements.push(
+                    {
+                        node: element,
+                        bgcolor: curbgcolor,
+                        before: edges.before,
+                        after: edges.after
+                    }
+                );
+
+            } else if (element.localName === 'br' && llist.length !== 0) {
+
+                llist[llist.length - 1].br = true;
+
+            }
+
+        } else {
+
+            var child = element.firstChild;
+
+            while (child) {
+
+                if (child.nodeType === Node.ELEMENT_NODE) {
+
+                    constructLineList(context, child, llist, curbgcolor);
+
+                }
+
+                child = child.nextSibling;
+            }
+        }
+
+    }
+
+    function isSameLine(before1, after1, before2, after2) {
+
+        return ((after1 < after2) && (before1 > before2)) || ((after2 <= after1) && (before2 >= before1));
+
+    }
+
+    function HTMLStylingMapDefintion(qName, mapFunc) {
+        this.qname = qName;
+        this.map = mapFunc;
+    }
+
+    var STYLING_MAP_DEFS = [
+
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling backgroundColor",
+            function (context, dom_element, isd_element, attr) {
+
+                /* skip if transparent */
+                if (attr[3] === 0) return;
+
+                dom_element.style.backgroundColor = "rgba(" +
+                    attr[0].toString() + "," +
+                    attr[1].toString() + "," +
+                    attr[2].toString() + "," +
+                    (attr[3] / 255).toString() +
+                    ")";
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling color",
+            function (context, dom_element, isd_element, attr) {
+                dom_element.style.color = "rgba(" +
+                    attr[0].toString() + "," +
+                    attr[1].toString() + "," +
+                    attr[2].toString() + "," +
+                    (attr[3] / 255).toString() +
+                    ")";
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling direction",
+            function (context, dom_element, isd_element, attr) {
+                dom_element.style.direction = attr;
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling display",
+            function (context, dom_element, isd_element, attr) {}
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling displayAlign",
+            function (context, dom_element, isd_element, attr) {
+
+                /* see https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
+
+                /* TODO: is this affected by writing direction? */
+
+                dom_element.style.display = "flex";
+                dom_element.style.flexDirection = "column";
+
+
+                if (attr === "before") {
+
+                    dom_element.style.justifyContent = "flex-start";
+
+                } else if (attr === "center") {
+
+                    dom_element.style.justifyContent = "center";
+
+                } else if (attr === "after") {
+
+                    dom_element.style.justifyContent = "flex-end";
+                }
+
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling extent",
+            function (context, dom_element, isd_element, attr) {
+                /* TODO: this is super ugly */
+
+                context.regionH = (attr.h * context.h);
+                context.regionW = (attr.w * context.w);
+
+                /* 
+                 * CSS height/width are measured against the content rectangle,
+                 * whereas TTML height/width include padding
+                 */
+
+                var hdelta = 0;
+                var wdelta = 0;
+
+                var p = isd_element.styleAttrs["http://www.w3.org/ns/ttml#styling padding"];
+
+                if (!p) {
+
+                    /* error */
+
+                } else {
+
+                    hdelta = (p[0] + p[2]) * context.h;
+                    wdelta = (p[1] + p[3]) * context.w;
+
+                }
+
+                dom_element.style.height = (context.regionH - hdelta) + "px";
+                dom_element.style.width = (context.regionW - wdelta) + "px";
+
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling fontFamily",
+            function (context, dom_element, isd_element, attr) {
+
+                var rslt = [];
+
+                /* per IMSC1 */
+
+                for (var i in attr) {
+
+                    if (attr[i] === "monospaceSerif") {
+
+                        rslt.push("Courier New");
+                        rslt.push('"Liberation Mono"');
+                        rslt.push("Courier");
+                        rslt.push("monospace");
+
+                    } else if (attr[i] === "proportionalSansSerif") {
+
+                        rslt.push("Arial");
+                        rslt.push("Helvetica");
+                        rslt.push('"Liberation Sans"');
+                        rslt.push("sans-serif");
+
+                    } else if (attr[i] === "monospace") {
+
+                        rslt.push("monospace");
+
+                    } else if (attr[i] === "sansSerif") {
+
+                        rslt.push("sans-serif");
+
+                    } else if (attr[i] === "serif") {
+
+                        rslt.push("serif");
+
+                    } else if (attr[i] === "monospaceSansSerif") {
+
+                        rslt.push("Consolas");
+                        rslt.push("monospace");
+
+                    } else if (attr[i] === "proportionalSerif") {
+
+                        rslt.push("serif");
+
+                    } else {
+
+                        rslt.push(attr[i]);
+
+                    }
+
+                }
+
+                dom_element.style.fontFamily = rslt.join(",");
+            }
+        ),
+
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling fontSize",
+            function (context, dom_element, isd_element, attr) {
+                dom_element.style.fontSize = (attr * context.h) + "px";
+            }
+        ),
+
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling fontStyle",
+            function (context, dom_element, isd_element, attr) {
+                dom_element.style.fontStyle = attr;
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling fontWeight",
+            function (context, dom_element, isd_element, attr) {
+                dom_element.style.fontWeight = attr;
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling lineHeight",
+            function (context, dom_element, isd_element, attr) {
+                if (attr === "normal") {
+
+                    dom_element.style.lineHeight = "normal";
+
+                } else {
+
+                    dom_element.style.lineHeight = (attr * context.h) + "px";
+                }
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling opacity",
+            function (context, dom_element, isd_element, attr) {
+                dom_element.style.opacity = attr;
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling origin",
+            function (context, dom_element, isd_element, attr) {
+                dom_element.style.top = (attr.h * context.h) + "px";
+                dom_element.style.left = (attr.w * context.w) + "px";
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling overflow",
+            function (context, dom_element, isd_element, attr) {
+                dom_element.style.overflow = attr;
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling padding",
+            function (context, dom_element, isd_element, attr) {
+
+                /* attr: top,left,bottom,right*/
+
+                /* style: top right bottom left*/
+
+                var rslt = [];
+
+                rslt[0] = (attr[0] * context.h) + "px";
+                rslt[1] = (attr[3] * context.w) + "px";
+                rslt[2] = (attr[2] * context.h) + "px";
+                rslt[3] = (attr[1] * context.w) + "px";
+
+                dom_element.style.padding = rslt.join(" ");
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling showBackground",
+            null
+            ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling textAlign",
+            function (context, dom_element, isd_element, attr) {
+
+                var ta;
+                var dir = isd_element.styleAttrs[imscStyles.byName.direction.qname];
+
+                /* handle UAs that do not understand start or end */
+
+                if (attr === "start") {
+
+                    ta = (dir === "rtl") ? "right" : "left";
+
+                } else if (attr === "end") {
+
+                    ta = (dir === "rtl") ? "left" : "right";
+
+                } else {
+
+                    ta = attr;
+
+                }
+
+                dom_element.style.textAlign = ta;
+
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling textDecoration",
+            function (context, dom_element, isd_element, attr) {
+                dom_element.style.textDecoration = attr.join(" ").replace("lineThrough", "line-through");
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling textOutline",
+            function (context, dom_element, isd_element, attr) {
+
+                if (attr === "none") {
+
+                    dom_element.style.textShadow = "";
+
+                } else {
+
+                    dom_element.style.textShadow = "rgba(" +
+                        attr.color[0].toString() + "," +
+                        attr.color[1].toString() + "," +
+                        attr.color[2].toString() + "," +
+                        (attr.color[3] / 255).toString() +
+                        ")" + " 0px 0px " +
+                        (attr.thickness * context.h) + "px";
+
+                }
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling unicodeBidi",
+            function (context, dom_element, isd_element, attr) {
+
+                var ub;
+
+                if (attr === 'bidiOverride') {
+                    ub = "bidi-override";
+                } else {
+                    ub = attr;
+                }
+
+                dom_element.style.unicodeBidi = ub;
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling visibility",
+            function (context, dom_element, isd_element, attr) {
+                dom_element.style.visibility = attr;
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling wrapOption",
+            function (context, dom_element, isd_element, attr) {
+
+                if (attr === "wrap") {
+
+                    if (isd_element.space === "preserve") {
+                        dom_element.style.whiteSpace = "pre-wrap";
+                    } else {
+                        dom_element.style.whiteSpace = "normal";
+                    }
+
+                } else {
+
+                    if (isd_element.space === "preserve") {
+
+                        dom_element.style.whiteSpace = "pre";
+
+                    } else {
+                        dom_element.style.whiteSpace = "noWrap";
+                    }
+
+                }
+
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling writingMode",
+            function (context, dom_element, isd_element, attr) {
+                if (attr === "lrtb" || attr === "lr") {
+
+                    dom_element.style.writingMode = "horizontal-tb";
+
+                } else if (attr === "rltb" || attr === "rl") {
+
+                    dom_element.style.writingMode = "horizontal-tb";
+
+                } else if (attr === "tblr") {
+
+                    dom_element.style.writingMode = "vertical-lr";
+
+                } else if (attr === "tbrl" || attr === "tb") {
+
+                    dom_element.style.writingMode = "vertical-rl";
+
+                }
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml#styling zIndex",
+            function (context, dom_element, isd_element, attr) {
+                dom_element.style.zIndex = attr;
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.smpte-ra.org/schemas/2052-1/2010/smpte-tt backgroundImage",
+            function (context, dom_element, isd_element, attr) {
+
+                if (context.imgResolver !== null && attr !== null) {
+
+                    var img = document.createElement("img");
+
+                    var uri = context.imgResolver(attr, img);
+
+                    if (uri)
+                        img.src = uri;
+
+                    img.height = context.regionH;
+                    img.width = context.regionW;
+
+                    dom_element.appendChild(img);
+                }
+            }
+        ),
+        new HTMLStylingMapDefintion(
+            "http://www.w3.org/ns/ttml/profile/imsc1#styling forcedDisplay",
+            function (context, dom_element, isd_element, attr) {
+
+                if (context.displayForcedOnlyMode && attr === false) {
+                    dom_element.style.visibility = "hidden";
+                }
+
+            }
+        )
+    ];
+
+    var STYLMAP_BY_QNAME = {};
+
+    for (var i in STYLING_MAP_DEFS) {
+
+        STYLMAP_BY_QNAME[STYLING_MAP_DEFS[i].qname] = STYLING_MAP_DEFS[i];
+    }
+
+    function reportError(errorHandler, msg) {
+
+        if (errorHandler && errorHandler.error && errorHandler.error(msg))
+            throw msg;
+
+    }
+
+})(typeof exports === 'undefined' ? this.imscHTML = {} : exports,
+    typeof imscNames === 'undefined' ? _dereq_(17) : imscNames,
+    typeof imscStyles === 'undefined' ? _dereq_(18) : imscStyles);
+},{"17":17,"18":18}],15:[function(_dereq_,module,exports){
+/* 
+ * Copyright (c) 2016, Pierre-Anthony Lemieux <pal@sandflow.com>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * @module imscISD
+ */
+
+
+;
+(function (imscISD, imscNames, imscStyles) { // wrapper for non-node envs
+
+    /** 
+     * Creates a canonical representation of an IMSC1 document returned by <pre>imscDoc.fromXML()</pre>
+     * at a given absolute offset in seconds. This offset does not have to be one of the values returned
+     * by <pre>getMediaTimeEvents()</pre>.
+     * 
+     * @param {Object} tt IMSC1 document
+     * @param {number} offset Absolute offset (in seconds)
+     * @param {?module:imscUtils.ErrorHandler} errorHandler Error callback
+     * @returns {Object} Opaque in-memory representation of an ISD
+     */
+
+    imscISD.generateISD = function (tt, offset, errorHandler) {
+
+        /* TODO check for tt and offset validity */
+
+        /* create the ISD object from the IMSC1 doc */
+
+        var isd = new ISD(tt);
+        
+        /* context */
+        
+        var context = {
+          
+            /* empty for now */
+            
+        };
+
+        /* process regions */
+
+        for (var r in tt.head.layout.regions) {
+
+            /* post-order traversal of the body tree per [construct intermediate document] */
+
+            var c = isdProcessContentElement(tt, offset, tt.head.layout.regions[r], tt.body, null, '', tt.head.layout.regions[r], errorHandler, context);
+
+            if (c !== null) {
+
+                /* add the region to the ISD */
+
+                isd.contents.push(c.element);
+            }
+
+
+        }
+
+        return isd;
+    };
+
+    function isdProcessContentElement(doc, offset, region, body, parent, inherited_region_id, elem, errorHandler, context) {
+
+        /* prune if temporally inactive */
+
+        if (offset < elem.begin || offset >= elem.end) {
+            return null;
+        }
+
+        /* 
+         * set the associated region as specified by the regionID attribute, or the 
+         * inherited associated region otherwise
+         */
+
+        var associated_region_id = 'regionID' in elem && elem.regionID !== '' ? elem.regionID : inherited_region_id;
+
+        /* prune the element if either:
+         * - the element is not terminal and the associated region is neither the default
+         *   region nor the parent region (this allows children to be associated with a 
+         *   region later on)
+         * - the element is terminal and the associated region is not the parent region
+         */
+        
+        /* TODO: improve detection of terminal elements since <region> has no contents */
+
+        if (parent !== null /* are we in the region element */ &&
+            associated_region_id !== region.id &&
+                (
+                    (! ('contents' in elem)) ||
+                    ('contents' in elem && elem.contents.length === 0) ||
+                    associated_region_id !== ''
+                )
+             )
+            return null;
+
+        /* create an ISD element, including applying specified styles */
+
+        var isd_element = new ISDContentElement(elem);
+
+        /* apply set (animation) styling */
+
+        for (var i in elem.sets) {
+
+            if (offset < elem.sets[i].begin || offset >= elem.sets[i].end)
+                continue;
+
+            isd_element.styleAttrs[elem.sets[i].qname] = elem.sets[i].value;
+
+        }
+
+        /* 
+         * keep track of specified styling attributes so that we
+         * can compute them later
+         */
+
+        var spec_attr = {};
+
+        for (var qname in isd_element.styleAttrs) {
+
+            spec_attr[qname] = true;
+
+            /* special rule for tts:writingMode (section 7.29.1 of XSL)
+             * direction is set consistently with writingMode only
+             * if writingMode sets inline-direction to LTR or RTL  
+             */
+
+            if (qname === imscStyles.byName.writingMode.qname &&
+                !(imscStyles.byName.direction.qname in isd_element.styleAttrs)) {
+
+                var wm = isd_element.styleAttrs[qname];
+
+                if (wm === "lrtb" || wm === "lr") {
+
+                    isd_element.styleAttrs[imscStyles.byName.direction.qname] = "ltr";
+
+                } else if (wm === "rltb" || wm === "rl") {
+
+                    isd_element.styleAttrs[imscStyles.byName.direction.qname] = "rtl";
+
+                }
+
+            }
+        }
+
+        /* inherited styling */
+
+        if (parent !== null) {
+
+            for (var j in imscStyles.all) {
+
+                var sa = imscStyles.all[j];
+
+                /* textDecoration has special inheritance rules */
+
+                if (sa.qname === imscStyles.byName.textDecoration.qname) {
+
+                    /* handle both textDecoration inheritance and specification */
+
+                    var ps = parent.styleAttrs[sa.qname];
+                    var es = isd_element.styleAttrs[sa.qname];
+                    var outs = [];
+
+                    if (es === undefined) {
+
+                        outs = ps;
+
+                    } else if (es.indexOf("none") === -1) {
+
+                        if ((es.indexOf("noUnderline") === -1 &&
+                            ps.indexOf("underline") !== -1) ||
+                            es.indexOf("underline") !== -1) {
+
+                            outs.push("underline");
+
+                        }
+
+                        if ((es.indexOf("noLineThrough") === -1 &&
+                            ps.indexOf("lineThrough") !== -1) ||
+                            es.indexOf("lineThrough") !== -1) {
+
+                            outs.push("lineThrough");
+
+                        }
+
+                        if ((es.indexOf("noOverline") === -1 &&
+                            ps.indexOf("overline") !== -1) ||
+                            es.indexOf("overline") !== -1) {
+
+                            outs.push("overline");
+
+                        }
+
+                    } else {
+
+                        outs.push("none");
+
+                    }
+
+                    isd_element.styleAttrs[sa.qname] = outs;
+
+                } else if (sa.inherit &&
+                    (sa.qname in parent.styleAttrs) &&
+                    !(sa.qname in isd_element.styleAttrs)) {
+
+                    isd_element.styleAttrs[sa.qname] = parent.styleAttrs[sa.qname];
+
+                }
+
+            }
+
+        }
+
+        /* initial value styling */
+
+        for (var k in imscStyles.all) {
+
+            var ivs = imscStyles.all[k];
+
+            /* skip if value is already specified */
+
+            if (ivs.qname in isd_element.styleAttrs) continue;
+
+            /* apply initial value to elements other than region only if non-inherited */
+
+            if (isd_element.kind === 'region' || (ivs.inherit === false && ivs.initial !== null)) {
+
+                isd_element.styleAttrs[ivs.qname] = ivs.parse(ivs.initial);
+
+                /* keep track of the style as specified */
+
+                spec_attr[ivs.qname] = true;
+
+            }
+
+        }
+
+        /* compute styles (only for non-inherited styles) */
+        /* TODO: get rid of spec_attr */
+
+        for (var z in imscStyles.all) {
+
+            var cs = imscStyles.all[z];
+
+            if (!(cs.qname in spec_attr)) continue;
+
+            if (cs.compute !== null) {
+
+                var cstyle = cs.compute(
+                    /*doc, parent, element, attr, context*/
+                    doc,
+                    parent,
+                    isd_element,
+                    isd_element.styleAttrs[cs.qname],
+                    context
+                    );
+
+                if (cstyle !== null) {
+                    isd_element.styleAttrs[cs.qname] = cstyle;
+                } else {
+                    reportError(errorHandler, "Style '" + cs.qname + "' on element '" + isd_element.kind + "' cannot be computed");
+                }
+            }
+
+        }
+
+        /* prune if tts:display is none */
+
+        if (isd_element.styleAttrs[imscStyles.byName.display.qname] === "none")
+            return null;
+
+        /* process contents of the element */
+
+        var contents;
+
+        if (parent === null) {
+
+            /* we are processing the region */
+
+            if (body === null) {
+
+                /* if there is no body, still process the region but with empty content */
+
+                contents = [];
+
+            } else {
+
+                /*use the body element as contents */
+
+                contents = [body];
+
+            }
+
+        } else if ('contents' in elem) {
+
+            contents = elem.contents;
+
+        }
+
+        for (var x in contents) {
+
+            var c = isdProcessContentElement(doc, offset, region, body, isd_element, associated_region_id, contents[x], errorHandler, context);
+
+            /* 
+             * keep child element only if they are non-null and their region match 
+             * the region of this element
+             */
+
+            if (c !== null) {
+
+                isd_element.contents.push(c.element);
+
+            }
+
+        }
+
+        /* compute used value of lineHeight="normal" */
+
+        /*        if (isd_element.styleAttrs[imscStyles.byName.lineHeight.qname] === "normal"  ) {
+         
+         isd_element.styleAttrs[imscStyles.byName.lineHeight.qname] =
+         isd_element.styleAttrs[imscStyles.byName.fontSize.qname] * 1.2;
+         
+         }
+         */
+
+        /* remove styles that are not applicable */
+
+        for (var qnameb in isd_element.styleAttrs) {
+            var da = imscStyles.byQName[qnameb];
+
+            if (da.applies.indexOf(isd_element.kind) === -1) {
+                delete isd_element.styleAttrs[qnameb];
+            }
+        }
+
+        /* collapse white space if space is "default" */
+
+        if (isd_element.kind === 'span' && isd_element.text && isd_element.space === "default") {
+
+            var trimmedspan = isd_element.text.replace(/\s+/g, ' ');
+
+            isd_element.text = trimmedspan;
+
+        }
+
+        /* trim whitespace around explicit line breaks */
+
+        if (isd_element.kind === 'p') {
+
+            var elist = [];
+
+            constructSpanList(isd_element, elist);
+
+            var l = 0;
+
+            var state = "after_br";
+            var br_pos = 0;
+
+            while (true) {
+
+                if (state === "after_br") {
+
+                    if (l >= elist.length || elist[l].kind === "br") {
+
+                        state = "before_br";
+                        br_pos = l;
+                        l--;
+
+                    } else {
+
+                        if (elist[l].space !== "preserve") {
+
+                            elist[l].text = elist[l].text.replace(/^\s+/g, '');
+
+                        }
+
+                        if (elist[l].text.length > 0) {
+
+                            state = "looking_br";
+                            l++;
+
+                        } else {
+
+                            elist.splice(l, 1);
+
+                        }
+
+                    }
+
+                } else if (state === "before_br") {
+
+                    if (l < 0 || elist[l].kind === "br") {
+
+                        state = "after_br";
+                        l = br_pos + 1;
+
+                        if (l >= elist.length) break;
+
+                    } else {
+
+                        if (elist[l].space !== "preserve") {
+
+                            elist[l].text = elist[l].text.replace(/\s+$/g, '');
+
+                        }
+
+                        if (elist[l].text.length > 0) {
+
+                            state = "after_br";
+                            l = br_pos + 1;
+
+                            if (l >= elist.length) break;
+
+                        } else {
+
+                            elist.splice(l, 1);
+                            l--;
+
+                        }
+
+                    }
+
+                } else {
+
+                    if (l >= elist.length || elist[l].kind === "br") {
+
+                        state = "before_br";
+                        br_pos = l;
+                        l--;
+
+                    } else {
+
+                        l++;
+
+                    }
+
+                }
+
+            }
+            
+            pruneEmptySpans(isd_element);
+
+        }
+
+        /* keep element if:
+         * * contains a background image
+         * * <br/>
+         * * if there are children
+         * * if <span> and has text
+         * * if region and showBackground = always
+         */
+
+        if ((isd_element.kind === 'div' && imscStyles.byName.backgroundImage.qname in isd_element.styleAttrs) ||
+            isd_element.kind === 'br' ||
+            ('contents' in isd_element && isd_element.contents.length > 0) ||
+            (isd_element.kind === 'span' && isd_element.text !== null) ||
+            (isd_element.kind === 'region' &&
+                isd_element.styleAttrs[imscStyles.byName.showBackground.qname] === 'always')) {
+
+            return {
+                region_id: associated_region_id,
+                element: isd_element
+            };
+        }
+
+        return null;
+    }
+
+    function constructSpanList(element, elist) {
+
+        if ('contents' in element) {
+
+            for (var i in element.contents) {
+                constructSpanList(element.contents[i], elist);
+            }
+
+        } else {
+
+            elist.push(element);
+
+        }
+
+    }
+
+    function pruneEmptySpans(element) {
+
+        if (element.kind === 'br') {
+            
+            return false;
+            
+        } else if ('text' in element) {
+            
+            return  element.text.length === 0;
+            
+        } else if ('contents' in element) {
+            
+            var i = element.contents.length;
+
+            while (i--) {
+                
+                if (pruneEmptySpans(element.contents[i])) {
+                    element.contents.splice(i, 1);
+                }
+                
+            }
+            
+            return element.contents.length === 0;
+
+        }
+    }
+
+    function ISD(tt) {
+        this.contents = [];
+        this.aspectRatio = tt.aspectRatio;
+    }
+
+    function ISDContentElement(ttelem) {
+
+        /* assume the element is a region if it does not have a kind */
+
+        this.kind = ttelem.kind || 'region';
+        
+        /* copy id */
+        
+        if (ttelem.id) {
+            this.id = ttelem.id;
+        }
+
+        /* deep copy of style attributes */
+        this.styleAttrs = {};
+
+        for (var sname in ttelem.styleAttrs) {
+
+            this.styleAttrs[sname] =
+                ttelem.styleAttrs[sname];
+        }
+
+        /* TODO: clean this! */
+
+        if ('text' in ttelem) {
+
+            this.text = ttelem.text;
+
+        } else if (ttelem.kind !== 'br') {
+            
+            this.contents = [];
+        }
+
+        if ('space' in ttelem) {
+
+            this.space = ttelem.space;
+        }
+    }
+
+
+    /*
+     * ERROR HANDLING UTILITY FUNCTIONS
+     * 
+     */
+
+    function reportInfo(errorHandler, msg) {
+
+        if (errorHandler && errorHandler.info && errorHandler.info(msg))
+            throw msg;
+
+    }
+
+    function reportWarning(errorHandler, msg) {
+
+        if (errorHandler && errorHandler.warn && errorHandler.warn(msg))
+            throw msg;
+
+    }
+
+    function reportError(errorHandler, msg) {
+
+        if (errorHandler && errorHandler.error && errorHandler.error(msg))
+            throw msg;
+
+    }
+
+    function reportFatal(errorHandler, msg) {
+
+        if (errorHandler && errorHandler.fatal)
+            errorHandler.fatal(msg);
+
+        throw msg;
+
+    }
+
+
+})(typeof exports === 'undefined' ? this.imscISD = {} : exports,
+    typeof imscNames === 'undefined' ? _dereq_(17) : imscNames,
+    typeof imscStyles === 'undefined' ? _dereq_(18) : imscStyles
+    );
+
+},{"17":17,"18":18}],16:[function(_dereq_,module,exports){
+/* 
+ * Copyright (c) 2016, Pierre-Anthony Lemieux <pal@sandflow.com>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+exports.generateISD = _dereq_(15).generateISD;
+exports.fromXML = _dereq_(13).fromXML;
+exports.renderHTML = _dereq_(14).render;
+},{"13":13,"14":14,"15":15}],17:[function(_dereq_,module,exports){
+/* 
+ * Copyright (c) 2016, Pierre-Anthony Lemieux <pal@sandflow.com>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * @module imscNames
+ */
+
+;
+(function (imscNames) { // wrapper for non-node envs
+
+    imscNames.ns_tt = "http://www.w3.org/ns/ttml";
+    imscNames.ns_tts = "http://www.w3.org/ns/ttml#styling";
+    imscNames.ns_ttp = "http://www.w3.org/ns/ttml#parameter";
+    imscNames.ns_xml = "http://www.w3.org/XML/1998/namespace";
+    imscNames.ns_itts = "http://www.w3.org/ns/ttml/profile/imsc1#styling";
+    imscNames.ns_ittp = "http://www.w3.org/ns/ttml/profile/imsc1#parameter";
+    imscNames.ns_smpte = "http://www.smpte-ra.org/schemas/2052-1/2010/smpte-tt";
+    imscNames.ns_ebutts = "urn:ebu:tt:style";
+    
+})(typeof exports === 'undefined' ? this.imscNames = {} : exports);
+
+
+
+
+
+},{}],18:[function(_dereq_,module,exports){
+/* 
+ * Copyright (c) 2016, Pierre-Anthony Lemieux <pal@sandflow.com>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * @module imscStyles
+ */
+
+;
+(function (imscStyles, imscNames, imscUtils) { // wrapper for non-node envs
+
+    function StylingAttributeDefinition(ns, name, initialValue, appliesTo, isInherit, isAnimatable, parseFunc, computeFunc) {
+        this.name = name;
+        this.ns = ns;
+        this.qname = ns + " " + name;
+        this.inherit = isInherit;
+        this.animatable = isAnimatable;
+        this.initial = initialValue;
+        this.applies = appliesTo;
+        this.parse = parseFunc;
+        this.compute = computeFunc;
+    }
+
+    imscStyles.all = [
+
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "backgroundColor",
+                "transparent",
+                ['body', 'div', 'p', 'region', 'span'],
+                false,
+                true,
+                imscUtils.parseColor,
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "color",
+                "white",
+                ['span'],
+                true,
+                true,
+                imscUtils.parseColor,
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "direction",
+                "ltr",
+                ['p', 'span'],
+                true,
+                true,
+                function (str) {
+                    return str;
+                },
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "display",
+                "auto",
+                ['body', 'div', 'p', 'region', 'span'],
+                false,
+                true,
+                function (str) {
+                    return str;
+                },
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "displayAlign",
+                "before",
+                ['region'],
+                false,
+                true,
+                function (str) {
+                    return str;
+                },
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "extent",
+                "auto",
+                ['tt', 'region'],
+                false,
+                true,
+                function (str) {
+
+                    if (str === "auto") {
+
+                        return str;
+
+                    } else {
+
+                        var s = str.split(" ");
+                        if (s.length !== 2) return null;
+                        var w = imscUtils.parseLength(s[0]);
+                        var h = imscUtils.parseLength(s[1]);
+                        if (!h || !w) return null;
+                        return {'h': h, 'w': w};
+                    }
+
+                },
+                function (doc, parent, element, attr, context) {
+
+                    var h;
+                    var w;
+
+                    if (attr === "auto") {
+
+                        h = 1;
+
+                    } else if (attr.h.unit === "%") {
+
+                        h = attr.h.value / 100;
+
+                    } else if (attr.h.unit === "px") {
+
+                        h = attr.h.value / doc.pxDimensions.h;
+
+                    } else {
+
+                        return null;
+
+                    }
+
+                    if (attr === "auto") {
+
+                        w = 1;
+
+                    } else if (attr.w.unit === "%") {
+
+                        w = attr.w.value / 100;
+
+                    } else if (attr.w.unit === "px") {
+
+                        w = attr.w.value / doc.pxDimensions.w;
+
+                    } else {
+
+                        return null;
+
+                    }
+
+                    return {'h': h, 'w': w};
+                }
+        ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "fontFamily",
+                "default",
+                ['span'],
+                true,
+                true,
+                function (str) {
+                    var ffs = str.split(",");
+                    var rslt = [];
+
+                    for (var i in ffs) {
+
+                        if (ffs[i].charAt(0) !== "'" && ffs[i].charAt(0) !== '"') {
+
+                            if (ffs[i] === "default") {
+
+                                /* per IMSC1 */
+
+                                rslt.push("monospaceSerif");
+
+                            } else {
+
+                                rslt.push(ffs[i]);
+
+                            }
+
+                        } else {
+
+                            rslt.push(ffs[i]);
+
+                        }
+
+                    }
+
+                    return rslt;
+                },
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "fontSize",
+                "1c",
+                ['span'],
+                true,
+                true,
+                imscUtils.parseLength,
+                function (doc, parent, element, attr, context) {
+
+                    var fs;
+
+                    if (attr.unit === "%") {
+
+                        if (parent !== null) {
+
+                            fs = parent.styleAttrs[imscStyles.byName.fontSize.qname] * attr.value / 100;
+
+                        } else {
+
+                            /* region, so percent of 1c */
+
+                            fs = attr.value / 100 / doc.cellResolution.h;
+
+                        }
+
+                    } else if (attr.unit === "em") {
+
+                        if (parent !== null) {
+
+                            fs = parent.styleAttrs[imscStyles.byName.fontSize.qname] * attr.value;
+
+                        } else {
+
+                            /* region, so percent of 1c */
+
+                            fs = attr.value / doc.cellResolution.h;
+
+                        }
+
+                    } else if (attr.unit === "c") {
+
+                        fs = attr.value / doc.cellResolution.h;
+
+                    } else if (attr.unit === "px") {
+
+                        fs = attr.value / doc.pxDimensions.h;
+
+                    } else {
+
+                        return null;
+
+                    }
+
+                    return fs;
+                }
+        ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "fontStyle",
+                "normal",
+                ['span'],
+                true,
+                true,
+                function (str) {
+                    /* TODO: handle font style */
+
+                    return str;
+                },
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "fontWeight",
+                "normal",
+                ['span'],
+                true,
+                true,
+                function (str) {
+                    /* TODO: handle font weight */
+
+                    return str;
+                },
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "lineHeight",
+                "normal",
+                ['p'],
+                true,
+                true,
+                function (str) {
+                    if (str === "normal") {
+                        return str;
+                    } else {
+                        return imscUtils.parseLength(str);
+                    }
+                },
+                function (doc, parent, element, attr, context) {
+
+                    var lh;
+
+                    if (attr === "normal") {
+
+                        /* inherit normal per https://github.com/w3c/ttml1/issues/220 */
+
+                        lh = attr;
+
+                    } else if (attr.unit === "%") {
+
+                        lh = element.styleAttrs[imscStyles.byName.fontSize.qname] * attr.value / 100;
+
+                    } else if (attr.unit === "em") {
+
+                        lh = element.styleAttrs[imscStyles.byName.fontSize.qname] * attr.value;
+
+                    } else if (attr.unit === "c") {
+
+                        lh = attr.value / doc.cellResolution.h;
+
+                    } else if (attr.unit === "px") {
+
+                        /* TODO: handle error if no px dimensions are provided */
+
+                        lh = attr.value / doc.pxDimensions.h;
+
+                    } else {
+
+                        return null;
+
+                    }
+
+                    /* TODO: create a Length constructor */
+
+                    return lh;
+                }
+        ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "opacity",
+                1.0,
+                ['region'],
+                false,
+                true,
+                parseFloat,
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "origin",
+                "auto",
+                ['region'],
+                false,
+                true,
+                function (str) {
+
+                    if (str === "auto") {
+
+                        return str;
+
+                    } else {
+
+                        var s = str.split(" ");
+                        if (s.length !== 2) return null;
+                        var w = imscUtils.parseLength(s[0]);
+                        var h = imscUtils.parseLength(s[1]);
+                        if (!h || !w) return null;
+                        return {'h': h, 'w': w};
+                    }
+
+                },
+                function (doc, parent, element, attr, context) {
+
+                    var h;
+                    var w;
+
+                    if (attr === "auto") {
+
+                        h = 0;
+
+                    } else if (attr.h.unit === "%") {
+
+                        h = attr.h.value / 100;
+
+                    } else if (attr.h.unit === "px") {
+
+                        h = attr.h.value / doc.pxDimensions.h;
+
+                    } else {
+
+                        return null;
+
+                    }
+
+                    if (attr === "auto") {
+
+                        w = 0;
+
+                    } else if (attr.w.unit === "%") {
+
+                        w = attr.w.value / 100;
+
+                    } else if (attr.w.unit === "px") {
+
+                        w = attr.w.value / doc.pxDimensions.w;
+
+                    } else {
+
+                        return null;
+
+                    }
+
+                    return {'h': h, 'w': w};
+                }
+        ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "overflow",
+                "hidden",
+                ['region'],
+                false,
+                true,
+                function (str) {
+                    return str;
+                },
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "padding",
+                "0px",
+                ['region'],
+                false,
+                true,
+                function (str) {
+
+                    var s = str.split(" ");
+                    if (s.length > 4) return null;
+                    var r = [];
+                    for (var i in s) {
+
+                        var l = imscUtils.parseLength(s[i]);
+                        if (!l) return null;
+                        r.push(l);
+                    }
+
+                    return r;
+                },
+                function (doc, parent, element, attr, context) {
+
+                    var padding;
+
+                    /* TODO: make sure we are in region */
+
+                    /*
+                     * expand padding shortcuts to 
+                     * [before, end, after, start]
+                     * 
+                     */
+
+                    if (attr.length === 1) {
+
+                        padding = [attr[0], attr[0], attr[0], attr[0]];
+
+                    } else if (attr.length === 2) {
+
+                        padding = [attr[0], attr[1], attr[0], attr[1]];
+
+                    } else if (attr.length === 3) {
+
+                        padding = [attr[0], attr[1], attr[2], attr[1]];
+
+                    } else if (attr.length === 4) {
+
+                        padding = [attr[0], attr[1], attr[2], attr[3]];
+
+                    } else {
+
+                        return null;
+
+                    }
+
+                    /* TODO: take into account tts:direction */
+
+                    /* 
+                     * transform [before, end, after, start] according to writingMode to 
+                     * [top,left,bottom,right]
+                     * 
+                     */
+
+                    var dir = element.styleAttrs[imscStyles.byName.writingMode.qname];
+
+                    if (dir === "lrtb" || dir === "lr") {
+
+                        padding = [padding[0], padding[3], padding[2], padding[1]];
+
+                    } else if (dir === "rltb" || dir === "rl") {
+
+                        padding = [padding[0], padding[1], padding[2], padding[3]];
+
+                    } else if (dir === "tblr") {
+
+                        padding = [padding[3], padding[0], padding[1], padding[2]];
+
+                    } else if (dir === "tbrl" || dir === "tb") {
+
+                        padding = [padding[3], padding[2], padding[1], padding[0]];
+
+                    } else {
+
+                        return null;
+
+                    }
+
+                    var out = [];
+
+                    for (var i in padding) {
+
+                        if (padding[i].value === 0) {
+
+                            out[i] = 0;
+
+                        } else if (padding[i].unit === "%") {
+
+                            if (i === "0" || i === "2") {
+
+                                out[i] = element.styleAttrs[imscStyles.byName.extent.qname].h * padding[i].value / 100;
+
+                            } else {
+
+                                out[i] = element.styleAttrs[imscStyles.byName.extent.qname].w * padding[i].value / 100;
+                            }
+
+                        } else if (padding[i].unit === "em") {
+
+                            out[i] = element.styleAttrs[imscStyles.byName.fontSize.qname] * padding[i].value;
+
+                        } else if (padding[i].unit === "c") {
+
+                            out[i] = padding[i].value / doc.cellResolution.h;
+
+                        } else if (padding[i].unit === "px") {
+                            
+                            if (i === "0" || i === "2") {
+
+                                out[i] = padding[i].value / doc.pxDimensions.h;
+
+                            } else {
+
+                                out[i] = padding[i].value / doc.pxDimensions.w;
+                            }
+                            
+                        } else {
+
+                            return null;
+
+                        }
+                    }
+
+
+                    return out;
+                }
+        ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "showBackground",
+                "always",
+                ['region'],
+                false,
+                true,
+                function (str) {
+                    return str;
+                },
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "textAlign",
+                "start",
+                ['p'],
+                true,
+                true,
+                function (str) {
+                    return str;
+                },
+                function (doc, parent, element, attr, context) {
+                    
+                    /* Section 7.16.9 of XSL */
+                    
+                    if (attr === "left") {
+                        
+                        return "start";
+                        
+                    } else if (attr === "right") {
+                        
+                        return "end";
+                        
+                    } else {
+                        
+                        return attr;
+                        
+                    }
+                }
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "textDecoration",
+                "none",
+                ['span'],
+                true,
+                true,
+                function (str) {
+                    return str.split(" ");
+                },
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "textOutline",
+                "none",
+                ['span'],
+                true,
+                true,
+                function (str) {
+
+                    /*
+                     * returns {c: <color>?, thichness: <length>} | "none"
+                     * 
+                     */
+
+                    if (str === "none") {
+
+                        return str;
+
+                    } else {
+
+                        var r = {};
+                        var s = str.split(" ");
+                        if (s.length === 0 || s.length > 2) return null;
+                        var c = imscUtils.parseColor(s[0]);
+                       
+                        r.color = c;
+                        
+                        if (c !== null) s.shift();
+
+                        if (s.length !== 1) return null;
+
+                        var l = imscUtils.parseLength(s[0]);
+
+                        if (!l) return null;
+
+                        r.thickness = l;
+
+                        return r;
+                    }
+
+                },
+                function (doc, parent, element, attr, context) {
+
+                    /*
+                     * returns {color: <color>, thickness: <norm length>}
+                     * 
+                     */
+
+                    if (attr === "none") return attr;
+
+                    var rslt = {};
+
+                    if (attr.color === null) {
+                        
+                        rslt.color = element.styleAttrs[imscStyles.byName.color.qname];
+                        
+                    } else {
+                        
+                        rslt.color = attr.color;
+
+                    }
+
+                    if (attr.thickness.unit === "%") {
+
+                        rslt.thickness = element.styleAttrs[imscStyles.byName.fontSize.qname] * attr.thickness.value / 100;
+
+                    } else if (attr.thickness.unit === "em") {
+
+                        rslt.thickness = element.styleAttrs[imscStyles.byName.fontSize.qname] * attr.thickness.value;
+
+                    } else if (attr.thickness.unit === "c") {
+
+                        rslt.thickness = attr.thickness.value / doc.cellResolution.h;
+
+                    } else if (attr.thickness.unit === "px") {
+
+                        rslt.thickness = attr.thickness.value / doc.pxDimensions.h;
+
+                    } else {
+
+                        return null;
+
+                    }
+
+
+                    return rslt;
+                }
+        ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "unicodeBidi",
+                "normal",
+                ['span', 'p'],
+                false,
+                true,
+                function (str) {
+                    return str;
+                },
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "visibility",
+                "visible",
+                ['body', 'div', 'p', 'region', 'span'],
+                true,
+                true,
+                function (str) {
+                    return str;
+                },
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "wrapOption",
+                "wrap",
+                ['span'],
+                true,
+                true,
+                function (str) {
+                    return str;
+                },
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "writingMode",
+                "lrtb",
+                ['region'],
+                false,
+                true,
+                function (str) {
+                    return str;
+                },
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_tts,
+                "zIndex",
+                "auto",
+                ['region'],
+                false,
+                true,
+                function (str) {
+                    
+                    var rslt;
+                    
+                    if (str === 'auto') {
+                        
+                        rslt = str;
+                        
+                    } else {
+                        
+                        rslt = parseInt(str);
+                        
+                        if (isNaN(rslt)) {
+                            rslt = null;
+                        }
+                        
+                    }
+                    
+                    return rslt;
+                },
+                null
+                ),
+        new StylingAttributeDefinition(
+                imscNames.ns_ebutts,
+                "linePadding",
+                "0c",
+                ['p'],
+                true,
+                false,
+                imscUtils.parseLength,
+                function (doc, parent, element, attr, context) {
+                    if (attr.unit === "c") {
+
+                        return attr.value / doc.cellResolution.h;
+
+                    } else {
+
+                        return null;
+
+                    }
+                }
+        ),
+        new StylingAttributeDefinition(
+                imscNames.ns_ebutts,
+                "multiRowAlign",
+                "auto",
+                ['p'],
+                true,
+                false,
+                function (str) {
+                    return str;
+                },
+                null
+                ),
+
+        new StylingAttributeDefinition(
+                imscNames.ns_smpte,
+                "backgroundImage",
+                null,
+                ['div'],
+                false,
+                false,
+                function (str) {
+                    return str;
+                },
+                null
+                ),
+
+        new StylingAttributeDefinition(
+                imscNames.ns_itts,
+                "forcedDisplay",
+                "false",
+                ['body', 'div', 'p', 'region', 'span'],
+                true,
+                true,
+                function (str) {
+                    return str === 'true' ? true : false;
+                },
+                null
+                ),
+
+        new StylingAttributeDefinition(
+                imscNames.ns_itts,
+                "fillLineGap",
+                "false",
+                ['p'],
+                true,
+                true,
+                function (str) {
+                    return str === 'true' ? true : false;
+                },
+                null
+                )
+    ];
+
+    /* TODO: allow null parse function */
+
+    imscStyles.byQName = {};
+    for (var i in imscStyles.all) {
+
+        imscStyles.byQName[imscStyles.all[i].qname] = imscStyles.all[i];
+    }
+
+    imscStyles.byName = {};
+    for (var j in imscStyles.all) {
+
+        imscStyles.byName[imscStyles.all[j].name] = imscStyles.all[j];
+    }
+
+})(typeof exports === 'undefined' ? this.imscStyles = {} : exports,
+        typeof imscNames === 'undefined' ? _dereq_(17) : imscNames,
+        typeof imscUtils === 'undefined' ? _dereq_(19) : imscUtils);
+
+},{"17":17,"19":19}],19:[function(_dereq_,module,exports){
+/* 
+ * Copyright (c) 2016, Pierre-Anthony Lemieux <pal@sandflow.com>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * @module imscUtils
+ */
+
+;
+(function (imscUtils) { // wrapper for non-node envs
+    
+    /* Documents the error handler interface */
+    
+    /**
+     * @classdesc Generic interface for handling events. The interface exposes four
+     * methods:
+     * * <pre>info</pre>: unusual event that does not result in an inconsistent state
+     * * <pre>warn</pre>: unexpected event that should not result in an inconsistent state
+     * * <pre>error</pre>: unexpected event that may result in an inconsistent state
+     * * <pre>fatal</pre>: unexpected event that results in an inconsistent state
+     *   and termination of processing
+     * Each method takes a single <pre>string</pre> describing the event as argument,
+     * and returns a single <pre>boolean</pre>, which terminates processing if <pre>true</pre>.
+     *
+     * @name ErrorHandler
+     * @class
+     */
+
+
+    /*
+     * Parses a TTML color expression
+     * 
+     */
+
+    var HEX_COLOR_RE = /#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?/;
+    var DEC_COLOR_RE = /rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/;
+    var DEC_COLORA_RE = /rgba\(\s*(\d+),\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/;
+    var NAMED_COLOR = {
+        transparent: [0, 0, 0, 0],
+        black: [0, 0, 0, 255],
+        silver: [192, 192, 192, 255],
+        gray: [128, 128, 128, 255],
+        white: [255, 255, 255, 255],
+        maroon: [128, 0, 0, 255],
+        red: [255, 0, 0, 255],
+        purple: [128, 0, 128, 255],
+        fuchsia: [255, 0, 255, 255],
+        magenta: [255, 0, 255, 255],
+        green: [0, 128, 0, 255],
+        lime: [0, 255, 0, 255],
+        olive: [128, 128, 0, 255],
+        yellow: [255, 255, 0, 255],
+        navy: [0, 0, 128, 255],
+        blue: [0, 0, 255, 255],
+        teal: [0, 128, 128, 255],
+        aqua: [0, 255, 255, 255],
+        cyan: [0, 255, 255, 255]
+    };
+
+    imscUtils.parseColor = function (str) {
+
+        var m;
+        
+        var r = null;
+        
+        var nc = NAMED_COLOR[str.toLowerCase()];
+        
+        if (nc !== undefined) {
+
+            r = nc;
+
+        } else if ((m = HEX_COLOR_RE.exec(str)) !== null) {
+
+            r = [parseInt(m[1], 16),
+                parseInt(m[2], 16),
+                parseInt(m[3], 16),
+                (m[4] !== undefined ? parseInt(m[4], 16) : 255)];
+            
+        } else if ((m = DEC_COLOR_RE.exec(str)) !== null) {
+
+            r = [parseInt(m[1]),
+                parseInt(m[2]),
+                parseInt(m[3]),
+                255];
+            
+        } else if ((m = DEC_COLORA_RE.exec(str)) !== null) {
+
+            r = [parseInt(m[1]),
+                parseInt(m[2]),
+                parseInt(m[3]),
+                parseInt(m[4])];
+            
+        }
+
+        return r;
+    };
+
+    var LENGTH_RE = /^((?:\+|\-)?\d*(?:\.\d+)?)(px|em|c|%)$/;
+
+    imscUtils.parseLength = function (str) {
+
+        var m;
+
+        var r = null;
+
+        if ((m = LENGTH_RE.exec(str)) !== null) {
+
+            r = {value: parseFloat(m[1]), unit: m[2]};
+        }
+
+        return r;
+    };
+
+})(typeof exports === 'undefined' ? this.imscUtils = {} : exports);
+
+},{}],20:[function(_dereq_,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -5557,7 +10509,14 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],17:[function(_dereq_,module,exports){
+},{}],21:[function(_dereq_,module,exports){
+var toString = {}.toString;
+
+module.exports = Array.isArray || function (arr) {
+  return toString.call(arr) == '[object Array]';
+};
+
+},{}],22:[function(_dereq_,module,exports){
 (function (process){
 'use strict';
 
@@ -5604,9 +10563,9 @@ function nextTick(fn, arg1, arg2, arg3) {
 }
 
 
-}).call(this,_dereq_(18))
+}).call(this,_dereq_(23))
 
-},{"18":18}],18:[function(_dereq_,module,exports){
+},{"23":23}],23:[function(_dereq_,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -5792,10 +10751,10 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],19:[function(_dereq_,module,exports){
-module.exports = _dereq_(20);
+},{}],24:[function(_dereq_,module,exports){
+module.exports = _dereq_(25);
 
-},{"20":20}],20:[function(_dereq_,module,exports){
+},{"25":25}],25:[function(_dereq_,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -5826,7 +10785,7 @@ module.exports = _dereq_(20);
 
 /*<replacement>*/
 
-var pna = _dereq_(17);
+var pna = _dereq_(22);
 /*</replacement>*/
 
 /*<replacement>*/
@@ -5841,12 +10800,12 @@ var objectKeys = Object.keys || function (obj) {
 module.exports = Duplex;
 
 /*<replacement>*/
-var util = _dereq_(12);
-util.inherits = _dereq_(15);
+var util = _dereq_(33);
+util.inherits = _dereq_(34);
 /*</replacement>*/
 
-var Readable = _dereq_(22);
-var Writable = _dereq_(24);
+var Readable = _dereq_(27);
+var Writable = _dereq_(29);
 
 util.inherits(Duplex, Readable);
 
@@ -5927,7 +10886,7 @@ Duplex.prototype._destroy = function (err, cb) {
 
   pna.nextTick(cb, err);
 };
-},{"12":12,"15":15,"17":17,"22":22,"24":24}],21:[function(_dereq_,module,exports){
+},{"22":22,"27":27,"29":29,"33":33,"34":34}],26:[function(_dereq_,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -5957,11 +10916,11 @@ Duplex.prototype._destroy = function (err, cb) {
 
 module.exports = PassThrough;
 
-var Transform = _dereq_(23);
+var Transform = _dereq_(28);
 
 /*<replacement>*/
-var util = _dereq_(12);
-util.inherits = _dereq_(15);
+var util = _dereq_(33);
+util.inherits = _dereq_(34);
 /*</replacement>*/
 
 util.inherits(PassThrough, Transform);
@@ -5975,7 +10934,7 @@ function PassThrough(options) {
 PassThrough.prototype._transform = function (chunk, encoding, cb) {
   cb(null, chunk);
 };
-},{"12":12,"15":15,"23":23}],22:[function(_dereq_,module,exports){
+},{"28":28,"33":33,"34":34}],27:[function(_dereq_,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -6002,13 +10961,13 @@ PassThrough.prototype._transform = function (chunk, encoding, cb) {
 
 /*<replacement>*/
 
-var pna = _dereq_(17);
+var pna = _dereq_(22);
 /*</replacement>*/
 
 module.exports = Readable;
 
 /*<replacement>*/
-var isArray = _dereq_(28);
+var isArray = _dereq_(21);
 /*</replacement>*/
 
 /*<replacement>*/
@@ -6018,7 +10977,7 @@ var Duplex;
 Readable.ReadableState = ReadableState;
 
 /*<replacement>*/
-var EE = _dereq_(13).EventEmitter;
+var EE = _dereq_(10).EventEmitter;
 
 var EElistenerCount = function (emitter, type) {
   return emitter.listeners(type).length;
@@ -6026,12 +10985,12 @@ var EElistenerCount = function (emitter, type) {
 /*</replacement>*/
 
 /*<replacement>*/
-var Stream = _dereq_(27);
+var Stream = _dereq_(32);
 /*</replacement>*/
 
 /*<replacement>*/
 
-var Buffer = _dereq_(34).Buffer;
+var Buffer = _dereq_(40).Buffer;
 var OurUint8Array = global.Uint8Array || function () {};
 function _uint8ArrayToBuffer(chunk) {
   return Buffer.from(chunk);
@@ -6043,12 +11002,12 @@ function _isUint8Array(obj) {
 /*</replacement>*/
 
 /*<replacement>*/
-var util = _dereq_(12);
-util.inherits = _dereq_(15);
+var util = _dereq_(33);
+util.inherits = _dereq_(34);
 /*</replacement>*/
 
 /*<replacement>*/
-var debugUtil = _dereq_(9);
+var debugUtil = _dereq_(7);
 var debug = void 0;
 if (debugUtil && debugUtil.debuglog) {
   debug = debugUtil.debuglog('stream');
@@ -6057,8 +11016,8 @@ if (debugUtil && debugUtil.debuglog) {
 }
 /*</replacement>*/
 
-var BufferList = _dereq_(25);
-var destroyImpl = _dereq_(26);
+var BufferList = _dereq_(30);
+var destroyImpl = _dereq_(31);
 var StringDecoder;
 
 util.inherits(Readable, Stream);
@@ -6078,7 +11037,7 @@ function prependListener(emitter, event, fn) {
 }
 
 function ReadableState(options, stream) {
-  Duplex = Duplex || _dereq_(20);
+  Duplex = Duplex || _dereq_(25);
 
   options = options || {};
 
@@ -6148,14 +11107,14 @@ function ReadableState(options, stream) {
   this.decoder = null;
   this.encoding = null;
   if (options.encoding) {
-    if (!StringDecoder) StringDecoder = _dereq_(29).StringDecoder;
+    if (!StringDecoder) StringDecoder = _dereq_(35).StringDecoder;
     this.decoder = new StringDecoder(options.encoding);
     this.encoding = options.encoding;
   }
 }
 
 function Readable(options) {
-  Duplex = Duplex || _dereq_(20);
+  Duplex = Duplex || _dereq_(25);
 
   if (!(this instanceof Readable)) return new Readable(options);
 
@@ -6304,7 +11263,7 @@ Readable.prototype.isPaused = function () {
 
 // backwards compatibility.
 Readable.prototype.setEncoding = function (enc) {
-  if (!StringDecoder) StringDecoder = _dereq_(29).StringDecoder;
+  if (!StringDecoder) StringDecoder = _dereq_(35).StringDecoder;
   this._readableState.decoder = new StringDecoder(enc);
   this._readableState.encoding = enc;
   return this;
@@ -6996,9 +11955,9 @@ function indexOf(xs, x) {
   }
   return -1;
 }
-}).call(this,_dereq_(18),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+}).call(this,_dereq_(23),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"12":12,"13":13,"15":15,"17":17,"18":18,"20":20,"25":25,"26":26,"27":27,"28":28,"29":29,"34":34,"9":9}],23:[function(_dereq_,module,exports){
+},{"10":10,"21":21,"22":22,"23":23,"25":25,"30":30,"31":31,"32":32,"33":33,"34":34,"35":35,"40":40,"7":7}],28:[function(_dereq_,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -7066,11 +12025,11 @@ function indexOf(xs, x) {
 
 module.exports = Transform;
 
-var Duplex = _dereq_(20);
+var Duplex = _dereq_(25);
 
 /*<replacement>*/
-var util = _dereq_(12);
-util.inherits = _dereq_(15);
+var util = _dereq_(33);
+util.inherits = _dereq_(34);
 /*</replacement>*/
 
 util.inherits(Transform, Duplex);
@@ -7213,8 +12172,8 @@ function done(stream, er, data) {
 
   return stream.push(null);
 }
-},{"12":12,"15":15,"20":20}],24:[function(_dereq_,module,exports){
-(function (process,global){
+},{"25":25,"33":33,"34":34}],29:[function(_dereq_,module,exports){
+(function (process,global,setImmediate){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -7244,7 +12203,7 @@ function done(stream, er, data) {
 
 /*<replacement>*/
 
-var pna = _dereq_(17);
+var pna = _dereq_(22);
 /*</replacement>*/
 
 module.exports = Writable;
@@ -7281,23 +12240,23 @@ var Duplex;
 Writable.WritableState = WritableState;
 
 /*<replacement>*/
-var util = _dereq_(12);
-util.inherits = _dereq_(15);
+var util = _dereq_(33);
+util.inherits = _dereq_(34);
 /*</replacement>*/
 
 /*<replacement>*/
 var internalUtil = {
-  deprecate: _dereq_(37)
+  deprecate: _dereq_(46)
 };
 /*</replacement>*/
 
 /*<replacement>*/
-var Stream = _dereq_(27);
+var Stream = _dereq_(32);
 /*</replacement>*/
 
 /*<replacement>*/
 
-var Buffer = _dereq_(34).Buffer;
+var Buffer = _dereq_(40).Buffer;
 var OurUint8Array = global.Uint8Array || function () {};
 function _uint8ArrayToBuffer(chunk) {
   return Buffer.from(chunk);
@@ -7308,14 +12267,14 @@ function _isUint8Array(obj) {
 
 /*</replacement>*/
 
-var destroyImpl = _dereq_(26);
+var destroyImpl = _dereq_(31);
 
 util.inherits(Writable, Stream);
 
 function nop() {}
 
 function WritableState(options, stream) {
-  Duplex = Duplex || _dereq_(20);
+  Duplex = Duplex || _dereq_(25);
 
   options = options || {};
 
@@ -7465,7 +12424,7 @@ if (typeof Symbol === 'function' && Symbol.hasInstance && typeof Function.protot
 }
 
 function Writable(options) {
-  Duplex = Duplex || _dereq_(20);
+  Duplex = Duplex || _dereq_(25);
 
   // Writable ctor is applied to Duplexes, too.
   // `realHasInstance` is necessary because using plain `instanceof`
@@ -7902,15 +12861,15 @@ Writable.prototype._destroy = function (err, cb) {
   this.end();
   cb(err);
 };
-}).call(this,_dereq_(18),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+}).call(this,_dereq_(23),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},_dereq_(45).setImmediate)
 
-},{"12":12,"15":15,"17":17,"18":18,"20":20,"26":26,"27":27,"34":34,"37":37}],25:[function(_dereq_,module,exports){
+},{"22":22,"23":23,"25":25,"31":31,"32":32,"33":33,"34":34,"40":40,"45":45,"46":46}],30:[function(_dereq_,module,exports){
 'use strict';
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Buffer = _dereq_(34).Buffer;
-var util = _dereq_(9);
+var Buffer = _dereq_(40).Buffer;
+var util = _dereq_(7);
 
 function copyBuffer(src, target, offset) {
   src.copy(target, offset);
@@ -7984,12 +12943,12 @@ if (util && util.inspect && util.inspect.custom) {
     return this.constructor.name + ' ' + obj;
   };
 }
-},{"34":34,"9":9}],26:[function(_dereq_,module,exports){
+},{"40":40,"7":7}],31:[function(_dereq_,module,exports){
 'use strict';
 
 /*<replacement>*/
 
-var pna = _dereq_(17);
+var pna = _dereq_(22);
 /*</replacement>*/
 
 // undocumented cb() API, needed for core, not for public API
@@ -8059,12 +13018,147 @@ module.exports = {
   destroy: destroy,
   undestroy: undestroy
 };
-},{"17":17}],27:[function(_dereq_,module,exports){
-module.exports = _dereq_(13).EventEmitter;
+},{"22":22}],32:[function(_dereq_,module,exports){
+module.exports = _dereq_(10).EventEmitter;
 
-},{"13":13}],28:[function(_dereq_,module,exports){
-arguments[4][11][0].apply(exports,arguments)
-},{"11":11}],29:[function(_dereq_,module,exports){
+},{"10":10}],33:[function(_dereq_,module,exports){
+(function (Buffer){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+// NOTE: These type checking functions intentionally don't use `instanceof`
+// because it is fragile and can be easily faked with `Object.create()`.
+
+function isArray(arg) {
+  if (Array.isArray) {
+    return Array.isArray(arg);
+  }
+  return objectToString(arg) === '[object Array]';
+}
+exports.isArray = isArray;
+
+function isBoolean(arg) {
+  return typeof arg === 'boolean';
+}
+exports.isBoolean = isBoolean;
+
+function isNull(arg) {
+  return arg === null;
+}
+exports.isNull = isNull;
+
+function isNullOrUndefined(arg) {
+  return arg == null;
+}
+exports.isNullOrUndefined = isNullOrUndefined;
+
+function isNumber(arg) {
+  return typeof arg === 'number';
+}
+exports.isNumber = isNumber;
+
+function isString(arg) {
+  return typeof arg === 'string';
+}
+exports.isString = isString;
+
+function isSymbol(arg) {
+  return typeof arg === 'symbol';
+}
+exports.isSymbol = isSymbol;
+
+function isUndefined(arg) {
+  return arg === void 0;
+}
+exports.isUndefined = isUndefined;
+
+function isRegExp(re) {
+  return objectToString(re) === '[object RegExp]';
+}
+exports.isRegExp = isRegExp;
+
+function isObject(arg) {
+  return typeof arg === 'object' && arg !== null;
+}
+exports.isObject = isObject;
+
+function isDate(d) {
+  return objectToString(d) === '[object Date]';
+}
+exports.isDate = isDate;
+
+function isError(e) {
+  return (objectToString(e) === '[object Error]' || e instanceof Error);
+}
+exports.isError = isError;
+
+function isFunction(arg) {
+  return typeof arg === 'function';
+}
+exports.isFunction = isFunction;
+
+function isPrimitive(arg) {
+  return arg === null ||
+         typeof arg === 'boolean' ||
+         typeof arg === 'number' ||
+         typeof arg === 'string' ||
+         typeof arg === 'symbol' ||  // ES6 symbol
+         typeof arg === 'undefined';
+}
+exports.isPrimitive = isPrimitive;
+
+exports.isBuffer = Buffer.isBuffer;
+
+function objectToString(o) {
+  return Object.prototype.toString.call(o);
+}
+
+}).call(this,{"isBuffer":_dereq_(20)})
+
+},{"20":20}],34:[function(_dereq_,module,exports){
+if (typeof Object.create === 'function') {
+  // implementation from standard node.js 'util' module
+  module.exports = function inherits(ctor, superCtor) {
+    ctor.super_ = superCtor
+    ctor.prototype = Object.create(superCtor.prototype, {
+      constructor: {
+        value: ctor,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      }
+    });
+  };
+} else {
+  // old school shim for old browsers
+  module.exports = function inherits(ctor, superCtor) {
+    ctor.super_ = superCtor
+    var TempCtor = function () {}
+    TempCtor.prototype = superCtor.prototype
+    ctor.prototype = new TempCtor()
+    ctor.prototype.constructor = ctor
+  }
+}
+
+},{}],35:[function(_dereq_,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -8090,7 +13184,7 @@ arguments[4][11][0].apply(exports,arguments)
 
 /*<replacement>*/
 
-var Buffer = _dereq_(34).Buffer;
+var Buffer = _dereq_(40).Buffer;
 /*</replacement>*/
 
 var isEncoding = Buffer.isEncoding || function (encoding) {
@@ -8361,27 +13455,27 @@ function simpleWrite(buf) {
 function simpleEnd(buf) {
   return buf && buf.length ? this.write(buf) : '';
 }
-},{"34":34}],30:[function(_dereq_,module,exports){
-module.exports = _dereq_(31).PassThrough
+},{"40":40}],36:[function(_dereq_,module,exports){
+module.exports = _dereq_(37).PassThrough
 
-},{"31":31}],31:[function(_dereq_,module,exports){
-exports = module.exports = _dereq_(22);
+},{"37":37}],37:[function(_dereq_,module,exports){
+exports = module.exports = _dereq_(27);
 exports.Stream = exports;
 exports.Readable = exports;
-exports.Writable = _dereq_(24);
-exports.Duplex = _dereq_(20);
-exports.Transform = _dereq_(23);
-exports.PassThrough = _dereq_(21);
+exports.Writable = _dereq_(29);
+exports.Duplex = _dereq_(25);
+exports.Transform = _dereq_(28);
+exports.PassThrough = _dereq_(26);
 
-},{"20":20,"21":21,"22":22,"23":23,"24":24}],32:[function(_dereq_,module,exports){
-module.exports = _dereq_(31).Transform
+},{"25":25,"26":26,"27":27,"28":28,"29":29}],38:[function(_dereq_,module,exports){
+module.exports = _dereq_(37).Transform
 
-},{"31":31}],33:[function(_dereq_,module,exports){
-module.exports = _dereq_(24);
+},{"37":37}],39:[function(_dereq_,module,exports){
+module.exports = _dereq_(29);
 
-},{"24":24}],34:[function(_dereq_,module,exports){
+},{"29":29}],40:[function(_dereq_,module,exports){
 /* eslint-disable node/no-deprecated-api */
-var buffer = _dereq_(10)
+var buffer = _dereq_(8)
 var Buffer = buffer.Buffer
 
 // alternative to using Object.keys for old browsers
@@ -8443,4651 +13537,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   return buffer.SlowBuffer(size)
 }
 
-},{"10":10}],35:[function(_dereq_,module,exports){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-module.exports = Stream;
-
-var EE = _dereq_(13).EventEmitter;
-var inherits = _dereq_(15);
-
-inherits(Stream, EE);
-Stream.Readable = _dereq_(31);
-Stream.Writable = _dereq_(33);
-Stream.Duplex = _dereq_(19);
-Stream.Transform = _dereq_(32);
-Stream.PassThrough = _dereq_(30);
-
-// Backwards-compat with node 0.4.x
-Stream.Stream = Stream;
-
-
-
-// old-style streams.  Note that the pipe method (the only relevant
-// part of this class) is overridden in the Readable class.
-
-function Stream() {
-  EE.call(this);
-}
-
-Stream.prototype.pipe = function(dest, options) {
-  var source = this;
-
-  function ondata(chunk) {
-    if (dest.writable) {
-      if (false === dest.write(chunk) && source.pause) {
-        source.pause();
-      }
-    }
-  }
-
-  source.on('data', ondata);
-
-  function ondrain() {
-    if (source.readable && source.resume) {
-      source.resume();
-    }
-  }
-
-  dest.on('drain', ondrain);
-
-  // If the 'end' option is not supplied, dest.end() will be called when
-  // source gets the 'end' or 'close' events.  Only dest.end() once.
-  if (!dest._isStdio && (!options || options.end !== false)) {
-    source.on('end', onend);
-    source.on('close', onclose);
-  }
-
-  var didOnEnd = false;
-  function onend() {
-    if (didOnEnd) return;
-    didOnEnd = true;
-
-    dest.end();
-  }
-
-
-  function onclose() {
-    if (didOnEnd) return;
-    didOnEnd = true;
-
-    if (typeof dest.destroy === 'function') dest.destroy();
-  }
-
-  // don't leave dangling pipes when there are errors.
-  function onerror(er) {
-    cleanup();
-    if (EE.listenerCount(this, 'error') === 0) {
-      throw er; // Unhandled stream error in pipe.
-    }
-  }
-
-  source.on('error', onerror);
-  dest.on('error', onerror);
-
-  // remove all the event listeners that were added.
-  function cleanup() {
-    source.removeListener('data', ondata);
-    dest.removeListener('drain', ondrain);
-
-    source.removeListener('end', onend);
-    source.removeListener('close', onclose);
-
-    source.removeListener('error', onerror);
-    dest.removeListener('error', onerror);
-
-    source.removeListener('end', cleanup);
-    source.removeListener('close', cleanup);
-
-    dest.removeListener('close', cleanup);
-  }
-
-  source.on('end', cleanup);
-  source.on('close', cleanup);
-
-  dest.on('close', cleanup);
-
-  dest.emit('pipe', source);
-
-  // Allow for unix-like usage: A.pipe(B).pipe(C)
-  return dest;
-};
-
-},{"13":13,"15":15,"19":19,"30":30,"31":31,"32":32,"33":33}],36:[function(_dereq_,module,exports){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-var Buffer = _dereq_(10).Buffer;
-
-var isBufferEncoding = Buffer.isEncoding
-  || function(encoding) {
-       switch (encoding && encoding.toLowerCase()) {
-         case 'hex': case 'utf8': case 'utf-8': case 'ascii': case 'binary': case 'base64': case 'ucs2': case 'ucs-2': case 'utf16le': case 'utf-16le': case 'raw': return true;
-         default: return false;
-       }
-     }
-
-
-function assertEncoding(encoding) {
-  if (encoding && !isBufferEncoding(encoding)) {
-    throw new Error('Unknown encoding: ' + encoding);
-  }
-}
-
-// StringDecoder provides an interface for efficiently splitting a series of
-// buffers into a series of JS strings without breaking apart multi-byte
-// characters. CESU-8 is handled as part of the UTF-8 encoding.
-//
-// @TODO Handling all encodings inside a single object makes it very difficult
-// to reason about this code, so it should be split up in the future.
-// @TODO There should be a utf8-strict encoding that rejects invalid UTF-8 code
-// points as used by CESU-8.
-var StringDecoder = exports.StringDecoder = function(encoding) {
-  this.encoding = (encoding || 'utf8').toLowerCase().replace(/[-_]/, '');
-  assertEncoding(encoding);
-  switch (this.encoding) {
-    case 'utf8':
-      // CESU-8 represents each of Surrogate Pair by 3-bytes
-      this.surrogateSize = 3;
-      break;
-    case 'ucs2':
-    case 'utf16le':
-      // UTF-16 represents each of Surrogate Pair by 2-bytes
-      this.surrogateSize = 2;
-      this.detectIncompleteChar = utf16DetectIncompleteChar;
-      break;
-    case 'base64':
-      // Base-64 stores 3 bytes in 4 chars, and pads the remainder.
-      this.surrogateSize = 3;
-      this.detectIncompleteChar = base64DetectIncompleteChar;
-      break;
-    default:
-      this.write = passThroughWrite;
-      return;
-  }
-
-  // Enough space to store all bytes of a single character. UTF-8 needs 4
-  // bytes, but CESU-8 may require up to 6 (3 bytes per surrogate).
-  this.charBuffer = new Buffer(6);
-  // Number of bytes received for the current incomplete multi-byte character.
-  this.charReceived = 0;
-  // Number of bytes expected for the current incomplete multi-byte character.
-  this.charLength = 0;
-};
-
-
-// write decodes the given buffer and returns it as JS string that is
-// guaranteed to not contain any partial multi-byte characters. Any partial
-// character found at the end of the buffer is buffered up, and will be
-// returned when calling write again with the remaining bytes.
-//
-// Note: Converting a Buffer containing an orphan surrogate to a String
-// currently works, but converting a String to a Buffer (via `new Buffer`, or
-// Buffer#write) will replace incomplete surrogates with the unicode
-// replacement character. See https://codereview.chromium.org/121173009/ .
-StringDecoder.prototype.write = function(buffer) {
-  var charStr = '';
-  // if our last write ended with an incomplete multibyte character
-  while (this.charLength) {
-    // determine how many remaining bytes this buffer has to offer for this char
-    var available = (buffer.length >= this.charLength - this.charReceived) ?
-        this.charLength - this.charReceived :
-        buffer.length;
-
-    // add the new bytes to the char buffer
-    buffer.copy(this.charBuffer, this.charReceived, 0, available);
-    this.charReceived += available;
-
-    if (this.charReceived < this.charLength) {
-      // still not enough chars in this buffer? wait for more ...
-      return '';
-    }
-
-    // remove bytes belonging to the current character from the buffer
-    buffer = buffer.slice(available, buffer.length);
-
-    // get the character that was split
-    charStr = this.charBuffer.slice(0, this.charLength).toString(this.encoding);
-
-    // CESU-8: lead surrogate (D800-DBFF) is also the incomplete character
-    var charCode = charStr.charCodeAt(charStr.length - 1);
-    if (charCode >= 0xD800 && charCode <= 0xDBFF) {
-      this.charLength += this.surrogateSize;
-      charStr = '';
-      continue;
-    }
-    this.charReceived = this.charLength = 0;
-
-    // if there are no more bytes in this buffer, just emit our char
-    if (buffer.length === 0) {
-      return charStr;
-    }
-    break;
-  }
-
-  // determine and set charLength / charReceived
-  this.detectIncompleteChar(buffer);
-
-  var end = buffer.length;
-  if (this.charLength) {
-    // buffer the incomplete character bytes we got
-    buffer.copy(this.charBuffer, 0, buffer.length - this.charReceived, end);
-    end -= this.charReceived;
-  }
-
-  charStr += buffer.toString(this.encoding, 0, end);
-
-  var end = charStr.length - 1;
-  var charCode = charStr.charCodeAt(end);
-  // CESU-8: lead surrogate (D800-DBFF) is also the incomplete character
-  if (charCode >= 0xD800 && charCode <= 0xDBFF) {
-    var size = this.surrogateSize;
-    this.charLength += size;
-    this.charReceived += size;
-    this.charBuffer.copy(this.charBuffer, size, 0, size);
-    buffer.copy(this.charBuffer, 0, 0, size);
-    return charStr.substring(0, end);
-  }
-
-  // or just emit the charStr
-  return charStr;
-};
-
-// detectIncompleteChar determines if there is an incomplete UTF-8 character at
-// the end of the given buffer. If so, it sets this.charLength to the byte
-// length that character, and sets this.charReceived to the number of bytes
-// that are available for this character.
-StringDecoder.prototype.detectIncompleteChar = function(buffer) {
-  // determine how many bytes we have to check at the end of this buffer
-  var i = (buffer.length >= 3) ? 3 : buffer.length;
-
-  // Figure out if one of the last i bytes of our buffer announces an
-  // incomplete char.
-  for (; i > 0; i--) {
-    var c = buffer[buffer.length - i];
-
-    // See http://en.wikipedia.org/wiki/UTF-8#Description
-
-    // 110XXXXX
-    if (i == 1 && c >> 5 == 0x06) {
-      this.charLength = 2;
-      break;
-    }
-
-    // 1110XXXX
-    if (i <= 2 && c >> 4 == 0x0E) {
-      this.charLength = 3;
-      break;
-    }
-
-    // 11110XXX
-    if (i <= 3 && c >> 3 == 0x1E) {
-      this.charLength = 4;
-      break;
-    }
-  }
-  this.charReceived = i;
-};
-
-StringDecoder.prototype.end = function(buffer) {
-  var res = '';
-  if (buffer && buffer.length)
-    res = this.write(buffer);
-
-  if (this.charReceived) {
-    var cr = this.charReceived;
-    var buf = this.charBuffer;
-    var enc = this.encoding;
-    res += buf.slice(0, cr).toString(enc);
-  }
-
-  return res;
-};
-
-function passThroughWrite(buffer) {
-  return buffer.toString(this.encoding);
-}
-
-function utf16DetectIncompleteChar(buffer) {
-  this.charReceived = buffer.length % 2;
-  this.charLength = this.charReceived ? 2 : 0;
-}
-
-function base64DetectIncompleteChar(buffer) {
-  this.charReceived = buffer.length % 3;
-  this.charLength = this.charReceived ? 3 : 0;
-}
-
-},{"10":10}],37:[function(_dereq_,module,exports){
-(function (global){
-
-/**
- * Module exports.
- */
-
-module.exports = deprecate;
-
-/**
- * Mark that a method should not be used.
- * Returns a modified function which warns once by default.
- *
- * If `localStorage.noDeprecation = true` is set, then it is a no-op.
- *
- * If `localStorage.throwDeprecation = true` is set, then deprecated functions
- * will throw an Error when invoked.
- *
- * If `localStorage.traceDeprecation = true` is set, then deprecated functions
- * will invoke `console.trace()` instead of `console.error()`.
- *
- * @param {Function} fn - the function to deprecate
- * @param {String} msg - the string to print to the console when `fn` is invoked
- * @returns {Function} a new "deprecated" version of `fn`
- * @api public
- */
-
-function deprecate (fn, msg) {
-  if (config('noDeprecation')) {
-    return fn;
-  }
-
-  var warned = false;
-  function deprecated() {
-    if (!warned) {
-      if (config('throwDeprecation')) {
-        throw new Error(msg);
-      } else if (config('traceDeprecation')) {
-        console.trace(msg);
-      } else {
-        console.warn(msg);
-      }
-      warned = true;
-    }
-    return fn.apply(this, arguments);
-  }
-
-  return deprecated;
-}
-
-/**
- * Checks `localStorage` for boolean values for the given `name`.
- *
- * @param {String} name
- * @returns {Boolean}
- * @api private
- */
-
-function config (name) {
-  // accessing global.localStorage can trigger a DOMException in sandboxed iframes
-  try {
-    if (!global.localStorage) return false;
-  } catch (_) {
-    return false;
-  }
-  var val = global.localStorage[name];
-  if (null == val) return false;
-  return String(val).toLowerCase() === 'true';
-}
-
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-
-},{}],38:[function(_dereq_,module,exports){
-/* 
- * Copyright (c) 2016, Pierre-Anthony Lemieux <pal@sandflow.com>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice, this
- *   list of conditions and the following disclaimer.
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
-/**
- * @module imscDoc
- */
-
-;
-(function (imscDoc, sax, imscNames, imscStyles, imscUtils) {
-
-
-    /**
-     * Allows a client to provide callbacks to handle children of the <metadata> element
-     * @typedef {Object} MetadataHandler
-     * @property {?OpenTagCallBack} onOpenTag
-     * @property {?CloseTagCallBack} onCloseTag
-     * @property {?TextCallBack} onText
-     */
-
-    /**
-     * Called when the opening tag of an element node is encountered.
-     * @callback OpenTagCallBack
-     * @param {string} ns Namespace URI of the element
-     * @param {string} name Local name of the element
-     * @param {Object[]} attributes List of attributes, each consisting of a
-     *                              `uri`, `name` and `value`
-     */
-
-    /**
-     * Called when the closing tag of an element node is encountered.
-     * @callback CloseTagCallBack
-     */
-
-    /**
-     * Called when a text node is encountered.
-     * @callback TextCallBack
-     * @param {string} contents Contents of the text node
-     */
-
-    /**
-     * Parses an IMSC1 document into an opaque in-memory representation that exposes
-     * a single method <pre>getMediaTimeEvents()</pre> that returns a list of time
-     * offsets (in seconds) of the ISD, i.e. the points in time where the visual
-     * representation of the document change. `metadataHandler` allows the caller to
-     * be called back when nodes are present in <metadata> elements. 
-     * 
-     * @param {string} xmlstring XML document
-     * @param {?module:imscUtils.ErrorHandler} errorHandler Error callback
-     * @param {?MetadataHandler} metadataHandler Callback for <Metadata> elements
-     * @returns {Object} Opaque in-memory representation of an IMSC1 document
-     */
-
-    imscDoc.fromXML = function (xmlstring, errorHandler, metadataHandler) {
-        var p = sax.parser(true, {xmlns: true});
-        var estack = [];
-        var xmllangstack = [];
-        var xmlspacestack = [];
-        var metadata_depth = 0;
-        var doc = null;
-
-        p.onclosetag = function (node) {
-
-            if (estack[0] instanceof Styling) {
-
-                /* flatten chained referential styling */
-
-                for (var sid in estack[0].styles) {
-
-                    mergeChainedStyles(estack[0], estack[0].styles[sid], errorHandler);
-
-                }
-
-            } else if (estack[0] instanceof P || estack[0] instanceof Span) {
-
-                /* merge anonymous spans */
-
-                if (estack[0].contents.length > 1) {
-
-                    var cs = [estack[0].contents[0]];
-
-                    var c;
-
-                    for (c = 1; c < estack[0].contents.length; c++) {
-
-                        if (estack[0].contents[c] instanceof AnonymousSpan &&
-                            cs[cs.length - 1] instanceof AnonymousSpan) {
-
-                            cs[cs.length - 1].text += estack[0].contents[c].text;
-
-                        } else {
-
-                            cs.push(estack[0].contents[c]);
-
-                        }
-
-                    }
-
-                    estack[0].contents = cs;
-
-                }
-
-                // remove redundant nested anonymous spans (9.3.3(1)(c))
-
-                if (estack[0] instanceof Span &&
-                    estack[0].contents.length === 1 &&
-                    estack[0].contents[0] instanceof AnonymousSpan &&
-                    estack[0].text === null) {
-
-                    estack[0].text = estack[0].contents[0].text;
-                    delete estack[0].contents;
-
-                }
-
-            } else if (estack[0] instanceof ForeignElement) {
-
-                if (estack[0].node.uri === imscNames.ns_tt &&
-                    estack[0].node.local === 'metadata') {
-
-                    /* leave the metadata element */
-
-                    metadata_depth--;
-
-                } else if (metadata_depth > 0 &&
-                    metadataHandler &&
-                    'onCloseTag' in metadataHandler) {
-
-                    /* end of child of metadata element */
-
-                    metadataHandler.onCloseTag();
-
-                }
-
-            }
-
-            // TODO: delete stylerefs?
-
-            // maintain the xml:space stack
-
-            xmlspacestack.shift();
-
-            // maintain the xml:lang stack
-
-            xmllangstack.shift();
-
-            // prepare for the next element
-
-            estack.shift();
-        };
-
-        p.ontext = function (str) {
-
-            if (estack[0] === undefined) {
-
-                /* ignoring text outside of elements */
-
-            } else if (estack[0] instanceof Span || estack[0] instanceof P) {
-
-                /* create an anonymous span */
-                
-                var s = new AnonymousSpan();
-              
-                s.initFromText(doc, estack[0], str, xmlspacestack[0], errorHandler);
-
-                estack[0].contents.push(s);
-
-            } else if (estack[0] instanceof ForeignElement &&
-                metadata_depth > 0 &&
-                metadataHandler &&
-                'onText' in metadataHandler) {
-
-                /* text node within a child of metadata element */
-
-                metadataHandler.onText(str);
-
-            }
-
-        };
-
-
-        p.onopentag = function (node) {
-
-            // maintain the xml:space stack
-
-            var xmlspace = node.attributes["xml:space"];
-
-            if (xmlspace) {
-
-                xmlspacestack.unshift(xmlspace.value);
-
-            } else {
-
-                if (xmlspacestack.length === 0) {
-
-                    xmlspacestack.unshift("default");
-
-                } else {
-
-                    xmlspacestack.unshift(xmlspacestack[0]);
-
-                }
-
-            }
-
-            /* maintain the xml:lang stack */
-
-
-            var xmllang = node.attributes["xml:lang"];
-
-            if (xmllang) {
-
-                xmllangstack.unshift(xmllang.value);
-
-            } else {
-
-                if (xmllangstack.length === 0) {
-
-                    xmllangstack.unshift("");
-
-                } else {
-
-                    xmllangstack.unshift(xmllangstack[0]);
-
-                }
-
-            }
-
-
-            /* process the element */
-
-            if (node.uri === imscNames.ns_tt) {
-
-                if (node.local === 'tt') {
-
-                    if (doc !== null) {
-
-                        reportFatal("Two <tt> elements at (" + this.line + "," + this.column + ")");
-
-                    }
-
-                    doc = new TT();
-
-                    doc.initFromNode(node, errorHandler);
-
-                    estack.unshift(doc);
-
-                } else if (node.local === 'head') {
-
-                    if (!(estack[0] instanceof TT)) {
-                        reportFatal("Parent of <head> element is not <tt> at (" + this.line + "," + this.column + ")");
-                    }
-
-                    if (doc.head !== null) {
-                        reportFatal("Second <head> element at (" + this.line + "," + this.column + ")");
-                    }
-
-                    doc.head = new Head();
-
-                    estack.unshift(doc.head);
-
-                } else if (node.local === 'styling') {
-
-                    if (!(estack[0] instanceof Head)) {
-                        reportFatal("Parent of <styling> element is not <head> at (" + this.line + "," + this.column + ")");
-                    }
-
-                    if (doc.head.styling !== null) {
-                        reportFatal("Second <styling> element at (" + this.line + "," + this.column + ")");
-                    }
-
-                    doc.head.styling = new Styling();
-
-                    estack.unshift(doc.head.styling);
-
-                } else if (node.local === 'style') {
-
-                    var s;
-
-                    if (estack[0] instanceof Styling) {
-
-                        s = new Style();
-
-                        s.initFromNode(node, errorHandler);
-
-                        /* ignore <style> element missing @id */
-
-                        if (!s.id) {
-
-                            reportError("<style> element missing @id attribute");
-
-                        } else {
-
-                            doc.head.styling.styles[s.id] = s;
-
-                        }
-
-                        estack.unshift(s);
-
-                    } else if (estack[0] instanceof Region) {
-
-                        /* nested styles can be merged with specified styles
-                         * immediately, with lower priority
-                         * (see 8.4.4.2(3) at TTML1 )
-                         */
-
-                        s = new Style();
-
-                        s.initFromNode(node, errorHandler);
-
-                        mergeStylesIfNotPresent(s.styleAttrs, estack[0].styleAttrs);
-
-                        estack.unshift(s);
-
-                    } else {
-
-                        reportFatal(errorHandler, "Parent of <style> element is not <styling> or <region> at (" + this.line + "," + this.column + ")");
-
-                    }
-
-                } else if (node.local === 'layout') {
-
-                    if (!(estack[0] instanceof Head)) {
-
-                        reportFatal(errorHandler, "Parent of <layout> element is not <head> at " + this.line + "," + this.column + ")");
-
-                    }
-
-                    if (doc.head.layout !== null) {
-
-                        reportFatal(errorHandler, "Second <layout> element at " + this.line + "," + this.column + ")");
-
-                    }
-
-                    doc.head.layout = new Layout();
-
-                    estack.unshift(doc.head.layout);
-
-                } else if (node.local === 'region') {
-
-                    if (!(estack[0] instanceof Layout)) {
-                        reportFatal(errorHandler, "Parent of <region> element is not <layout> at " + this.line + "," + this.column + ")");
-                    }
-
-                    var r = new Region();
-
-                    r.initFromNode(doc, node, errorHandler);
-
-                    if (!r.id || r.id in doc.head.layout.regions) {
-
-                        reportError(errorHandler, "Ignoring <region> with duplicate or missing @id at " + this.line + "," + this.column + ")");
-
-                    } else {
-
-                        doc.head.layout.regions[r.id] = r;
-
-                        doc._registerEvent(r);
-
-                    }
-
-                    estack.unshift(r);
-
-                } else if (node.local === 'body') {
-
-                    if (!(estack[0] instanceof TT)) {
-
-                        reportFatal(errorHandler, "Parent of <body> element is not <tt> at " + this.line + "," + this.column + ")");
-
-                    }
-
-                    if (doc.body !== null) {
-
-                        reportFatal(errorHandler, "Second <body> element at " + this.line + "," + this.column + ")");
-
-                    }
-
-                    var b = new Body();
-
-                    b.initFromNode(doc, node, errorHandler);
-
-                    doc._registerEvent(b);
-
-                    doc.body = b;
-
-                    estack.unshift(b);
-
-                } else if (node.local === 'div') {
-
-                    if (!(estack[0] instanceof Div || estack[0] instanceof Body)) {
-
-                        reportFatal(errorHandler, "Parent of <div> element is not <body> or <div> at " + this.line + "," + this.column + ")");
-
-                    }
-
-                    var d = new Div();
-
-                    d.initFromNode(doc, estack[0], node, errorHandler);
-
-                    doc._registerEvent(d);
-
-                    estack[0].contents.push(d);
-
-                    estack.unshift(d);
-
-                } else if (node.local === 'p') {
-
-                    if (!(estack[0] instanceof Div)) {
-
-                        reportFatal(errorHandler, "Parent of <p> element is not <div> at " + this.line + "," + this.column + ")");
-
-                    }
-
-                    var p = new P();
-
-                    p.initFromNode(doc, estack[0], node, errorHandler);
-
-                    doc._registerEvent(p);
-
-                    estack[0].contents.push(p);
-
-                    estack.unshift(p);
-
-                } else if (node.local === 'span') {
-
-                    if (!(estack[0] instanceof Span || estack[0] instanceof P)) {
-
-                        reportFatal(errorHandler, "Parent of <span> element is not <span> or <p> at " + this.line + "," + this.column + ")");
-
-                    }
-
-                    var ns = new Span();
-
-                    ns.initFromNode(doc, estack[0], node, xmlspacestack[0], errorHandler);
-
-                    doc._registerEvent(ns);
-
-                    estack[0].contents.push(ns);
-
-                    estack.unshift(ns);
-
-                } else if (node.local === 'br') {
-
-                    if (!(estack[0] instanceof Span || estack[0] instanceof P)) {
-
-                        reportFatal(errorHandler, "Parent of <br> element is not <span> or <p> at " + this.line + "," + this.column + ")");
-
-                    }
-
-                    var nb = new Br();
-
-                    nb.initFromNode(doc, estack[0], node, errorHandler);
-
-                    doc._registerEvent(nb);
-
-                    estack[0].contents.push(nb);
-
-                    estack.unshift(nb);
-
-                } else if (node.local === 'set') {
-
-                    if (!(estack[0] instanceof Span ||
-                        estack[0] instanceof P ||
-                        estack[0] instanceof Div ||
-                        estack[0] instanceof Body ||
-                        estack[0] instanceof Region ||
-                        estack[0] instanceof Br)) {
-
-                        reportFatal(errorHandler, "Parent of <set> element is not a content element or a region at " + this.line + "," + this.column + ")");
-
-                    }
-
-                    var st = new Set();
-
-                    st.initFromNode(doc, estack[0], node, errorHandler);
-
-                    doc._registerEvent(st);
-
-                    estack[0].sets.push(st);
-
-                    estack.unshift(st);
-
-                } else {
-
-                    /* element in the TT namespace, but not a content element */
-
-                    estack.unshift(new ForeignElement(node));
-                }
-
-            } else {
-
-                /* ignore elements not in the TTML namespace unless in metadata element */
-
-                estack.unshift(new ForeignElement(node));
-
-            }
-
-            /* handle metadata callbacks */
-
-            if (estack[0] instanceof ForeignElement) {
-
-                if (node.uri === imscNames.ns_tt &&
-                    node.local === 'metadata') {
-
-                    /* enter the metadata element */
-
-                    metadata_depth++;
-
-                } else if (
-                    metadata_depth > 0 &&
-                    metadataHandler &&
-                    'onOpenTag' in metadataHandler
-                    ) {
-
-                    /* start of child of metadata element */
-
-                    var attrs = [];
-
-                    for (var a in node.attributes) {
-                        attrs[node.attributes[a].uri + " " + node.attributes[a].local] =
-                            {
-                                uri: node.attributes[a].uri,
-                                local: node.attributes[a].local,
-                                value: node.attributes[a].value
-                            };
-                    }
-
-                    metadataHandler.onOpenTag(node.uri, node.local, attrs);
-
-                }
-
-            }
-
-        };
-
-        // parse the document
-
-        p.write(xmlstring).close();
-
-        // all referential styling has been flatten, so delete the styling elements if there is a head
-        // otherwise create an empty head
-
-        if (doc.head !== null) {
-            delete doc.head.styling;
-        } else {
-            doc.head = new Head();
-        }
-
-        // create default region if no regions specified
-
-        if (doc.head.layout === null) {
-
-            doc.head.layout = new Layout();
-
-        }
-
-        var hasRegions = false;
-
-        /* AFAIK the only way to determine whether an object has members */
-
-        for (var i in doc.head.layout.regions) {
-
-            hasRegions = true;
-
-            break;
-
-        }
-
-        if (!hasRegions) {
-
-            var dr = Region.createDefaultRegion();
-
-            doc.head.layout.regions[dr.id] = dr;
-
-        }
-
-        return doc;
-    };
-
-    function ForeignElement(node) {
-        this.node = node;
-    }
-
-    function TT() {
-        this.events = [];
-        this.head = null;
-        this.body = null;
-    }
-
-    TT.prototype.initFromNode = function (node, errorHandler) {
-
-        /* compute cell resolution */
-
-        this.cellResolution = extractCellResolution(node, errorHandler);
-
-        /* extract frame rate and tick rate */
-
-        var frtr = extractFrameAndTickRate(node, errorHandler);
-
-        this.effectiveFrameRate = frtr.effectiveFrameRate;
-
-        this.tickRate = frtr.tickRate;
-
-        /* extract aspect ratio */
-
-        this.aspectRatio = extractAspectRatio(node, errorHandler);
-
-        /* check timebase */
-
-        var attr = findAttribute(node, imscNames.ns_ttp, "timeBase");
-
-        if (attr !== null && attr !== "media") {
-
-            reportFatal(errorHandler, "Unsupported time base");
-
-        }
-
-        /* retrieve extent */
-
-        var e = extractExtent(node, errorHandler);
-
-        if (e === null) {
-
-            /* TODO: remove once unit tests are ready */
-
-            this.pxDimensions = {'h': 480, 'w': 640};
-
-        } else {
-
-            if (e.h.unit !== "px" || e.w.unit !== "px") {
-                reportFatal(errorHandler, "Extent on TT must be in px or absent");
-            }
-
-            this.pxDimensions = {'h': e.h.value, 'w': e.w.value};
-        }
-
-    };
-
-    /* register a temporal events */
-    TT.prototype._registerEvent = function (elem) {
-
-        /* skip if begin is not < then end */
-
-        if (elem.end <= elem.begin) return;
-
-        /* index the begin time of the event */
-
-        var b_i = indexOf(this.events, elem.begin);
-
-        if (!b_i.found) {
-            this.events.splice(b_i.index, 0, elem.begin);
-        }
-
-        /* index the end time of the event */
-
-        if (elem.end !== Number.POSITIVE_INFINITY) {
-
-            var e_i = indexOf(this.events, elem.end);
-
-            if (!e_i.found) {
-                this.events.splice(e_i.index, 0, elem.end);
-            }
-
-        }
-
-    };
-
-
-    /*
-     * Retrieves the range of ISD times covered by the document
-     * 
-     * @returns {Array} Array of two elements: min_begin_time and max_begin_time
-     * 
-     */
-    TT.prototype.getMediaTimeRange = function () {
-
-        return [this.events[0], this.events[this.events.length - 1]];
-    };
-
-    /*
-     * Returns list of ISD begin times  
-     * 
-     * @returns {Array}
-     */
-    TT.prototype.getMediaTimeEvents = function () {
-
-        return this.events;
-    };
-
-    /*
-     * Represents a TTML Head element
-     */
-
-    function Head() {
-        this.styling = null;
-        this.layout = null;
-    }
-
-    /*
-     * Represents a TTML Styling element
-     */
-
-    function Styling() {
-        this.styles = {};
-    }
-
-    /*
-     * Represents a TTML Style element
-     */
-
-    function Style() {
-        this.id = null;
-        this.styleAttrs = null;
-        this.styleRefs = null;
-    }
-
-    Style.prototype.initFromNode = function (node, errorHandler) {
-        this.id = elementGetXMLID(node);
-        this.styleAttrs = elementGetStyles(node, errorHandler);
-        this.styleRefs = elementGetStyleRefs(node);
-    };
-
-    /*
-     * Represents a TTML Layout element
-     * 
-     */
-
-    function Layout() {
-        this.regions = {};
-    }
-
-    /*
-     * Represents a TTML Content element
-     * 
-     */
-
-    function ContentElement(kind) {
-        this.kind = kind;
-        this.begin = null;
-        this.end = null;
-        this.styleAttrs = null;
-        this.regionID = null;
-        this.sets = null;
-        this.timeContainer = null;
-    }
-
-    ContentElement.prototype.initFromNode = function (doc, parent, node, errorHandler) {
-
-        var t = processTiming(doc, parent, node, errorHandler);
-        this.begin = t.begin;
-        this.end = t.end;
-
-        this.styleAttrs = elementGetStyles(node, errorHandler);
-
-        if (doc.head !== null && doc.head.styling !== null) {
-            mergeReferencedStyles(doc.head.styling, elementGetStyleRefs(node), this.styleAttrs, errorHandler);
-        }
-
-        this.regionID = elementGetRegionID(node);
-
-        this.sets = [];
-
-        this.timeContainer = elementGetTimeContainer(node, errorHandler);
-
-    };
-
-    /*
-     * Represents a TTML body element
-     */
-
-    function Body() {
-        ContentElement.call(this, 'body');
-    }
-
-    Body.prototype.initFromNode = function (doc, node, errorHandler) {
-        ContentElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
-        this.contents = [];
-    };
-
-    /*
-     * Represents a TTML div element
-     */
-
-    function Div() {
-        ContentElement.call(this, 'div');
-    }
-
-    Div.prototype.initFromNode = function (doc, parent, node, errorHandler) {
-        ContentElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
-        this.contents = [];
-    };
-
-    /*
-     * Represents a TTML p element
-     */
-
-    function P() {
-        ContentElement.call(this, 'p');
-    }
-
-    P.prototype.initFromNode = function (doc, parent, node, errorHandler) {
-        ContentElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
-        this.contents = [];
-    };
-
-    /*
-     * Represents a TTML span element
-     */
-
-    function Span() {
-        ContentElement.call(this, 'span');
-        this.space = null;
-    }
-
-    Span.prototype.initFromNode = function (doc, parent, node, xmlspace, errorHandler) {
-        ContentElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
-        this.space = xmlspace;
-        this.contents = [];
-    };
-    
-    /*
-     * Represents a TTML anonymous span element
-     */
-    
-    function AnonymousSpan() {
-        ContentElement.call(this, 'span');
-        this.space = null;
-        this.text = null;
-    }
-    
-    AnonymousSpan.prototype.initFromText = function (doc, parent, text, xmlspace, errorHandler) {
-        ContentElement.prototype.initFromNode.call(this, doc, parent, null, errorHandler);
-        this.text = text;
-        this.space = xmlspace;
-    };
-
-    /*
-     * Represents a TTML br element
-     */
-
-    function Br() {
-        ContentElement.call(this, 'br');
-    }
-
-    Br.prototype.initFromNode = function (doc, parent, node, errorHandler) {
-        ContentElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
-    };
-
-    /*
-     * Represents a TTML Region element
-     * 
-     */
-
-    function Region() {
-        this.id = null;
-        this.begin = null;
-        this.end = null;
-        this.styleAttrs = null;
-        this.sets = null;
-    }
-
-    Region.createDefaultRegion = function () {
-        var r = new Region();
-
-        r.id = '';
-        r.begin = 0;
-        r.end = Number.POSITIVE_INFINITY;
-        r.styleAttrs = {};
-        r.sets = [];
-
-        return r;
-    };
-
-    Region.prototype.initFromNode = function (doc, node, errorHandler) {
-
-        this.id = elementGetXMLID(node);
-
-        var t = processTiming(doc, null, node, errorHandler);
-        this.begin = t.begin;
-        this.end = t.end;
-
-        this.styleAttrs = elementGetStyles(node, errorHandler);
-
-        this.sets = [];
-
-        /* immediately merge referenced styles */
-
-        if (doc.head !== null && doc.head.styling !== null) {
-            mergeReferencedStyles(doc.head.styling, elementGetStyleRefs(node), this.styleAttrs, errorHandler);
-        }
-
-    };
-
-    /*
-     * Represents a TTML Set element
-     * 
-     */
-
-    function Set() {
-        this.begin = null;
-        this.end = null;
-        this.qname = null;
-        this.value = null;
-    }
-
-    Set.prototype.initFromNode = function (doc, parent, node, errorHandler) {
-
-        var t = processTiming(doc, parent, node, errorHandler);
-
-        this.begin = t.begin;
-        this.end = t.end;
-
-        var styles = elementGetStyles(node, errorHandler);
-
-        for (var qname in styles) {
-
-            if (this.qname) {
-
-                reportError(errorHandler, "More than one style specified on set");
-                break;
-
-            }
-
-            this.qname = qname;
-            this.value = styles[qname];
-
-        }
-
-    };
-
-    /*
-     * Utility functions
-     * 
-     */
-
-
-    function elementGetXMLID(node) {
-        return node && 'xml:id' in node.attributes ? node.attributes['xml:id'].value || null : null;
-    }
-
-    function elementGetRegionID(node) {
-        return node && 'region' in node.attributes ? node.attributes.region.value : '';
-    }
-
-    function elementGetTimeContainer(node, errorHandler) {
-
-        var tc = node && 'timeContainer' in node.attributes ? node.attributes.timeContainer.value : null;
-
-        if ((!tc) || tc === "par") {
-
-            return "par";
-
-        } else if (tc === "seq") {
-
-            return "seq";
-
-        } else {
-
-            reportError(errorHandler, "Illegal value of timeContainer (assuming 'par')");
-
-            return "par";
-
-        }
-
-    }
-
-    function elementGetStyleRefs(node) {
-
-        return node && 'style' in node.attributes ? node.attributes.style.value.split(" ") : [];
-
-    }
-
-    function elementGetStyles(node, errorHandler) {
-
-        var s = {};
-
-        if (node !== null) {
-
-            for (var i in node.attributes) {
-
-                var qname = node.attributes[i].uri + " " + node.attributes[i].local;
-
-                var sa = imscStyles.byQName[qname];
-
-                if (sa !== undefined) {
-
-                    var val = sa.parse(node.attributes[i].value);
-
-                    if (val !== null) {
-
-                        s[qname] = val;
-
-                        /* TODO: consider refactoring errorHandler into parse and compute routines */
-
-                        if (sa === imscStyles.byName.zIndex) {
-                            reportWarning(errorHandler, "zIndex attribute present but not used by IMSC1 since regions do not overlap");
-                        }
-
-                    } else {
-
-                        reportError(errorHandler, "Cannot parse styling attribute " + qname + " --> " + node.attributes[i].value);
-
-                    }
-
-                }
-
-            }
-
-        }
-
-        return s;
-    }
-
-    function findAttribute(node, ns, name) {
-        for (var i in node.attributes) {
-
-            if (node.attributes[i].uri === ns &&
-                node.attributes[i].local === name) {
-
-                return node.attributes[i].value;
-            }
-        }
-
-        return null;
-    }
-
-    function extractAspectRatio(node, errorHandler) {
-
-        var ar = findAttribute(node, imscNames.ns_ittp, "aspectRatio");
-
-        var rslt = null;
-
-        if (ar !== null) {
-
-            var ASPECT_RATIO_RE = /(\d+) (\d+)/;
-
-            var m = ASPECT_RATIO_RE.exec(ar);
-
-            if (m !== null) {
-
-                var w = parseInt(m[1]);
-
-                var h = parseInt(m[2]);
-
-                if (w !== 0 && h !== 0) {
-
-                    rslt = w / h;
-
-                } else {
-
-                    reportError(errorHandler, "Illegal aspectRatio values (ignoring)");
-                }
-
-            } else {
-
-                reportError(errorHandler, "Malformed aspectRatio attribute (ignoring)");
-            }
-
-        }
-
-        return rslt;
-
-    }
-
-    /*
-     * Returns the cellResolution attribute from a node
-     * 
-     */
-    function extractCellResolution(node, errorHandler) {
-
-        var cr = findAttribute(node, imscNames.ns_ttp, "cellResolution");
-
-        // initial value
-
-        var h = 15;
-        var w = 32;
-
-        if (cr !== null) {
-
-            var CELL_RESOLUTION_RE = /(\d+) (\d+)/;
-
-            var m = CELL_RESOLUTION_RE.exec(cr);
-
-            if (m !== null) {
-
-                w = parseInt(m[1]);
-
-                h = parseInt(m[2]);
-
-            } else {
-
-                reportWarning(errorHandler, "Malformed cellResolution value (using initial value instead)");
-
-            }
-
-        }
-
-        return {'w': w, 'h': h};
-
-    }
-
-
-    function extractFrameAndTickRate(node, errorHandler) {
-
-        // subFrameRate is ignored per IMSC1 specification
-
-        // extract frame rate
-
-        var fps_attr = findAttribute(node, imscNames.ns_ttp, "frameRate");
-
-        // initial value
-
-        var fps = 30;
-
-        // match variable
-
-        var m;
-
-        if (fps_attr !== null) {
-
-            var FRAME_RATE_RE = /(\d+)/;
-
-            m = FRAME_RATE_RE.exec(fps_attr);
-
-            if (m !== null) {
-
-                fps = parseInt(m[1]);
-
-            } else {
-
-                reportWarning(errorHandler, "Malformed frame rate attribute (using initial value instead)");
-            }
-
-        }
-
-        // extract frame rate multiplier
-
-        var frm_attr = findAttribute(node, imscNames.ns_ttp, "frameRateMultiplier");
-
-        // initial value
-
-        var frm = 1;
-
-        if (frm_attr !== null) {
-
-            var FRAME_RATE_MULT_RE = /(\d+) (\d+)/;
-
-            m = FRAME_RATE_MULT_RE.exec(frm_attr);
-
-            if (m !== null) {
-
-                frm = parseInt(m[1]) / parseInt(m[2]);
-
-            } else {
-
-                reportWarning(errorHandler, "Malformed frame rate multiplier attribute (using initial value instead)");
-            }
-
-        }
-
-        var efps = frm * fps;
-
-        // extract tick rate
-
-        var tr = 1;
-
-        var trattr = findAttribute(node, imscNames.ns_ttp, "tickRate");
-
-        if (trattr === null) {
-
-            if (fps_attr !== null) tr = efps;
-
-        } else {
-
-            var TICK_RATE_RE = /(\d+)/;
-
-            m = TICK_RATE_RE.exec(trattr);
-
-            if (m !== null) {
-
-                tr = parseInt(m[1]);
-
-            } else {
-
-                reportWarning(errorHandler, "Malformed tick rate attribute (using initial value instead)");
-            }
-
-        }
-
-        return {effectiveFrameRate: efps, tickRate: tr};
-
-    }
-
-    function extractExtent(node, errorHandler) {
-
-        var attr = findAttribute(node, imscNames.ns_tts, "extent");
-
-        if (attr === null) return null;
-
-        var s = attr.split(" ");
-
-        if (s.length !== 2) {
-
-            reportWarning(errorHandler, "Malformed extent (ignoring)");
-
-            return null;
-        }
-
-        var w = imscUtils.parseLength(s[0]);
-
-        var h = imscUtils.parseLength(s[1]);
-
-        if (!h || !w) {
-
-            reportWarning(errorHandler, "Malformed extent values (ignoring)");
-
-            return null;
-        }
-
-        return {'h': h, 'w': w};
-
-    }
-
-    function parseTimeExpression(tickRate, effectiveFrameRate, str) {
-
-        var CLOCK_TIME_FRACTION_RE = /^(\d{2,}):(\d\d):(\d\d(?:\.\d+)?)$/;
-        var CLOCK_TIME_FRAMES_RE = /^(\d{2,}):(\d\d):(\d\d)\:(\d{2,})$/;
-        var OFFSET_FRAME_RE = /^(\d+(?:\.\d+)?)f$/;
-        var OFFSET_TICK_RE = /^(\d+(?:\.\d+)?)t$/;
-        var OFFSET_MS_RE = /^(\d+(?:\.\d+)?)ms$/;
-        var OFFSET_S_RE = /^(\d+(?:\.\d+)?)s$/;
-        var OFFSET_H_RE = /^(\d+(?:\.\d+)?)h$/;
-        var OFFSET_M_RE = /^(\d+(?:\.\d+)?)m$/;
-        var m;
-        var r = null;
-        if ((m = OFFSET_FRAME_RE.exec(str)) !== null) {
-
-            if (effectiveFrameRate !== null) {
-
-                r = parseFloat(m[1]) / effectiveFrameRate;
-            }
-
-        } else if ((m = OFFSET_TICK_RE.exec(str)) !== null) {
-
-            if (tickRate !== null) {
-
-                r = parseFloat(m[1]) / tickRate;
-            }
-
-        } else if ((m = OFFSET_MS_RE.exec(str)) !== null) {
-
-            r = parseFloat(m[1]) / 1000.0;
-
-        } else if ((m = OFFSET_S_RE.exec(str)) !== null) {
-
-            r = parseFloat(m[1]);
-
-        } else if ((m = OFFSET_H_RE.exec(str)) !== null) {
-
-            r = parseFloat(m[1]) * 3600.0;
-
-        } else if ((m = OFFSET_M_RE.exec(str)) !== null) {
-
-            r = parseFloat(m[1]) * 60.0;
-
-        } else if ((m = CLOCK_TIME_FRACTION_RE.exec(str)) !== null) {
-
-            r = parseInt(m[1]) * 3600 +
-                parseInt(m[2]) * 60 +
-                parseFloat(m[3]);
-
-        } else if ((m = CLOCK_TIME_FRAMES_RE.exec(str)) !== null) {
-
-            /* this assumes that HH:MM:SS is a clock-time-with-fraction */
-
-            if (effectiveFrameRate !== null) {
-
-                r = parseInt(m[1]) * 3600 +
-                    parseInt(m[2]) * 60 +
-                    parseInt(m[3]) +
-                    (m[4] === null ? 0 : parseInt(m[4]) / effectiveFrameRate);
-            }
-
-        }
-
-        return r;
-    }
-
-    function processTiming(doc, parent, node, errorHandler) {
-
-        /* Q: what does this do <div b=1 e=3><p b=1 e=5> ?*/
-        /* Q: are children clipped by parent time interval? */
-
-        var isseq = parent && parent.timeContainer === "seq";
-
-        /* retrieve begin value */
-
-        var b = 0;
-
-        if (node && 'begin' in node.attributes) {
-
-            b = parseTimeExpression(doc.tickRate, doc.effectiveFrameRate, node.attributes.begin.value);
-
-            if (b === null) {
-
-                reportWarning(errorHandler, "Malformed begin value " + node.attributes.begin.value + " (using 0)");
-
-                b = 0;
-
-            }
-
-        }
-
-        /* retrieve dur value */
-
-        /* NOTE: end is not meaningful on seq container children and dur is equal to 0 if not specified */
-
-        var d = isseq ? 0 : null;
-
-        if (node && 'dur' in node.attributes) {
-
-            d = parseTimeExpression(doc.tickRate, doc.effectiveFrameRate, node.attributes.dur.value);
-
-            if (d === null) {
-
-                reportWarning(errorHandler, "Malformed dur value " + node.attributes.dur.value + " (ignoring)");
-
-            }
-
-        }
-
-        /* retrieve end value */
-
-        var e = null;
-
-        if (node && 'end' in node.attributes) {
-
-            e = parseTimeExpression(doc.tickRate, doc.effectiveFrameRate, node.attributes.end.value);
-
-            if (e === null) {
-
-                reportWarning(errorHandler, "Malformed end value (ignoring)");
-
-            }
-
-        }
-
-        /* compute starting offset */
-
-        var start_off = 0;
-
-        if (parent) {
-
-            if (isseq && 'contents' in parent && parent.contents.length > 0) {
-
-                /*
-                 * if seq time container, offset from the previous sibling end
-                 */
-
-                start_off = parent.contents[parent.contents.length - 1].end;
-
-
-            } else {
-
-                /* 
-                 * retrieve parent begin. Assume 0 if no parent.
-                 * 
-                 */
-
-                start_off = parent.begin || 0;
-
-            }
-
-        }
-
-        /* offset begin per time container semantics */
-
-        b += start_off;
-
-        /* set end */
-
-        if (d !== null) {
-
-            // use dur if specified
-
-            e = b + d;
-
-        } else {
-
-            /* retrieve parent end, or +infinity if none */
-
-            var parent_e = (parent && 'end' in parent) ? parent.end : Number.POSITIVE_INFINITY;
-
-            e = (e !== null) ? e + start_off : parent_e;
-
-        }
-
-        return {begin: b, end: e};
-
-    }
-
-
-
-    function mergeChainedStyles(styling, style, errorHandler) {
-
-        while (style.styleRefs.length > 0) {
-
-            var sref = style.styleRefs.pop();
-
-            if (!(sref in styling.styles)) {
-                reportError(errorHandler, "Non-existant style id referenced");
-                continue;
-            }
-
-            mergeChainedStyles(styling, styling.styles[sref], errorHandler);
-
-            mergeStylesIfNotPresent(styling.styles[sref].styleAttrs, style.styleAttrs);
-
-        }
-
-    }
-
-    function mergeReferencedStyles(styling, stylerefs, styleattrs, errorHandler) {
-
-        for (var i = stylerefs.length - 1; i >= 0; i--) {
-
-            var sref = stylerefs[i];
-
-            if (!(sref in styling.styles)) {
-                reportError(errorHandler, "Non-existant style id referenced");
-                continue;
-            }
-
-            mergeStylesIfNotPresent(styling.styles[sref].styleAttrs, styleattrs);
-
-        }
-
-    }
-
-    function mergeStylesIfNotPresent(from_styles, into_styles) {
-
-        for (var sname in from_styles) {
-
-            if (sname in into_styles)
-                continue;
-
-            into_styles[sname] = from_styles[sname];
-
-        }
-
-    }
-
-    /* TODO: validate style format at parsing */
-
-
-    /*
-     * ERROR HANDLING UTILITY FUNCTIONS
-     * 
-     */
-
-    function reportInfo(errorHandler, msg) {
-
-        if (errorHandler && errorHandler.info && errorHandler.info(msg))
-            throw msg;
-
-    }
-
-    function reportWarning(errorHandler, msg) {
-
-        if (errorHandler && errorHandler.warn && errorHandler.warn(msg))
-            throw msg;
-
-    }
-
-    function reportError(errorHandler, msg) {
-
-        if (errorHandler && errorHandler.error && errorHandler.error(msg))
-            throw msg;
-
-    }
-
-    function reportFatal(errorHandler, msg) {
-
-        if (errorHandler && errorHandler.fatal)
-            errorHandler.fatal(msg);
-
-        throw msg;
-
-    }
-
-    /*
-     * Binary search utility function
-     * 
-     * @typedef {Object} BinarySearchResult
-     * @property {boolean} found Was an exact match found?
-     * @property {number} index Position of the exact match or insert position
-     * 
-     * @returns {BinarySearchResult}
-     */
-
-    function indexOf(arr, searchval) {
-
-        var min = 0;
-        var max = arr.length - 1;
-        var cur;
-
-        while (min <= max) {
-
-            cur = Math.floor((min + max) / 2);
-
-            var curval = arr[cur];
-
-            if (curval < searchval) {
-
-                min = cur + 1;
-
-            } else if (curval > searchval) {
-
-                max = cur - 1;
-
-            } else {
-
-                return {found: true, index: cur};
-
-            }
-
-        }
-
-        return {found: false, index: min};
-    }
-
-
-})(typeof exports === 'undefined' ? this.imscDoc = {} : exports,
-    typeof sax === 'undefined' ? _dereq_(45) : sax,
-    typeof imscNames === 'undefined' ? _dereq_(42) : imscNames,
-    typeof imscStyles === 'undefined' ? _dereq_(43) : imscStyles,
-    typeof imscUtils === 'undefined' ? _dereq_(44) : imscUtils);
-
-},{"42":42,"43":43,"44":44,"45":45}],39:[function(_dereq_,module,exports){
-/* 
- * Copyright (c) 2016, Pierre-Anthony Lemieux <pal@sandflow.com>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice, this
- *   list of conditions and the following disclaimer.
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
-/**
- * @module imscHTML
- */
-
-;
-(function (imscHTML, imscNames, imscStyles) {
-
-    /**
-     * Function that maps <pre>smpte:background</pre> URIs to URLs resolving to image resource
-     * @callback IMGResolver
-     * @param {string} <pre>smpte:background</pre> URI
-     * @return {string} PNG resource URL
-     */
-
-
-    /**
-     * Renders an ISD object (returned by <pre>generateISD()</pre>) into a 
-     * parent element, that must be attached to the DOM. The ISD will be rendered
-     * into a child <pre>div</pre>
-     * with heigh and width equal to the clientHeight and clientWidth of the element,
-     * unless explicitly specified otherwise by the caller. Images URIs specified 
-     * by <pre>smpte:background</pre> attributes are mapped to image resource URLs
-     * by an <pre>imgResolver</pre> function. The latter takes the value of <code>smpte:background</code>
-     * attribute and an <code>img</code> DOM element as input, and is expected to
-     * set the <code>src</code> attribute of the <code>img</code> to the absolute URI of the image.
-     * <pre>displayForcedOnlyMode</pre> sets the (boolean)
-     * value of the IMSC1 displayForcedOnlyMode parameter. The function returns
-     * an opaque object that should passed in <code>previousISDState</code> when this function
-     * is called for the next ISD, otherwise <code>previousISDState</code> should be set to 
-     * <code>null</code>.
-     * 
-     * @param {Object} isd ISD to be rendered
-     * @param {Object} element Element into which the ISD is rendered
-     * @param {?IMGResolver} imgResolver Resolve <pre>smpte:background</pre> URIs into URLs.
-     * @param {?number} eheight Height (in pixel) of the child <div>div</div> or null 
-     *                  to use clientHeight of the parent element
-     * @param {?number} ewidth Width (in pixel) of the child <div>div</div> or null
-     *                  to use clientWidth of the parent element
-     * @param {?boolean} displayForcedOnlyMode Value of the IMSC1 displayForcedOnlyMode parameter,
-     *                   or false if null         
-     * @param {?module:imscUtils.ErrorHandler} errorHandler Error callback
-     * @param {Object} previousISDState State saved during processing of the previous ISD, or null if initial call
-     * @param {?boolean} enableRollUp Enables roll-up animations (see CEA 708)
-     * @return {Object} ISD state to be provided when this funtion is called for the next ISD
-     */
-
-    imscHTML.render = function (    isd,
-                                    element,
-                                    imgResolver,
-                                    eheight,
-                                    ewidth,
-                                    displayForcedOnlyMode,
-                                    errorHandler,
-                                    previousISDState,
-                                    enableRollUp
-                                ) {
-
-        /* maintain aspect ratio if specified */
-
-        var height = eheight || element.clientHeight;
-        var width = ewidth || element.clientWidth;
-
-        if (isd.aspectRatio !== null) {
-
-            var twidth = height * isd.aspectRatio;
-
-            if (twidth > width) {
-
-                height = Math.round(width / isd.aspectRatio);
-
-            } else {
-
-                width = twidth;
-
-            }
-
-        }
-
-        var rootcontainer = document.createElement("div");
-
-        rootcontainer.style.position = "relative";
-        rootcontainer.style.width = width + "px";
-        rootcontainer.style.height = height + "px";
-        rootcontainer.style.margin = "auto";
-        rootcontainer.style.top = 0;
-        rootcontainer.style.bottom = 0;
-        rootcontainer.style.left = 0;
-        rootcontainer.style.right = 0;
-        rootcontainer.style.zIndex = 0;
-
-        var context = {
-            h: height,
-            w: width,
-            regionH: null,
-            regionW: null,
-            imgResolver: imgResolver,
-            displayForcedOnlyMode: displayForcedOnlyMode || false,
-            isd: isd,
-            errorHandler: errorHandler,
-            previousISDState: previousISDState,
-            enableRollUp : enableRollUp || false,
-            currentISDState: {}
-        };
-
-        element.appendChild(rootcontainer);
-
-        for (var i in isd.contents) {
-
-            processElement(context, rootcontainer, isd.contents[i]);
-
-        }
-
-        return context.currentISDState;
-
-    };
-
-    function processElement(context, dom_parent, isd_element) {
-
-        var e;
-
-        if (isd_element.kind === 'region') {
-
-            e = document.createElement("div");
-            e.style.position = "absolute";
-
-        } else if (isd_element.kind === 'body') {
-
-            e = document.createElement("div");
-
-        } else if (isd_element.kind === 'div') {
-
-            e = document.createElement("div");
-
-        } else if (isd_element.kind === 'p') {
-
-            e = document.createElement("p");
-
-        } else if (isd_element.kind === 'span') {
-
-            e = document.createElement("span");
-
-            //e.textContent = isd_element.text;
-
-        } else if (isd_element.kind === 'br') {
-
-            e = document.createElement("br");
-
-        }
-
-        if (!e) {
-
-            reportError(context.errorHandler, "Error processing ISD element kind: " + isd_element.kind);
-
-            return;
-
-        }
-
-        /* override UA default margin */
-
-        e.style.margin = "0";
-
-        /* tranform TTML styles to CSS styles */
-
-        for (var i in STYLING_MAP_DEFS) {
-
-            var sm = STYLING_MAP_DEFS[i];
-
-            var attr = isd_element.styleAttrs[sm.qname];
-
-            if (attr !== undefined && sm.map !== null) {
-
-                sm.map(context, e, isd_element, attr);
-
-            }
-
-        }
-
-        var proc_e = e;
-
-
-        // handle multiRowAlign and linePadding
-
-        var mra = isd_element.styleAttrs[imscStyles.byName.multiRowAlign.qname];
-
-        if (mra && mra !== "auto") {
-
-            var s = document.createElement("span");
-
-            s.style.display = "inline-block";
-
-            s.style.textAlign = mra;
-
-            e.appendChild(s);
-
-            proc_e = s;
-
-            context.mra = mra;
-
-        }
-
-        var lp = isd_element.styleAttrs[imscStyles.byName.linePadding.qname];
-
-        if (lp && lp > 0) {
-
-            context.lp = lp;
-
-        }
-
-        // wrap characters in spans to find the line wrap locations
-
-        if (isd_element.kind === "span" && isd_element.text) {
-
-            if (context.lp || context.mra) {
-
-                for (var j = 0; j < isd_element.text.length; j++) {
-
-                    var span = document.createElement("span");
-
-                    span.textContent = isd_element.text.charAt(j);
-
-                    e.appendChild(span);
-
-                }
-
-            } else {
-                e.textContent = isd_element.text;
-            }
-        }
-
-
-        dom_parent.appendChild(e);
-
-        for (var k in isd_element.contents) {
-
-            processElement(context, proc_e, isd_element.contents[k]);
-
-        }
-
-        // handle linePadding and multiRowAlign
-
-        if ((context.lp || context.mra) && isd_element.kind === "p") {
-
-            var elist = [];
-
-            constructElementList(proc_e, elist, "red");
-
-            /* TODO: linePadding only supported for horizontal scripts */
-
-            processLinePaddingAndMultiRowAlign(elist, context.lp * context.h);
-
-            /* TODO: clean-up the spans ? */
-
-            if (context.lp)
-                delete context.lp;
-            if (context.mra)
-                delete context.mra;
-
-        }
-
-        /* region processing */
-
-        if (isd_element.kind === "region") {
-
-            /* build line list */
-
-            var linelist = [];
-
-            constructLineList(proc_e, linelist);
-
-            /* perform roll up if needed */
-            
-            var wdir = isd_element.styleAttrs[imscStyles.byName.writingMode.qname];
-
-            if ((wdir === "lrtb" || wdir === "lr" || wdir === "rltb" || wdir === "rl") &&
-                context.enableRollUp && 
-                isd_element.contents.length > 0 &&
-                isd_element.styleAttrs[imscStyles.byName.displayAlign.qname] === 'after') {
-
-                /* horrible hack, perhaps default region id should be underscore everywhere? */
-
-                var rid = isd_element.id === '' ? '_' : isd_element.id;
-
-                var rb = new RegionPBuffer(rid, linelist);
-
-                context.currentISDState[rb.id] = rb;
-
-                if (context.previousISDState &&
-                    rb.id in context.previousISDState &&
-                    context.previousISDState[rb.id].plist.length > 0 &&
-                    rb.plist.length > 1 &&
-                    rb.plist[rb.plist.length - 2].text ===
-                    context.previousISDState[rb.id].plist[context.previousISDState[rb.id].plist.length - 1].text) {
-
-                    var body_elem = e.firstElementChild;
-
-                    body_elem.style.bottom = "-" + rb.plist[rb.plist.length - 1].height + "px";
-                    body_elem.style.transition = "transform 0.4s";
-                    body_elem.style.position = "relative";
-                    body_elem.style.transform = "translateY(-" + rb.plist[rb.plist.length - 1].height + "px)";
-
-                }
-
-            }
-
-        }
-    }
-
-
-    function RegionPBuffer(id, lineList) {
-
-        this.id = id;
-
-        this.plist = lineList;
-
-    }
-
-    function pruneEmptySpans(element) {
-
-        var child = element.firstChild;
-
-        while (child) {
-
-            var nchild = child.nextSibling;
-
-            if (child.nodeType === Node.ELEMENT_NODE &&
-                child.localName === 'span') {
-
-                pruneEmptySpans(child);
-
-                if (child.childElementCount === 0 &&
-                    child.textContent.length === 0) {
-
-                    element.removeChild(child);
-
-                }
-            }
-
-            child = nchild;
-        }
-
-    }
-
-    function constructElementList(element, elist, bgcolor) {
-
-        if (element.childElementCount === 0) {
-
-            elist.push({
-                "element": element,
-                "bgcolor": bgcolor}
-            );
-
-        } else {
-
-            var newbgcolor = element.style.backgroundColor || bgcolor;
-
-            var child = element.firstChild;
-
-            while (child) {
-
-                if (child.nodeType === Node.ELEMENT_NODE) {
-
-                    constructElementList(child, elist, newbgcolor);
-
-                }
-
-                child = child.nextSibling;
-            }
-        }
-
-    }
-
-
-    function constructLineList(element, llist) {
-
-        if (element.childElementCount === 0 && element.localName === 'span') {
-
-            var r = element.getBoundingClientRect();
-
-            if (llist.length === 0 ||
-                (!isSameLine(r.top, r.height, llist[llist.length - 1].top, llist[llist.length - 1].height))
-                ) {
-
-                llist.push({
-                    top: r.top,
-                    height: r.height,
-                    text: element.textContent
-                });
-
-            } else {
-
-                if (r.top < llist[llist.length - 1].top) {
-                    llist[llist.length - 1].top = r.top;
-                }
-
-                if (r.height > llist[llist.length - 1].height) {
-                    llist[llist.length - 1].height = r.height;
-                }
-
-                llist[llist.length - 1].text += element.textContent;
-
-            }
-
-        } else {
-
-
-            var child = element.firstChild;
-
-            while (child) {
-
-                if (child.nodeType === Node.ELEMENT_NODE) {
-
-                    constructLineList(child, llist);
-
-                }
-
-                child = child.nextSibling;
-            }
-        }
-
-    }
-    
-    function isSameLine(top1, height1, top2, height2) {
-
-        return (((top1 + height1) < (top2 + height2)) && (top1 > top2)) || (((top2 + height2) <= (top1 + height1)) && (top2 >= top1));
-
-    }
-
-    function processLinePaddingAndMultiRowAlign(elist, lp) {
-
-        var line_head = null;
-
-        var lookingForHead = true;
-
-        var foundBR = false;
-
-        for (var i = 0; i <= elist.length; i++) {
-
-            /* skip <br> since they apparently have a different box top than
-             * the rest of the line 
-             */
-
-            if (i !== elist.length && elist[i].element.localName === "br") {
-                foundBR = true;
-                continue;
-            }
-
-            /* detect new line */
-
-            if (line_head === null ||
-                i === elist.length ||
-                (!isSameLine(elist[i].element.getBoundingClientRect().top,
-                    elist[i].element.getBoundingClientRect().height,
-                    elist[line_head].element.getBoundingClientRect().top,
-                    elist[line_head].element.getBoundingClientRect().height))
-                ) {
-
-                /* apply right padding to previous line (if applicable and unless this is the first line) */
-
-                if (lp && (!lookingForHead)) {
-
-                    for (; --i >= 0; ) {
-
-                        if (elist[i].element.getBoundingClientRect().width !== 0) {
-
-                            addRightPadding(elist[i].element, elist[i].color, lp);
-
-                            if (elist[i].element.getBoundingClientRect().width !== 0 &&
-                                isSameLine(elist[i].element.getBoundingClientRect().top,
-                                    elist[i].element.getBoundingClientRect().height,
-                                    elist[line_head].element.getBoundingClientRect().top,
-                                    elist[line_head].element.getBoundingClientRect().height))
-                                break;
-
-                            removeRightPadding(elist[i].element);
-
-                        }
-
-                    }
-
-                    lookingForHead = true;
-
-                    continue;
-
-                }
-
-                /* explicit <br> unless already present */
-
-                if (i !== elist.length && line_head !== null && (!foundBR)) {
-
-                    var br = document.createElement("br");
-
-                    elist[i].element.parentElement.insertBefore(br, elist[i].element);
-
-                    elist.splice(i, 0, {"element": br});
-
-                    foundBR = true;
-
-                    continue;
-
-                }
-
-                /* apply left padding to current line (if applicable) */
-
-                if (i !== elist.length && lp) {
-
-                    /* find first non-zero */
-
-                    for (; i < elist.length; i++) {
-
-                        if (elist[i].element.getBoundingClientRect().width !== 0) {
-                            addLeftPadding(elist[i].element, elist[i].color, lp);
-                            break;
-                        }
-
-                    }
-
-                }
-
-                lookingForHead = false;
-
-                foundBR = false;
-
-                line_head = i;
-
-            }
-
-        }
-
-    }
-
-    function addLeftPadding(e, c, lp) {
-        e.style.paddingLeft = lp + "px";
-        e.style.backgroundColor = c;
-    }
-
-    function addRightPadding(e, c, lp) {
-        e.style.paddingRight = lp + "px";
-        e.style.backgroundColor = c;
-
-    }
-
-    function removeRightPadding(e) {
-        e.style.paddingRight = null;
-    }
-
-
-    function HTMLStylingMapDefintion(qName, mapFunc) {
-        this.qname = qName;
-        this.map = mapFunc;
-    }
-
-    var STYLING_MAP_DEFS = [
-
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling backgroundColor",
-            function (context, dom_element, isd_element, attr) {
-                dom_element.style.backgroundColor = "rgba(" +
-                    attr[0].toString() + "," +
-                    attr[1].toString() + "," +
-                    attr[2].toString() + "," +
-                    (attr[3] / 255).toString() +
-                    ")";
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling color",
-            function (context, dom_element, isd_element, attr) {
-                dom_element.style.color = "rgba(" +
-                    attr[0].toString() + "," +
-                    attr[1].toString() + "," +
-                    attr[2].toString() + "," +
-                    (attr[3] / 255).toString() +
-                    ")";
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling direction",
-            function (context, dom_element, isd_element, attr) {
-                dom_element.style.direction = attr;
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling display",
-            function (context, dom_element, isd_element, attr) {}
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling displayAlign",
-            function (context, dom_element, isd_element, attr) {
-
-                /* see https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
-
-                /* TODO: is this affected by writing direction? */
-
-                dom_element.style.display = "flex";
-                dom_element.style.flexDirection = "column";
-
-
-                if (attr === "before") {
-
-                    dom_element.style.justifyContent = "flex-start";
-
-                } else if (attr === "center") {
-
-                    dom_element.style.justifyContent = "center";
-
-                } else if (attr === "after") {
-
-                    dom_element.style.justifyContent = "flex-end";
-                }
-
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling extent",
-            function (context, dom_element, isd_element, attr) {
-                /* TODO: this is super ugly */
-
-                context.regionH = (attr.h * context.h);
-                context.regionW = (attr.w * context.w);
-
-                /* 
-                 * CSS height/width are measured against the content rectangle,
-                 * whereas TTML height/width include padding
-                 */
-
-                var hdelta = 0;
-                var wdelta = 0;
-
-                var p = isd_element.styleAttrs["http://www.w3.org/ns/ttml#styling padding"];
-
-                if (!p) {
-
-                    /* error */
-
-                } else {
-
-                    hdelta = (p[0] + p[2]) * context.h;
-                    wdelta = (p[1] + p[3]) * context.w;
-
-                }
-
-                dom_element.style.height = (context.regionH - hdelta) + "px";
-                dom_element.style.width = (context.regionW - wdelta) + "px";
-
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling fontFamily",
-            function (context, dom_element, isd_element, attr) {
-
-                var rslt = [];
-
-                /* per IMSC1 */
-
-                for (var i in attr) {
-
-                    if (attr[i] === "monospaceSerif") {
-
-                        rslt.push("Courier New");
-                        rslt.push('"Liberation Mono"');
-                        rslt.push("Courier");
-                        rslt.push("monospace");
-
-                    } else if (attr[i] === "proportionalSansSerif") {
-
-                        rslt.push("Arial");
-                        rslt.push("Helvetica");
-                        rslt.push('"Liberation Sans"');
-                        rslt.push("sans-serif");
-
-                    } else if (attr[i] === "monospace") {
-
-                        rslt.push("monospace");
-
-                    } else if (attr[i] === "sansSerif") {
-
-                        rslt.push("sans-serif");
-
-                    } else if (attr[i] === "serif") {
-
-                        rslt.push("serif");
-
-                    } else if (attr[i] === "monospaceSansSerif") {
-
-                        rslt.push("Consolas");
-                        rslt.push("monospace");
-
-                    } else if (attr[i] === "proportionalSerif") {
-
-                        rslt.push("serif");
-
-                    } else {
-
-                        rslt.push(attr[i]);
-
-                    }
-
-                }
-
-                dom_element.style.fontFamily = rslt.join(",");
-            }
-        ),
-
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling fontSize",
-            function (context, dom_element, isd_element, attr) {
-                dom_element.style.fontSize = (attr * context.h) + "px";
-            }
-        ),
-
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling fontStyle",
-            function (context, dom_element, isd_element, attr) {
-                dom_element.style.fontStyle = attr;
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling fontWeight",
-            function (context, dom_element, isd_element, attr) {
-                dom_element.style.fontWeight = attr;
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling lineHeight",
-            function (context, dom_element, isd_element, attr) {
-                if (attr === "normal") {
-
-                    dom_element.style.lineHeight = "normal";
-
-                } else {
-
-                    dom_element.style.lineHeight = (attr * context.h) + "px";
-                }
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling opacity",
-            function (context, dom_element, isd_element, attr) {
-                dom_element.style.opacity = attr;
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling origin",
-            function (context, dom_element, isd_element, attr) {
-                dom_element.style.top = (attr.h * context.h) + "px";
-                dom_element.style.left = (attr.w * context.w) + "px";
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling overflow",
-            function (context, dom_element, isd_element, attr) {
-                dom_element.style.overflow = attr;
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling padding",
-            function (context, dom_element, isd_element, attr) {
-
-                /* attr: top,left,bottom,right*/
-
-                /* style: top right bottom left*/
-
-                var rslt = [];
-
-                rslt[0] = (attr[0] * context.h) + "px";
-                rslt[1] = (attr[3] * context.w) + "px";
-                rslt[2] = (attr[2] * context.h) + "px";
-                rslt[3] = (attr[1] * context.w) + "px";
-
-                dom_element.style.padding = rslt.join(" ");
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling showBackground",
-            null
-            ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling textAlign",
-            function (context, dom_element, isd_element, attr) {
-
-                var ta;
-                var dir = isd_element.styleAttrs[imscStyles.byName.direction.qname];
-
-                /* handle UAs that do not understand start or end */
-
-                if (attr === "start") {
-
-                    ta = (dir === "rtl") ? "right" : "left";
-
-                } else if (attr === "end") {
-
-                    ta = (dir === "rtl") ? "left" : "right";
-
-                } else {
-
-                    ta = attr;
-
-                }
-
-                dom_element.style.textAlign = ta;
-
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling textDecoration",
-            function (context, dom_element, isd_element, attr) {
-                dom_element.style.textDecoration = attr.join(" ").replace("lineThrough", "line-through");
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling textOutline",
-            function (context, dom_element, isd_element, attr) {
-
-                if (attr === "none") {
-
-                    dom_element.style.textShadow = "";
-
-                } else {
-
-                    dom_element.style.textShadow = "rgba(" +
-                        attr.color[0].toString() + "," +
-                        attr.color[1].toString() + "," +
-                        attr.color[2].toString() + "," +
-                        (attr.color[3] / 255).toString() +
-                        ")" + " 0px 0px " +
-                        (attr.thickness * context.h) + "px";
-
-                }
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling unicodeBidi",
-            function (context, dom_element, isd_element, attr) {
-
-                var ub;
-
-                if (attr === 'bidiOverride') {
-                    ub = "bidi-override";
-                } else {
-                    ub = attr;
-                }
-
-                dom_element.style.unicodeBidi = ub;
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling visibility",
-            function (context, dom_element, isd_element, attr) {
-                dom_element.style.visibility = attr;
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling wrapOption",
-            function (context, dom_element, isd_element, attr) {
-
-                if (attr === "wrap") {
-
-                    if (isd_element.space === "preserve") {
-                        dom_element.style.whiteSpace = "pre-wrap";
-                    } else {
-                        dom_element.style.whiteSpace = "normal";
-                    }
-
-                } else {
-
-                    if (isd_element.space === "preserve") {
-
-                        dom_element.style.whiteSpace = "pre";
-
-                    } else {
-                        dom_element.style.whiteSpace = "noWrap";
-                    }
-
-                }
-
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling writingMode",
-            function (context, dom_element, isd_element, attr) {
-                if (attr === "lrtb" || attr === "lr") {
-
-                    dom_element.style.writingMode = "horizontal-tb";
-
-                } else if (attr === "rltb" || attr === "rl") {
-
-                    dom_element.style.writingMode = "horizontal-tb";
-
-                } else if (attr === "tblr") {
-
-                    dom_element.style.writingMode = "vertical-lr";
-
-                } else if (attr === "tbrl" || attr === "tb") {
-
-                    dom_element.style.writingMode = "vertical-rl";
-
-                }
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml#styling zIndex",
-            function (context, dom_element, isd_element, attr) {
-                dom_element.style.zIndex = attr;
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.smpte-ra.org/schemas/2052-1/2010/smpte-tt backgroundImage",
-            function (context, dom_element, isd_element, attr) {
-
-                if (context.imgResolver !== null && attr !== null) {
-
-                    var img = document.createElement("img");
-
-                    var uri = context.imgResolver(attr, img);
-
-                    if (uri) img.src = uri;
-
-                    img.height = context.regionH;
-                    img.width = context.regionW;
-
-                    dom_element.appendChild(img);
-                }
-            }
-        ),
-        new HTMLStylingMapDefintion(
-            "http://www.w3.org/ns/ttml/profile/imsc1#styling forcedDisplay",
-            function (context, dom_element, isd_element, attr) {
-
-                if (context.displayForcedOnlyMode && attr === false) {
-                    dom_element.style.visibility = "hidden";
-                }
-
-            }
-        )
-    ];
-
-    var STYLMAP_BY_QNAME = {};
-
-    for (var i in STYLING_MAP_DEFS) {
-
-        STYLMAP_BY_QNAME[STYLING_MAP_DEFS[i].qname] = STYLING_MAP_DEFS[i];
-    }
-
-    function reportError(errorHandler, msg) {
-
-        if (errorHandler && errorHandler.error && errorHandler.error(msg))
-            throw msg;
-
-    }
-
-})(typeof exports === 'undefined' ? this.imscHTML = {} : exports,
-    typeof imscNames === 'undefined' ? _dereq_(42) : imscNames,
-    typeof imscStyles === 'undefined' ? _dereq_(43) : imscStyles);
-},{"42":42,"43":43}],40:[function(_dereq_,module,exports){
-/* 
- * Copyright (c) 2016, Pierre-Anthony Lemieux <pal@sandflow.com>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice, this
- *   list of conditions and the following disclaimer.
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
-/**
- * @module imscISD
- */
-
-
-;
-(function (imscISD, imscNames, imscStyles) { // wrapper for non-node envs
-
-    /** 
-     * Creates a canonical representation of an IMSC1 document returned by <pre>imscDoc.fromXML()</pre>
-     * at a given absolute offset in seconds. This offset does not have to be one of the values returned
-     * by <pre>getMediaTimeEvents()</pre>.
-     * 
-     * @param {Object} tt IMSC1 document
-     * @param {number} offset Absolute offset (in seconds)
-     * @param {?module:imscUtils.ErrorHandler} errorHandler Error callback
-     * @returns {Object} Opaque in-memory representation of an ISD
-     */
-
-    imscISD.generateISD = function (tt, offset, errorHandler) {
-
-        /* TODO check for tt and offset validity */
-
-        /* create the ISD object from the IMSC1 doc */
-
-        var isd = new ISD(tt);
-
-        /* process regions */
-
-        for (var r in tt.head.layout.regions) {
-
-            /* post-order traversal of the body tree per [construct intermediate document] */
-
-            var c = isdProcessContentElement(tt, offset, tt.head.layout.regions[r], tt.body, null, '', tt.head.layout.regions[r], errorHandler);
-
-            if (c !== null) {
-
-                /* add the region to the ISD */
-
-                isd.contents.push(c.element);
-            }
-
-
-        }
-
-        return isd;
-    };
-
-    function isdProcessContentElement(doc, offset, region, body, parent, inherited_region_id, elem, errorHandler) {
-
-        /* prune if temporally inactive */
-
-        if (offset < elem.begin || offset >= elem.end) return null;
-
-        /* 
-         * set the associated region as specified by the regionID attribute, or the 
-         * inherited associated region otherwise
-         */
-
-        var associated_region_id = 'regionID' in elem && elem.regionID !== '' ? elem.regionID : inherited_region_id;
-
-        /* prune the element if either:
-         * - the element is not terminal and the associated region is neither the default
-         *   region nor the parent region (this allows children to be associated with a 
-         *   region later on)
-         * - the element is terminal and the associated region is not the parent region
-         */
-        
-        /* TODO: improve detection of terminal elements since <region> has no contents */
-
-        if (parent !== null /* are we in the region element */ &&
-            associated_region_id !== region.id &&
-                (
-                    (! ('contents' in elem)) ||
-                    ('contents' in elem && elem.contents.length === 0) ||
-                    associated_region_id !== ''
-                )
-             )
-            return null;
-
-        /* create an ISD element, including applying specified styles */
-
-        var isd_element = new ISDContentElement(elem);
-
-        /* apply set (animation) styling */
-
-        for (var i in elem.sets) {
-
-            if (offset < elem.sets[i].begin || offset >= elem.sets[i].end)
-                continue;
-
-            isd_element.styleAttrs[elem.sets[i].qname] = elem.sets[i].value;
-
-        }
-
-        /* 
-         * keep track of specified styling attributes so that we
-         * can compute them later
-         */
-
-        var spec_attr = {};
-
-        for (var qname in isd_element.styleAttrs) {
-
-            spec_attr[qname] = true;
-
-            /* special rule for tts:writingMode (section 7.29.1 of XSL)
-             * direction is set consistently with writingMode only
-             * if writingMode sets inline-direction to LTR or RTL  
-             */
-
-            if (qname === imscStyles.byName.writingMode.qname &&
-                !(imscStyles.byName.direction.qname in isd_element.styleAttrs)) {
-
-                var wm = isd_element.styleAttrs[qname];
-
-                if (wm === "lrtb" || wm === "lr") {
-
-                    isd_element.styleAttrs[imscStyles.byName.direction.qname] = "ltr";
-
-                } else if (wm === "rltb" || wm === "rl") {
-
-                    isd_element.styleAttrs[imscStyles.byName.direction.qname] = "rtl";
-
-                }
-
-            }
-        }
-
-        /* inherited styling */
-
-        if (parent !== null) {
-
-            for (var j in imscStyles.all) {
-
-                var sa = imscStyles.all[j];
-
-                /* textDecoration has special inheritance rules */
-
-                if (sa.qname === imscStyles.byName.textDecoration.qname) {
-
-                    /* handle both textDecoration inheritance and specification */
-
-                    var ps = parent.styleAttrs[sa.qname];
-                    var es = isd_element.styleAttrs[sa.qname];
-                    var outs = [];
-
-                    if (es === undefined) {
-
-                        outs = ps;
-
-                    } else if (es.indexOf("none") === -1) {
-
-                        if ((es.indexOf("noUnderline") === -1 &&
-                            ps.indexOf("underline") !== -1) ||
-                            es.indexOf("underline") !== -1) {
-
-                            outs.push("underline");
-
-                        }
-
-                        if ((es.indexOf("noLineThrough") === -1 &&
-                            ps.indexOf("lineThrough") !== -1) ||
-                            es.indexOf("lineThrough") !== -1) {
-
-                            outs.push("lineThrough");
-
-                        }
-
-                        if ((es.indexOf("noOverline") === -1 &&
-                            ps.indexOf("overline") !== -1) ||
-                            es.indexOf("overline") !== -1) {
-
-                            outs.push("overline");
-
-                        }
-
-                    } else {
-
-                        outs.push("none");
-
-                    }
-
-                    isd_element.styleAttrs[sa.qname] = outs;
-
-                } else if (sa.inherit &&
-                    (sa.qname in parent.styleAttrs) &&
-                    !(sa.qname in isd_element.styleAttrs)) {
-
-                    isd_element.styleAttrs[sa.qname] = parent.styleAttrs[sa.qname];
-
-                }
-
-            }
-
-        }
-
-        /* initial value styling */
-
-        for (var k in imscStyles.all) {
-
-            var ivs = imscStyles.all[k];
-
-            /* skip if value is already specified */
-
-            if (ivs.qname in isd_element.styleAttrs) continue;
-
-            /* apply initial value to elements other than region only if non-inherited */
-
-            if (isd_element.kind === 'region' || (ivs.inherit === false && ivs.initial !== null)) {
-
-                isd_element.styleAttrs[ivs.qname] = ivs.parse(ivs.initial);
-
-                /* keep track of the style as specified */
-
-                spec_attr[ivs.qname] = true;
-
-            }
-
-        }
-
-        /* compute styles (only for non-inherited styles) */
-        /* TODO: get rid of spec_attr */
-
-        for (var z in imscStyles.all) {
-
-            var cs = imscStyles.all[z];
-
-            if (!(cs.qname in spec_attr)) continue;
-
-            if (cs.compute !== null) {
-
-                var cstyle = cs.compute(
-                    /*doc, parent, element, attr*/
-                    doc,
-                    parent,
-                    isd_element,
-                    isd_element.styleAttrs[cs.qname]
-                    );
-
-                if (cstyle !== null) {
-                    isd_element.styleAttrs[cs.qname] = cstyle;
-                } else {
-                    reportError(errorHandler, "Style '" + cs.qname + "' on element '" + isd_element.kind + "' cannot be computed");
-                }
-            }
-
-        }
-
-        /* prune if tts:display is none */
-
-        if (isd_element.styleAttrs[imscStyles.byName.display.qname] === "none")
-            return null;
-
-        /* process contents of the element */
-
-        var contents;
-
-        if (parent === null) {
-
-            /* we are processing the region */
-
-            if (body === null) {
-
-                /* if there is no body, still process the region but with empty content */
-
-                contents = [];
-
-            } else {
-
-                /*use the body element as contents */
-
-                contents = [body];
-
-            }
-
-        } else if ('contents' in elem) {
-
-            contents = elem.contents;
-
-        }
-
-        for (var x in contents) {
-
-            var c = isdProcessContentElement(doc, offset, region, body, isd_element, associated_region_id, contents[x]);
-
-            /* 
-             * keep child element only if they are non-null and their region match 
-             * the region of this element
-             */
-
-            if (c !== null) {
-
-                isd_element.contents.push(c.element);
-
-            }
-
-        }
-
-        /* compute used value of lineHeight="normal" */
-
-        /*        if (isd_element.styleAttrs[imscStyles.byName.lineHeight.qname] === "normal"  ) {
-         
-         isd_element.styleAttrs[imscStyles.byName.lineHeight.qname] =
-         isd_element.styleAttrs[imscStyles.byName.fontSize.qname] * 1.2;
-         
-         }
-         */
-
-        /* remove styles that are not applicable */
-
-        for (var qnameb in isd_element.styleAttrs) {
-            var da = imscStyles.byQName[qnameb];
-
-            if (da.applies.indexOf(isd_element.kind) === -1) {
-                delete isd_element.styleAttrs[qnameb];
-            }
-        }
-
-        /* collapse white space if space is "default" */
-
-        if (isd_element.kind === 'span' && isd_element.text && isd_element.space === "default") {
-
-            var trimmedspan = isd_element.text.replace(/\s+/g, ' ');
-
-            isd_element.text = trimmedspan;
-
-        }
-
-        /* trim whitespace around explicit line breaks */
-
-        if (isd_element.kind === 'p') {
-
-            var elist = [];
-
-            constructSpanList(isd_element, elist);
-
-            var l = 0;
-
-            var state = "after_br";
-            var br_pos = 0;
-
-            while (true) {
-
-                if (state === "after_br") {
-
-                    if (l >= elist.length || elist[l].kind === "br") {
-
-                        state = "before_br";
-                        br_pos = l;
-                        l--;
-
-                    } else {
-
-                        if (elist[l].space !== "preserve") {
-
-                            elist[l].text = elist[l].text.replace(/^\s+/g, '');
-
-                        }
-
-                        if (elist[l].text.length > 0) {
-
-                            state = "looking_br";
-                            l++;
-
-                        } else {
-
-                            elist.splice(l, 1);
-
-                        }
-
-                    }
-
-                } else if (state === "before_br") {
-
-                    if (l < 0 || elist[l].kind === "br") {
-
-                        state = "after_br";
-                        l = br_pos + 1;
-
-                        if (l >= elist.length) break;
-
-                    } else {
-
-                        if (elist[l].space !== "preserve") {
-
-                            elist[l].text = elist[l].text.replace(/\s+$/g, '');
-
-                        }
-
-                        if (elist[l].text.length > 0) {
-
-                            state = "after_br";
-                            l = br_pos + 1;
-
-                            if (l >= elist.length) break;
-
-                        } else {
-
-                            elist.splice(l, 1);
-                            l--;
-
-                        }
-
-                    }
-
-                } else {
-
-                    if (l >= elist.length || elist[l].kind === "br") {
-
-                        state = "before_br";
-                        br_pos = l;
-                        l--;
-
-                    } else {
-
-                        l++;
-
-                    }
-
-                }
-
-            }
-            
-            pruneEmptySpans(isd_element);
-
-        }
-
-        /* keep element if:
-         * * contains a background image
-         * * <br/>
-         * * if there are children
-         * * if <span> and has text
-         * * if region and showBackground = always
-         */
-
-        if ((isd_element.kind === 'div' && imscStyles.byName.backgroundImage.qname in isd_element.styleAttrs) ||
-            isd_element.kind === 'br' ||
-            ('contents' in isd_element && isd_element.contents.length > 0) ||
-            (isd_element.kind === 'span' && isd_element.text !== null) ||
-            (isd_element.kind === 'region' &&
-                isd_element.styleAttrs[imscStyles.byName.showBackground.qname] === 'always')) {
-
-            return {
-                region_id: associated_region_id,
-                element: isd_element
-            };
-        }
-
-        return null;
-    }
-
-    function constructSpanList(element, elist) {
-
-        if ('contents' in element) {
-
-            for (var i in element.contents) {
-                constructSpanList(element.contents[i], elist);
-            }
-
-        } else {
-
-            elist.push(element);
-
-        }
-
-    }
-
-    function pruneEmptySpans(element) {
-
-        if (element.kind === 'br') {
-            
-            return false;
-            
-        } else if ('text' in element) {
-            
-            return  element.text.length === 0;
-            
-        } else if ('contents' in element) {
-            
-            var i = element.contents.length;
-
-            while (i--) {
-                
-                if (pruneEmptySpans(element.contents[i])) {
-                    element.contents.splice(i, 1);
-                }
-                
-            }
-            
-            return element.contents.length === 0;
-
-        }
-    }
-
-    function ISD(tt) {
-        this.contents = [];
-        this.aspectRatio = tt.aspectRatio;
-    }
-
-    function ISDContentElement(ttelem) {
-
-        /* assume the element is a region if it does not have a kind */
-
-        this.kind = ttelem.kind || 'region';
-        
-        /* copy id */
-        
-        if (ttelem.id) {
-            this.id = ttelem.id;
-        }
-
-        /* deep copy of style attributes */
-        this.styleAttrs = {};
-
-        for (var sname in ttelem.styleAttrs) {
-
-            this.styleAttrs[sname] =
-                ttelem.styleAttrs[sname];
-        }
-
-        /* TODO: clean this! */
-
-        if ('text' in ttelem) {
-
-            this.text = ttelem.text;
-
-        } else if (ttelem.kind !== 'br') {
-            
-            this.contents = [];
-        }
-
-        if ('space' in ttelem) {
-
-            this.space = ttelem.space;
-        }
-    }
-
-
-    /*
-     * ERROR HANDLING UTILITY FUNCTIONS
-     * 
-     */
-
-    function reportInfo(errorHandler, msg) {
-
-        if (errorHandler && errorHandler.info && errorHandler.info(msg))
-            throw msg;
-
-    }
-
-    function reportWarning(errorHandler, msg) {
-
-        if (errorHandler && errorHandler.warn && errorHandler.warn(msg))
-            throw msg;
-
-    }
-
-    function reportError(errorHandler, msg) {
-
-        if (errorHandler && errorHandler.error && errorHandler.error(msg))
-            throw msg;
-
-    }
-
-    function reportFatal(errorHandler, msg) {
-
-        if (errorHandler && errorHandler.fatal)
-            errorHandler.fatal(msg);
-
-        throw msg;
-
-    }
-
-
-})(typeof exports === 'undefined' ? this.imscISD = {} : exports,
-    typeof imscNames === 'undefined' ? _dereq_(42) : imscNames,
-    typeof imscStyles === 'undefined' ? _dereq_(43) : imscStyles
-    );
-
-},{"42":42,"43":43}],41:[function(_dereq_,module,exports){
-/* 
- * Copyright (c) 2016, Pierre-Anthony Lemieux <pal@sandflow.com>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice, this
- *   list of conditions and the following disclaimer.
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
-exports.generateISD = _dereq_(40).generateISD;
-exports.fromXML = _dereq_(38).fromXML;
-exports.renderHTML = _dereq_(39).render;
-},{"38":38,"39":39,"40":40}],42:[function(_dereq_,module,exports){
-/* 
- * Copyright (c) 2016, Pierre-Anthony Lemieux <pal@sandflow.com>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice, this
- *   list of conditions and the following disclaimer.
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
-/**
- * @module imscNames
- */
-
-;
-(function (imscNames) { // wrapper for non-node envs
-
-    imscNames.ns_tt = "http://www.w3.org/ns/ttml";
-    imscNames.ns_tts = "http://www.w3.org/ns/ttml#styling";
-    imscNames.ns_ttp = "http://www.w3.org/ns/ttml#parameter";
-    imscNames.ns_xml = "http://www.w3.org/XML/1998/namespace";
-    imscNames.ns_itts = "http://www.w3.org/ns/ttml/profile/imsc1#styling";
-    imscNames.ns_ittp = "http://www.w3.org/ns/ttml/profile/imsc1#parameter";
-    imscNames.ns_smpte = "http://www.smpte-ra.org/schemas/2052-1/2010/smpte-tt";
-    imscNames.ns_ebutts = "urn:ebu:tt:style";
-    
-})(typeof exports === 'undefined' ? this.imscNames = {} : exports);
-
-
-
-
-
-},{}],43:[function(_dereq_,module,exports){
-/* 
- * Copyright (c) 2016, Pierre-Anthony Lemieux <pal@sandflow.com>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice, this
- *   list of conditions and the following disclaimer.
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
-/**
- * @module imscStyles
- */
-
-;
-(function (imscStyles, imscNames, imscUtils) { // wrapper for non-node envs
-
-    function StylingAttributeDefinition(ns, name, initialValue, appliesTo, isInherit, isAnimatable, parseFunc, computeFunc) {
-        this.name = name;
-        this.ns = ns;
-        this.qname = ns + " " + name;
-        this.inherit = isInherit;
-        this.animatable = isAnimatable;
-        this.initial = initialValue;
-        this.applies = appliesTo;
-        this.parse = parseFunc;
-        this.compute = computeFunc;
-    }
-
-    imscStyles.all = [
-
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "backgroundColor",
-                "transparent",
-                ['body', 'div', 'p', 'region', 'span'],
-                false,
-                true,
-                imscUtils.parseColor,
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "color",
-                "white",
-                ['span'],
-                true,
-                true,
-                imscUtils.parseColor,
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "direction",
-                "ltr",
-                ['p', 'span'],
-                true,
-                true,
-                function (str) {
-                    return str;
-                },
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "display",
-                "auto",
-                ['body', 'div', 'p', 'region', 'span'],
-                false,
-                true,
-                function (str) {
-                    return str;
-                },
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "displayAlign",
-                "before",
-                ['region'],
-                false,
-                true,
-                function (str) {
-                    return str;
-                },
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "extent",
-                "auto",
-                ['tt', 'region'],
-                false,
-                true,
-                function (str) {
-
-                    if (str === "auto") {
-
-                        return str;
-
-                    } else {
-
-                        var s = str.split(" ");
-                        if (s.length !== 2) return null;
-                        var w = imscUtils.parseLength(s[0]);
-                        var h = imscUtils.parseLength(s[1]);
-                        if (!h || !w) return null;
-                        return {'h': h, 'w': w};
-                    }
-
-                },
-                function (doc, parent, element, attr) {
-
-                    var h;
-                    var w;
-
-                    if (attr === "auto") {
-
-                        h = 1;
-
-                    } else if (attr.h.unit === "%") {
-
-                        h = attr.h.value / 100;
-
-                    } else if (attr.h.unit === "px") {
-
-                        h = attr.h.value / doc.pxDimensions.h;
-
-                    } else {
-
-                        return null;
-
-                    }
-
-                    if (attr === "auto") {
-
-                        w = 1;
-
-                    } else if (attr.w.unit === "%") {
-
-                        w = attr.w.value / 100;
-
-                    } else if (attr.w.unit === "px") {
-
-                        w = attr.w.value / doc.pxDimensions.w;
-
-                    } else {
-
-                        return null;
-
-                    }
-
-                    return {'h': h, 'w': w};
-                }
-        ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "fontFamily",
-                "default",
-                ['span'],
-                true,
-                true,
-                function (str) {
-                    var ffs = str.split(",");
-                    var rslt = [];
-
-                    for (var i in ffs) {
-
-                        if (ffs[i].charAt(0) !== "'" && ffs[i].charAt(0) !== '"') {
-
-                            if (ffs[i] === "default") {
-
-                                /* per IMSC1 */
-
-                                rslt.push("monospaceSerif");
-
-                            } else {
-
-                                rslt.push(ffs[i]);
-
-                            }
-
-                        } else {
-
-                            rslt.push(ffs[i]);
-
-                        }
-
-                    }
-
-                    return rslt;
-                },
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "fontSize",
-                "1c",
-                ['span'],
-                true,
-                true,
-                imscUtils.parseLength,
-                function (doc, parent, element, attr) {
-
-                    var fs;
-
-                    if (attr.unit === "%") {
-
-                        if (parent !== null) {
-
-                            fs = parent.styleAttrs[imscStyles.byName.fontSize.qname] * attr.value / 100;
-
-                        } else {
-
-                            /* region, so percent of 1c */
-
-                            fs = attr.value / 100 / doc.cellResolution.h;
-
-                        }
-
-                    } else if (attr.unit === "em") {
-
-                        if (parent !== null) {
-
-                            fs = parent.styleAttrs[imscStyles.byName.fontSize.qname] * attr.value;
-
-                        } else {
-
-                            /* region, so percent of 1c */
-
-                            fs = attr.value / doc.cellResolution.h;
-
-                        }
-
-                    } else if (attr.unit === "c") {
-
-                        fs = attr.value / doc.cellResolution.h;
-
-                    } else if (attr.unit === "px") {
-
-                        fs = attr.value / doc.pxDimensions.h;
-
-                    } else {
-
-                        return null;
-
-                    }
-
-                    return fs;
-                }
-        ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "fontStyle",
-                "normal",
-                ['span'],
-                true,
-                true,
-                function (str) {
-                    /* TODO: handle font style */
-
-                    return str;
-                },
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "fontWeight",
-                "normal",
-                ['span'],
-                true,
-                true,
-                function (str) {
-                    /* TODO: handle font weight */
-
-                    return str;
-                },
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "lineHeight",
-                "normal",
-                ['p'],
-                true,
-                true,
-                function (str) {
-                    if (str === "normal") {
-                        return str;
-                    } else {
-                        return imscUtils.parseLength(str);
-                    }
-                },
-                function (doc, parent, element, attr) {
-
-                    var lh;
-
-                    if (attr === "normal") {
-
-                        /* inherit normal per https://github.com/w3c/ttml1/issues/220 */
-
-                        lh = attr;
-
-                    } else if (attr.unit === "%") {
-
-                        lh = element.styleAttrs[imscStyles.byName.fontSize.qname] * attr.value / 100;
-
-                    } else if (attr.unit === "em") {
-
-                        lh = element.styleAttrs[imscStyles.byName.fontSize.qname] * attr.value;
-
-                    } else if (attr.unit === "c") {
-
-                        lh = attr.value / doc.cellResolution.h;
-
-                    } else if (attr.unit === "px") {
-
-                        /* TODO: handle error if no px dimensions are provided */
-
-                        lh = attr.value / doc.pxDimensions.h;
-
-                    } else {
-
-                        return null;
-
-                    }
-
-                    /* TODO: create a Length constructor */
-
-                    return lh;
-                }
-        ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "opacity",
-                1.0,
-                ['region'],
-                false,
-                true,
-                parseFloat,
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "origin",
-                "auto",
-                ['region'],
-                false,
-                true,
-                function (str) {
-
-                    if (str === "auto") {
-
-                        return str;
-
-                    } else {
-
-                        var s = str.split(" ");
-                        if (s.length !== 2) return null;
-                        var w = imscUtils.parseLength(s[0]);
-                        var h = imscUtils.parseLength(s[1]);
-                        if (!h || !w) return null;
-                        return {'h': h, 'w': w};
-                    }
-
-                },
-                function (doc, parent, element, attr) {
-
-                    var h;
-                    var w;
-
-                    if (attr === "auto") {
-
-                        h = 0;
-
-                    } else if (attr.h.unit === "%") {
-
-                        h = attr.h.value / 100;
-
-                    } else if (attr.h.unit === "px") {
-
-                        h = attr.h.value / doc.pxDimensions.h;
-
-                    } else {
-
-                        return null;
-
-                    }
-
-                    if (attr === "auto") {
-
-                        w = 0;
-
-                    } else if (attr.w.unit === "%") {
-
-                        w = attr.w.value / 100;
-
-                    } else if (attr.w.unit === "px") {
-
-                        w = attr.w.value / doc.pxDimensions.w;
-
-                    } else {
-
-                        return null;
-
-                    }
-
-                    return {'h': h, 'w': w};
-                }
-        ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "overflow",
-                "hidden",
-                ['region'],
-                false,
-                true,
-                function (str) {
-                    return str;
-                },
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "padding",
-                "0px",
-                ['region'],
-                false,
-                true,
-                function (str) {
-
-                    var s = str.split(" ");
-                    if (s.length > 4) return null;
-                    var r = [];
-                    for (var i in s) {
-
-                        var l = imscUtils.parseLength(s[i]);
-                        if (!l) return null;
-                        r.push(l);
-                    }
-
-                    return r;
-                },
-                function (doc, parent, element, attr) {
-
-                    var padding;
-
-                    /* TODO: make sure we are in region */
-
-                    /*
-                     * expand padding shortcuts to 
-                     * [before, end, after, start]
-                     * 
-                     */
-
-                    if (attr.length === 1) {
-
-                        padding = [attr[0], attr[0], attr[0], attr[0]];
-
-                    } else if (attr.length === 2) {
-
-                        padding = [attr[0], attr[1], attr[0], attr[1]];
-
-                    } else if (attr.length === 3) {
-
-                        padding = [attr[0], attr[1], attr[2], attr[1]];
-
-                    } else if (attr.length === 4) {
-
-                        padding = [attr[0], attr[1], attr[2], attr[3]];
-
-                    } else {
-
-                        return null;
-
-                    }
-
-                    /* TODO: take into account tts:direction */
-
-                    /* 
-                     * transform [before, end, after, start] according to writingMode to 
-                     * [top,left,bottom,right]
-                     * 
-                     */
-
-                    var dir = element.styleAttrs[imscStyles.byName.writingMode.qname];
-
-                    if (dir === "lrtb" || dir === "lr") {
-
-                        padding = [padding[0], padding[3], padding[2], padding[1]];
-
-                    } else if (dir === "rltb" || dir === "rl") {
-
-                        padding = [padding[0], padding[1], padding[2], padding[3]];
-
-                    } else if (dir === "tblr") {
-
-                        padding = [padding[3], padding[0], padding[1], padding[2]];
-
-                    } else if (dir === "tbrl" || dir === "tb") {
-
-                        padding = [padding[3], padding[2], padding[1], padding[0]];
-
-                    } else {
-
-                        return null;
-
-                    }
-
-                    var out = [];
-
-                    for (var i in padding) {
-
-                        if (padding[i].value === 0) {
-
-                            out[i] = 0;
-
-                        } else if (padding[i].unit === "%") {
-
-                            if (i === "0" || i === "2") {
-
-                                out[i] = element.styleAttrs[imscStyles.byName.extent.qname].h * padding[i].value / 100;
-
-                            } else {
-
-                                out[i] = element.styleAttrs[imscStyles.byName.extent.qname].w * padding[i].value / 100;
-                            }
-
-                        } else if (padding[i].unit === "em") {
-
-                            out[i] = element.styleAttrs[imscStyles.byName.fontSize.qname] * padding[i].value;
-
-                        } else if (padding[i].unit === "c") {
-
-                            out[i] = padding[i].value / doc.cellResolution.h;
-
-                        } else if (padding[i].unit === "px") {
-
-                            out[i] = padding[i].value / doc.pxDimensions.h;
-
-                        } else {
-
-                            return null;
-
-                        }
-                    }
-
-
-                    return out;
-                }
-        ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "showBackground",
-                "always",
-                ['region'],
-                false,
-                true,
-                function (str) {
-                    return str;
-                },
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "textAlign",
-                "start",
-                ['p'],
-                true,
-                true,
-                function (str) {
-                    return str;
-                },
-                function (doc, parent, element, attr) {
-                    
-                    /* Section 7.16.9 of XSL */
-                    
-                    if (attr === "left") {
-                        
-                        return "start";
-                        
-                    } else if (attr === "right") {
-                        
-                        return "end";
-                        
-                    } else {
-                        
-                        return attr;
-                        
-                    }
-                }
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "textDecoration",
-                "none",
-                ['span'],
-                true,
-                true,
-                function (str) {
-                    return str.split(" ");
-                },
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "textOutline",
-                "none",
-                ['span'],
-                true,
-                true,
-                function (str) {
-
-                    /*
-                     * returns {c: <color>?, thichness: <length>} | "none"
-                     * 
-                     */
-
-                    if (str === "none") {
-
-                        return str;
-
-                    } else {
-
-                        var r = {};
-                        var s = str.split(" ");
-                        if (s.length === 0 || s.length > 2) return null;
-                        var c = imscUtils.parseColor(s[0]);
-                       
-                        r.color = c;
-                        
-                        if (c !== null) s.shift();
-
-                        if (s.length !== 1) return null;
-
-                        var l = imscUtils.parseLength(s[0]);
-
-                        if (!l) return null;
-
-                        r.thickness = l;
-
-                        return r;
-                    }
-
-                },
-                function (doc, parent, element, attr) {
-
-                    /*
-                     * returns {color: <color>, thickness: <norm length>}
-                     * 
-                     */
-
-                    if (attr === "none") return attr;
-
-                    var rslt = {};
-
-                    if (attr.color === null) {
-                        
-                        rslt.color = element.styleAttrs[imscStyles.byName.color.qname];
-                        
-                    } else {
-                        
-                        rslt.color = attr.color;
-
-                    }
-
-                    if (attr.thickness.unit === "%") {
-
-                        rslt.thickness = element.styleAttrs[imscStyles.byName.fontSize.qname] * attr.thickness.value / 100;
-
-                    } else if (attr.thickness.unit === "em") {
-
-                        rslt.thickness = element.styleAttrs[imscStyles.byName.fontSize.qname] * attr.thickness.value;
-
-                    } else if (attr.thickness.unit === "c") {
-
-                        rslt.thickness = attr.thickness.value / doc.cellResolution.h;
-
-                    } else if (attr.thickness.unit === "px") {
-
-                        rslt.thickness = attr.thickness.value / doc.pxDimensions.h;
-
-                    } else {
-
-                        return null;
-
-                    }
-
-
-                    return rslt;
-                }
-        ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "unicodeBidi",
-                "normal",
-                ['span', 'p'],
-                false,
-                true,
-                function (str) {
-                    return str;
-                },
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "visibility",
-                "visible",
-                ['body', 'div', 'p', 'region', 'span'],
-                true,
-                true,
-                function (str) {
-                    return str;
-                },
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "wrapOption",
-                "wrap",
-                ['span'],
-                true,
-                true,
-                function (str) {
-                    return str;
-                },
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "writingMode",
-                "lrtb",
-                ['region'],
-                false,
-                true,
-                function (str) {
-                    return str;
-                },
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_tts,
-                "zIndex",
-                "auto",
-                ['region'],
-                false,
-                true,
-                function (str) {
-                    
-                    var rslt;
-                    
-                    if (str === 'auto') {
-                        
-                        rslt = str;
-                        
-                    } else {
-                        
-                        rslt = parseInt(str);
-                        
-                        if (isNaN(rslt)) {
-                            rslt = null;
-                        }
-                        
-                    }
-                    
-                    return rslt;
-                },
-                null
-                ),
-        new StylingAttributeDefinition(
-                imscNames.ns_ebutts,
-                "linePadding",
-                "0c",
-                ['p'],
-                true,
-                false,
-                imscUtils.parseLength,
-                function (doc, parent, element, attr) {
-                    if (attr.unit === "c") {
-
-                        return attr.value / doc.cellResolution.h;
-
-                    } else {
-
-                        return null;
-
-                    }
-                }
-        ),
-        new StylingAttributeDefinition(
-                imscNames.ns_ebutts,
-                "multiRowAlign",
-                "auto",
-                ['p'],
-                true,
-                false,
-                function (str) {
-                    return str;
-                },
-                null
-                ),
-
-        new StylingAttributeDefinition(
-                imscNames.ns_smpte,
-                "backgroundImage",
-                null,
-                ['div'],
-                false,
-                false,
-                function (str) {
-                    return str;
-                },
-                null
-                ),
-
-        new StylingAttributeDefinition(
-                imscNames.ns_itts,
-                "forcedDisplay",
-                "false",
-                ['body', 'div', 'p', 'region', 'span'],
-                true,
-                true,
-                function (str) {
-                    return str === 'true' ? true : false;
-                },
-                null
-                )
-    ];
-
-    /* TODO: allow null parse function */
-
-    imscStyles.byQName = {};
-    for (var i in imscStyles.all) {
-
-        imscStyles.byQName[imscStyles.all[i].qname] = imscStyles.all[i];
-    }
-
-    imscStyles.byName = {};
-    for (var j in imscStyles.all) {
-
-        imscStyles.byName[imscStyles.all[j].name] = imscStyles.all[j];
-    }
-
-})(typeof exports === 'undefined' ? this.imscStyles = {} : exports,
-        typeof imscNames === 'undefined' ? _dereq_(42) : imscNames,
-        typeof imscUtils === 'undefined' ? _dereq_(44) : imscUtils);
-
-},{"42":42,"44":44}],44:[function(_dereq_,module,exports){
-/* 
- * Copyright (c) 2016, Pierre-Anthony Lemieux <pal@sandflow.com>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice, this
- *   list of conditions and the following disclaimer.
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
-/**
- * @module imscUtils
- */
-
-;
-(function (imscUtils) { // wrapper for non-node envs
-    
-    /* Documents the error handler interface */
-    
-    /**
-     * @classdesc Generic interface for handling events. The interface exposes four
-     * methods:
-     * * <pre>info</pre>: unusual event that does not result in an inconsistent state
-     * * <pre>warn</pre>: unexpected event that should not result in an inconsistent state
-     * * <pre>error</pre>: unexpected event that may result in an inconsistent state
-     * * <pre>fatal</pre>: unexpected event that results in an inconsistent state
-     *   and termination of processing
-     * Each method takes a single <pre>string</pre> describing the event as argument,
-     * and returns a single <pre>boolean</pre>, which terminates processing if <pre>true</pre>.
-     *
-     * @name ErrorHandler
-     * @class
-     */
-
-
-    /*
-     * Parses a TTML color expression
-     * 
-     */
-
-    var HEX_COLOR_RE = /#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?/;
-    var DEC_COLOR_RE = /rgb\((\d+),(\d+),(\d+)\)/;
-    var DEC_COLORA_RE = /rgba\((\d+),(\d+),(\d+),(\d+)\)/;
-    var NAMED_COLOR = {
-        transparent: [0, 0, 0, 0],
-        black: [0, 0, 0, 255],
-        silver: [192, 192, 192, 255],
-        gray: [128, 128, 128, 255],
-        white: [255, 255, 255, 255],
-        maroon: [128, 0, 0, 255],
-        red: [255, 0, 0, 255],
-        purple: [128, 0, 128, 255],
-        fuchsia: [255, 0, 255, 255],
-        magenta: [255, 0, 255, 255],
-        green: [0, 128, 0, 255],
-        lime: [0, 255, 0, 255],
-        olive: [128, 128, 0, 255],
-        yellow: [255, 255, 0, 255],
-        navy: [0, 0, 128, 255],
-        blue: [0, 0, 255, 255],
-        teal: [0, 128, 128, 255],
-        aqua: [0, 255, 255, 255],
-        cyan: [0, 255, 255, 255]
-    };
-
-    imscUtils.parseColor = function (str) {
-
-        var m;
-        var r = null;
-        if (str in NAMED_COLOR) {
-
-            r = NAMED_COLOR[str];
-
-        } else if ((m = HEX_COLOR_RE.exec(str)) !== null) {
-
-            r = [parseInt(m[1], 16),
-                parseInt(m[2], 16),
-                parseInt(m[3], 16),
-                (m[4] !== undefined ? parseInt(m[4], 16) : 255)];
-        } else if ((m = DEC_COLOR_RE.exec(str)) !== null) {
-
-            r = [parseInt(m[1]),
-                parseInt(m[2]),
-                parseInt(m[3]),
-                255];
-        } else if ((m = DEC_COLORA_RE.exec(str)) !== null) {
-
-            r = [parseInt(m[1]),
-                parseInt(m[2]),
-                parseInt(m[3]),
-                parseInt(m[4])];
-        }
-
-        return r;
-    };
-
-    var LENGTH_RE = /^((?:\+|\-)?\d*(?:\.\d+)?)(px|em|c|%)$/;
-
-    imscUtils.parseLength = function (str) {
-
-        var m;
-
-        var r = null;
-
-        if ((m = LENGTH_RE.exec(str)) !== null) {
-
-            r = {value: parseFloat(m[1]), unit: m[2]};
-        }
-
-        return r;
-    };
-
-})(typeof exports === 'undefined' ? this.imscUtils = {} : exports);
-
-},{}],45:[function(_dereq_,module,exports){
+},{"8":8}],41:[function(_dereq_,module,exports){
 (function (Buffer){
 ;(function (sax) { // wrapper for non-node envs
   sax.parser = function (strict, opt) { return new SAXParser(strict, opt) }
@@ -13251,7 +13701,7 @@ exports.renderHTML = _dereq_(39).render;
 
   var Stream
   try {
-    Stream = _dereq_(35).Stream
+    Stream = _dereq_(42).Stream
   } catch (ex) {
     Stream = function () {}
   }
@@ -13321,7 +13771,7 @@ exports.renderHTML = _dereq_(39).render;
       typeof Buffer.isBuffer === 'function' &&
       Buffer.isBuffer(data)) {
       if (!this._decoder) {
-        var SD = _dereq_(36).StringDecoder
+        var SD = _dereq_(44).StringDecoder
         this._decoder = new SD('utf8')
       }
       data = this._decoder.write(data)
@@ -14666,9 +15116,294 @@ exports.renderHTML = _dereq_(39).render;
   }
 })(typeof exports === 'undefined' ? this.sax = {} : exports)
 
-}).call(this,_dereq_(10).Buffer)
+}).call(this,_dereq_(8).Buffer)
 
-},{"10":10,"35":35,"36":36}],46:[function(_dereq_,module,exports){
+},{"42":42,"44":44,"8":8}],42:[function(_dereq_,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+module.exports = Stream;
+
+var EE = _dereq_(10).EventEmitter;
+var inherits = _dereq_(43);
+
+inherits(Stream, EE);
+Stream.Readable = _dereq_(37);
+Stream.Writable = _dereq_(39);
+Stream.Duplex = _dereq_(24);
+Stream.Transform = _dereq_(38);
+Stream.PassThrough = _dereq_(36);
+
+// Backwards-compat with node 0.4.x
+Stream.Stream = Stream;
+
+
+
+// old-style streams.  Note that the pipe method (the only relevant
+// part of this class) is overridden in the Readable class.
+
+function Stream() {
+  EE.call(this);
+}
+
+Stream.prototype.pipe = function(dest, options) {
+  var source = this;
+
+  function ondata(chunk) {
+    if (dest.writable) {
+      if (false === dest.write(chunk) && source.pause) {
+        source.pause();
+      }
+    }
+  }
+
+  source.on('data', ondata);
+
+  function ondrain() {
+    if (source.readable && source.resume) {
+      source.resume();
+    }
+  }
+
+  dest.on('drain', ondrain);
+
+  // If the 'end' option is not supplied, dest.end() will be called when
+  // source gets the 'end' or 'close' events.  Only dest.end() once.
+  if (!dest._isStdio && (!options || options.end !== false)) {
+    source.on('end', onend);
+    source.on('close', onclose);
+  }
+
+  var didOnEnd = false;
+  function onend() {
+    if (didOnEnd) return;
+    didOnEnd = true;
+
+    dest.end();
+  }
+
+
+  function onclose() {
+    if (didOnEnd) return;
+    didOnEnd = true;
+
+    if (typeof dest.destroy === 'function') dest.destroy();
+  }
+
+  // don't leave dangling pipes when there are errors.
+  function onerror(er) {
+    cleanup();
+    if (EE.listenerCount(this, 'error') === 0) {
+      throw er; // Unhandled stream error in pipe.
+    }
+  }
+
+  source.on('error', onerror);
+  dest.on('error', onerror);
+
+  // remove all the event listeners that were added.
+  function cleanup() {
+    source.removeListener('data', ondata);
+    dest.removeListener('drain', ondrain);
+
+    source.removeListener('end', onend);
+    source.removeListener('close', onclose);
+
+    source.removeListener('error', onerror);
+    dest.removeListener('error', onerror);
+
+    source.removeListener('end', cleanup);
+    source.removeListener('close', cleanup);
+
+    dest.removeListener('close', cleanup);
+  }
+
+  source.on('end', cleanup);
+  source.on('close', cleanup);
+
+  dest.on('close', cleanup);
+
+  dest.emit('pipe', source);
+
+  // Allow for unix-like usage: A.pipe(B).pipe(C)
+  return dest;
+};
+
+},{"10":10,"24":24,"36":36,"37":37,"38":38,"39":39,"43":43}],43:[function(_dereq_,module,exports){
+arguments[4][34][0].apply(exports,arguments)
+},{"34":34}],44:[function(_dereq_,module,exports){
+arguments[4][35][0].apply(exports,arguments)
+},{"35":35,"40":40}],45:[function(_dereq_,module,exports){
+(function (setImmediate,clearImmediate){
+var nextTick = _dereq_(23).nextTick;
+var apply = Function.prototype.apply;
+var slice = Array.prototype.slice;
+var immediateIds = {};
+var nextImmediateId = 0;
+
+// DOM APIs, for completeness
+
+exports.setTimeout = function() {
+  return new Timeout(apply.call(setTimeout, window, arguments), clearTimeout);
+};
+exports.setInterval = function() {
+  return new Timeout(apply.call(setInterval, window, arguments), clearInterval);
+};
+exports.clearTimeout =
+exports.clearInterval = function(timeout) { timeout.close(); };
+
+function Timeout(id, clearFn) {
+  this._id = id;
+  this._clearFn = clearFn;
+}
+Timeout.prototype.unref = Timeout.prototype.ref = function() {};
+Timeout.prototype.close = function() {
+  this._clearFn.call(window, this._id);
+};
+
+// Does not start the time, just sets up the members needed.
+exports.enroll = function(item, msecs) {
+  clearTimeout(item._idleTimeoutId);
+  item._idleTimeout = msecs;
+};
+
+exports.unenroll = function(item) {
+  clearTimeout(item._idleTimeoutId);
+  item._idleTimeout = -1;
+};
+
+exports._unrefActive = exports.active = function(item) {
+  clearTimeout(item._idleTimeoutId);
+
+  var msecs = item._idleTimeout;
+  if (msecs >= 0) {
+    item._idleTimeoutId = setTimeout(function onTimeout() {
+      if (item._onTimeout)
+        item._onTimeout();
+    }, msecs);
+  }
+};
+
+// That's not how node.js implements it but the exposed api is the same.
+exports.setImmediate = typeof setImmediate === "function" ? setImmediate : function(fn) {
+  var id = nextImmediateId++;
+  var args = arguments.length < 2 ? false : slice.call(arguments, 1);
+
+  immediateIds[id] = true;
+
+  nextTick(function onNextTick() {
+    if (immediateIds[id]) {
+      // fn.call() is faster so we optimize for the common use-case
+      // @see http://jsperf.com/call-apply-segu
+      if (args) {
+        fn.apply(null, args);
+      } else {
+        fn.call(null);
+      }
+      // Prevent ids from leaking
+      exports.clearImmediate(id);
+    }
+  });
+
+  return id;
+};
+
+exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate : function(id) {
+  delete immediateIds[id];
+};
+}).call(this,_dereq_(45).setImmediate,_dereq_(45).clearImmediate)
+
+},{"23":23,"45":45}],46:[function(_dereq_,module,exports){
+(function (global){
+
+/**
+ * Module exports.
+ */
+
+module.exports = deprecate;
+
+/**
+ * Mark that a method should not be used.
+ * Returns a modified function which warns once by default.
+ *
+ * If `localStorage.noDeprecation = true` is set, then it is a no-op.
+ *
+ * If `localStorage.throwDeprecation = true` is set, then deprecated functions
+ * will throw an Error when invoked.
+ *
+ * If `localStorage.traceDeprecation = true` is set, then deprecated functions
+ * will invoke `console.trace()` instead of `console.error()`.
+ *
+ * @param {Function} fn - the function to deprecate
+ * @param {String} msg - the string to print to the console when `fn` is invoked
+ * @returns {Function} a new "deprecated" version of `fn`
+ * @api public
+ */
+
+function deprecate (fn, msg) {
+  if (config('noDeprecation')) {
+    return fn;
+  }
+
+  var warned = false;
+  function deprecated() {
+    if (!warned) {
+      if (config('throwDeprecation')) {
+        throw new Error(msg);
+      } else if (config('traceDeprecation')) {
+        console.trace(msg);
+      } else {
+        console.warn(msg);
+      }
+      warned = true;
+    }
+    return fn.apply(this, arguments);
+  }
+
+  return deprecated;
+}
+
+/**
+ * Checks `localStorage` for boolean values for the given `name`.
+ *
+ * @param {String} name
+ * @returns {Boolean}
+ * @api private
+ */
+
+function config (name) {
+  // accessing global.localStorage can trigger a DOMException in sandboxed iframes
+  try {
+    if (!global.localStorage) return false;
+  } catch (_) {
+    return false;
+  }
+  var val = global.localStorage[name];
+  if (null == val) return false;
+  return String(val).toLowerCase() === 'true';
+}
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{}],47:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -14707,15 +15442,15 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _EventBus = _dereq_(47);
+var _EventBus = _dereq_(48);
 
 var _EventBus2 = _interopRequireDefault(_EventBus);
 
-var _eventsEvents = _dereq_(53);
+var _eventsEvents = _dereq_(54);
 
 var _eventsEvents2 = _interopRequireDefault(_eventsEvents);
 
-var _FactoryMaker = _dereq_(48);
+var _FactoryMaker = _dereq_(49);
 
 var _FactoryMaker2 = _interopRequireDefault(_FactoryMaker);
 
@@ -14976,7 +15711,7 @@ _FactoryMaker2['default'].updateSingletonFactory(Debug.__dashjs_factory_name, fa
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"47":47,"48":48,"53":53}],47:[function(_dereq_,module,exports){
+},{"48":48,"49":49,"54":54}],48:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -15015,7 +15750,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _FactoryMaker = _dereq_(48);
+var _FactoryMaker = _dereq_(49);
 
 var _FactoryMaker2 = _interopRequireDefault(_FactoryMaker);
 
@@ -15119,7 +15854,7 @@ _FactoryMaker2['default'].updateSingletonFactory(EventBus.__dashjs_factory_name,
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"48":48}],48:[function(_dereq_,module,exports){
+},{"49":49}],49:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -15381,7 +16116,7 @@ var FactoryMaker = (function () {
 exports["default"] = FactoryMaker;
 module.exports = exports["default"];
 
-},{}],49:[function(_dereq_,module,exports){
+},{}],50:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -15394,7 +16129,7 @@ function getVersionString() {
     return VERSION;
 }
 
-},{}],50:[function(_dereq_,module,exports){
+},{}],51:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -15439,7 +16174,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _ErrorsBase2 = _dereq_(51);
+var _ErrorsBase2 = _dereq_(52);
 
 var _ErrorsBase3 = _interopRequireDefault(_ErrorsBase2);
 
@@ -15558,7 +16293,7 @@ var errors = new Errors();
 exports['default'] = errors;
 module.exports = exports['default'];
 
-},{"51":51}],51:[function(_dereq_,module,exports){
+},{"52":52}],52:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -15630,7 +16365,7 @@ var ErrorsBase = (function () {
 exports['default'] = ErrorsBase;
 module.exports = exports['default'];
 
-},{}],52:[function(_dereq_,module,exports){
+},{}],53:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -15675,7 +16410,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _EventsBase2 = _dereq_(54);
+var _EventsBase2 = _dereq_(55);
 
 var _EventsBase3 = _interopRequireDefault(_EventsBase2);
 
@@ -15739,7 +16474,7 @@ var CoreEvents = (function (_EventsBase) {
 exports['default'] = CoreEvents;
 module.exports = exports['default'];
 
-},{"54":54}],53:[function(_dereq_,module,exports){
+},{"55":55}],54:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -15788,7 +16523,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _CoreEvents2 = _dereq_(52);
+var _CoreEvents2 = _dereq_(53);
 
 var _CoreEvents3 = _interopRequireDefault(_CoreEvents2);
 
@@ -15808,7 +16543,7 @@ var events = new Events();
 exports['default'] = events;
 module.exports = exports['default'];
 
-},{"52":52}],54:[function(_dereq_,module,exports){
+},{"53":53}],55:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -15880,7 +16615,7 @@ var EventsBase = (function () {
 exports['default'] = EventsBase;
 module.exports = exports['default'];
 
-},{}],55:[function(_dereq_,module,exports){
+},{}],56:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -15920,35 +16655,35 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _streamingConstantsConstants = _dereq_(101);
+var _streamingConstantsConstants = _dereq_(102);
 
 var _streamingConstantsConstants2 = _interopRequireDefault(_streamingConstantsConstants);
 
-var _constantsDashConstants = _dereq_(60);
+var _constantsDashConstants = _dereq_(61);
 
 var _constantsDashConstants2 = _interopRequireDefault(_constantsDashConstants);
 
-var _streamingVoRepresentationInfo = _dereq_(224);
+var _streamingVoRepresentationInfo = _dereq_(225);
 
 var _streamingVoRepresentationInfo2 = _interopRequireDefault(_streamingVoRepresentationInfo);
 
-var _streamingVoMediaInfo = _dereq_(222);
+var _streamingVoMediaInfo = _dereq_(223);
 
 var _streamingVoMediaInfo2 = _interopRequireDefault(_streamingVoMediaInfo);
 
-var _streamingVoStreamInfo = _dereq_(225);
+var _streamingVoStreamInfo = _dereq_(226);
 
 var _streamingVoStreamInfo2 = _interopRequireDefault(_streamingVoStreamInfo);
 
-var _streamingVoManifestInfo = _dereq_(221);
+var _streamingVoManifestInfo = _dereq_(222);
 
 var _streamingVoManifestInfo2 = _interopRequireDefault(_streamingVoManifestInfo);
 
-var _voEvent = _dereq_(83);
+var _voEvent = _dereq_(84);
 
 var _voEvent2 = _interopRequireDefault(_voEvent);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -15956,7 +16691,7 @@ var _externalsCea608Parser = _dereq_(2);
 
 var _externalsCea608Parser2 = _interopRequireDefault(_externalsCea608Parser);
 
-var _streamingUtilsSupervisorTools = _dereq_(208);
+var _streamingUtilsSupervisorTools = _dereq_(209);
 
 function DashAdapter() {
     var instance = undefined,
@@ -16493,7 +17228,7 @@ DashAdapter.__dashjs_factory_name = 'DashAdapter';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(DashAdapter);
 module.exports = exports['default'];
 
-},{"101":101,"2":2,"208":208,"221":221,"222":222,"224":224,"225":225,"48":48,"60":60,"83":83}],56:[function(_dereq_,module,exports){
+},{"102":102,"2":2,"209":209,"222":222,"223":223,"225":225,"226":226,"49":49,"61":61,"84":84}],57:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -16532,63 +17267,63 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _streamingConstantsConstants = _dereq_(101);
+var _streamingConstantsConstants = _dereq_(102);
 
 var _streamingConstantsConstants2 = _interopRequireDefault(_streamingConstantsConstants);
 
-var _constantsDashConstants = _dereq_(60);
+var _constantsDashConstants = _dereq_(61);
 
 var _constantsDashConstants2 = _interopRequireDefault(_constantsDashConstants);
 
-var _streamingVoFragmentRequest = _dereq_(217);
+var _streamingVoFragmentRequest = _dereq_(218);
 
 var _streamingVoFragmentRequest2 = _interopRequireDefault(_streamingVoFragmentRequest);
 
-var _streamingVoDashJSError = _dereq_(215);
+var _streamingVoDashJSError = _dereq_(216);
 
 var _streamingVoDashJSError2 = _interopRequireDefault(_streamingVoDashJSError);
 
-var _streamingVoMetricsHTTPRequest = _dereq_(235);
+var _streamingVoMetricsHTTPRequest = _dereq_(236);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _streamingUtilsURLUtils = _dereq_(210);
+var _streamingUtilsURLUtils = _dereq_(211);
 
 var _streamingUtilsURLUtils2 = _interopRequireDefault(_streamingUtilsURLUtils);
 
-var _voRepresentation = _dereq_(87);
+var _voRepresentation = _dereq_(88);
 
 var _voRepresentation2 = _interopRequireDefault(_voRepresentation);
 
-var _utilsSegmentsUtils = _dereq_(77);
+var _utilsSegmentsUtils = _dereq_(78);
 
-var _utilsSegmentsGetter = _dereq_(76);
+var _utilsSegmentsGetter = _dereq_(77);
 
 var _utilsSegmentsGetter2 = _interopRequireDefault(_utilsSegmentsGetter);
 
-var _SegmentBaseLoader = _dereq_(58);
+var _SegmentBaseLoader = _dereq_(59);
 
 var _SegmentBaseLoader2 = _interopRequireDefault(_SegmentBaseLoader);
 
-var _WebmSegmentBaseLoader = _dereq_(59);
+var _WebmSegmentBaseLoader = _dereq_(60);
 
 var _WebmSegmentBaseLoader2 = _interopRequireDefault(_WebmSegmentBaseLoader);
 
@@ -17063,7 +17798,7 @@ DashHandler.__dashjs_factory_name = 'DashHandler';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(DashHandler);
 module.exports = exports['default'];
 
-},{"101":101,"210":210,"215":215,"217":217,"235":235,"46":46,"47":47,"48":48,"50":50,"53":53,"58":58,"59":59,"60":60,"76":76,"77":77,"87":87}],57:[function(_dereq_,module,exports){
+},{"102":102,"211":211,"216":216,"218":218,"236":236,"47":47,"48":48,"49":49,"51":51,"54":54,"59":59,"60":60,"61":61,"77":77,"78":78,"88":88}],58:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -17102,17 +17837,17 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _streamingVoMetricsHTTPRequest = _dereq_(235);
+var _streamingVoMetricsHTTPRequest = _dereq_(236);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _streamingConstantsMetricsConstants = _dereq_(102);
+var _streamingConstantsMetricsConstants = _dereq_(103);
 
 var _streamingConstantsMetricsConstants2 = _interopRequireDefault(_streamingConstantsMetricsConstants);
 
-var _utilsRound10 = _dereq_(75);
+var _utilsRound10 = _dereq_(76);
 
 var _utilsRound102 = _interopRequireDefault(_utilsRound10);
 
@@ -17480,7 +18215,7 @@ DashMetrics.__dashjs_factory_name = 'DashMetrics';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(DashMetrics);
 module.exports = exports['default'];
 
-},{"102":102,"235":235,"48":48,"75":75}],58:[function(_dereq_,module,exports){
+},{"103":103,"236":236,"49":49,"76":76}],59:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -17519,49 +18254,49 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _streamingUtilsRequestModifier = _dereq_(207);
+var _streamingUtilsRequestModifier = _dereq_(208);
 
 var _streamingUtilsRequestModifier2 = _interopRequireDefault(_streamingUtilsRequestModifier);
 
-var _voSegment = _dereq_(88);
+var _voSegment = _dereq_(89);
 
 var _voSegment2 = _interopRequireDefault(_voSegment);
 
-var _streamingVoDashJSError = _dereq_(215);
+var _streamingVoDashJSError = _dereq_(216);
 
 var _streamingVoDashJSError2 = _interopRequireDefault(_streamingVoDashJSError);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _streamingUtilsBoxParser = _dereq_(197);
+var _streamingUtilsBoxParser = _dereq_(198);
 
 var _streamingUtilsBoxParser2 = _interopRequireDefault(_streamingUtilsBoxParser);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _streamingVoMetricsHTTPRequest = _dereq_(235);
+var _streamingVoMetricsHTTPRequest = _dereq_(236);
 
-var _streamingVoFragmentRequest = _dereq_(217);
+var _streamingVoFragmentRequest = _dereq_(218);
 
 var _streamingVoFragmentRequest2 = _interopRequireDefault(_streamingVoFragmentRequest);
 
-var _streamingNetHTTPLoader = _dereq_(148);
+var _streamingNetHTTPLoader = _dereq_(149);
 
 var _streamingNetHTTPLoader2 = _interopRequireDefault(_streamingNetHTTPLoader);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
@@ -17850,7 +18585,7 @@ SegmentBaseLoader.__dashjs_factory_name = 'SegmentBaseLoader';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(SegmentBaseLoader);
 module.exports = exports['default'];
 
-},{"148":148,"197":197,"207":207,"215":215,"217":217,"235":235,"46":46,"47":47,"48":48,"50":50,"53":53,"88":88}],59:[function(_dereq_,module,exports){
+},{"149":149,"198":198,"208":208,"216":216,"218":218,"236":236,"47":47,"48":48,"49":49,"51":51,"54":54,"89":89}],60:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -17859,53 +18594,53 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _streamingUtilsEBMLParser = _dereq_(201);
+var _streamingUtilsEBMLParser = _dereq_(202);
 
 var _streamingUtilsEBMLParser2 = _interopRequireDefault(_streamingUtilsEBMLParser);
 
-var _streamingConstantsConstants = _dereq_(101);
+var _streamingConstantsConstants = _dereq_(102);
 
 var _streamingConstantsConstants2 = _interopRequireDefault(_streamingConstantsConstants);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _streamingUtilsRequestModifier = _dereq_(207);
+var _streamingUtilsRequestModifier = _dereq_(208);
 
 var _streamingUtilsRequestModifier2 = _interopRequireDefault(_streamingUtilsRequestModifier);
 
-var _voSegment = _dereq_(88);
+var _voSegment = _dereq_(89);
 
 var _voSegment2 = _interopRequireDefault(_voSegment);
 
-var _streamingVoMetricsHTTPRequest = _dereq_(235);
+var _streamingVoMetricsHTTPRequest = _dereq_(236);
 
-var _streamingVoFragmentRequest = _dereq_(217);
+var _streamingVoFragmentRequest = _dereq_(218);
 
 var _streamingVoFragmentRequest2 = _interopRequireDefault(_streamingVoFragmentRequest);
 
-var _streamingNetHTTPLoader = _dereq_(148);
+var _streamingNetHTTPLoader = _dereq_(149);
 
 var _streamingNetHTTPLoader2 = _interopRequireDefault(_streamingNetHTTPLoader);
 
-var _streamingVoDashJSError = _dereq_(215);
+var _streamingVoDashJSError = _dereq_(216);
 
 var _streamingVoDashJSError2 = _interopRequireDefault(_streamingVoDashJSError);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
@@ -18322,7 +19057,7 @@ WebmSegmentBaseLoader.__dashjs_factory_name = 'WebmSegmentBaseLoader';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(WebmSegmentBaseLoader);
 module.exports = exports['default'];
 
-},{"101":101,"148":148,"201":201,"207":207,"215":215,"217":217,"235":235,"46":46,"47":47,"48":48,"50":50,"53":53,"88":88}],60:[function(_dereq_,module,exports){
+},{"102":102,"149":149,"202":202,"208":208,"216":216,"218":218,"236":236,"47":47,"48":48,"49":49,"51":51,"54":54,"89":89}],61:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -18477,7 +19212,7 @@ var constants = new DashConstants();
 exports['default'] = constants;
 module.exports = exports['default'];
 
-},{}],61:[function(_dereq_,module,exports){
+},{}],62:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -18516,35 +19251,35 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _streamingConstantsConstants = _dereq_(101);
+var _streamingConstantsConstants = _dereq_(102);
 
 var _streamingConstantsConstants2 = _interopRequireDefault(_streamingConstantsConstants);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
-var _constantsDashConstants = _dereq_(60);
+var _constantsDashConstants = _dereq_(61);
 
 var _constantsDashConstants2 = _interopRequireDefault(_constantsDashConstants);
 
-var _streamingVoDashJSError = _dereq_(215);
+var _streamingVoDashJSError = _dereq_(216);
 
 var _streamingVoDashJSError2 = _interopRequireDefault(_streamingVoDashJSError);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _voRepresentation = _dereq_(87);
+var _voRepresentation = _dereq_(88);
 
 var _voRepresentation2 = _interopRequireDefault(_voRepresentation);
 
@@ -18900,7 +19635,7 @@ RepresentationController.__dashjs_factory_name = 'RepresentationController';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(RepresentationController);
 module.exports = exports['default'];
 
-},{"101":101,"215":215,"47":47,"48":48,"50":50,"53":53,"60":60,"87":87}],62:[function(_dereq_,module,exports){
+},{"102":102,"216":216,"48":48,"49":49,"51":51,"54":54,"61":61,"88":88}],63:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -18939,71 +19674,71 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _streamingConstantsConstants = _dereq_(101);
+var _streamingConstantsConstants = _dereq_(102);
 
 var _streamingConstantsConstants2 = _interopRequireDefault(_streamingConstantsConstants);
 
-var _constantsDashConstants = _dereq_(60);
+var _constantsDashConstants = _dereq_(61);
 
 var _constantsDashConstants2 = _interopRequireDefault(_constantsDashConstants);
 
-var _voRepresentation = _dereq_(87);
+var _voRepresentation = _dereq_(88);
 
 var _voRepresentation2 = _interopRequireDefault(_voRepresentation);
 
-var _voAdaptationSet = _dereq_(81);
+var _voAdaptationSet = _dereq_(82);
 
 var _voAdaptationSet2 = _interopRequireDefault(_voAdaptationSet);
 
-var _voPeriod = _dereq_(86);
+var _voPeriod = _dereq_(87);
 
 var _voPeriod2 = _interopRequireDefault(_voPeriod);
 
-var _voMpd = _dereq_(85);
+var _voMpd = _dereq_(86);
 
 var _voMpd2 = _interopRequireDefault(_voMpd);
 
-var _voUTCTiming = _dereq_(89);
+var _voUTCTiming = _dereq_(90);
 
 var _voUTCTiming2 = _interopRequireDefault(_voUTCTiming);
 
-var _voEvent = _dereq_(83);
+var _voEvent = _dereq_(84);
 
 var _voEvent2 = _interopRequireDefault(_voEvent);
 
-var _voBaseURL = _dereq_(82);
+var _voBaseURL = _dereq_(83);
 
 var _voBaseURL2 = _interopRequireDefault(_voBaseURL);
 
-var _voEventStream = _dereq_(84);
+var _voEventStream = _dereq_(85);
 
 var _voEventStream2 = _interopRequireDefault(_voEventStream);
 
-var _streamingUtilsObjectUtils = _dereq_(206);
+var _streamingUtilsObjectUtils = _dereq_(207);
 
 var _streamingUtilsObjectUtils2 = _interopRequireDefault(_streamingUtilsObjectUtils);
 
-var _streamingUtilsURLUtils = _dereq_(210);
+var _streamingUtilsURLUtils = _dereq_(211);
 
 var _streamingUtilsURLUtils2 = _interopRequireDefault(_streamingUtilsURLUtils);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _streamingVoDashJSError = _dereq_(215);
+var _streamingVoDashJSError = _dereq_(216);
 
 var _streamingVoDashJSError2 = _interopRequireDefault(_streamingVoDashJSError);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
-var _streamingThumbnailThumbnailTracks = _dereq_(195);
+var _streamingThumbnailThumbnailTracks = _dereq_(196);
 
 function DashManifestModel(config) {
 
@@ -20018,7 +20753,7 @@ DashManifestModel.__dashjs_factory_name = 'DashManifestModel';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(DashManifestModel);
 module.exports = exports['default'];
 
-},{"101":101,"195":195,"206":206,"210":210,"215":215,"46":46,"48":48,"50":50,"60":60,"81":81,"82":82,"83":83,"84":84,"85":85,"86":86,"87":87,"89":89}],63:[function(_dereq_,module,exports){
+},{"102":102,"196":196,"207":207,"211":211,"216":216,"47":47,"49":49,"51":51,"61":61,"82":82,"83":83,"84":84,"85":85,"86":86,"87":87,"88":88,"90":90}],64:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -20057,15 +20792,15 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _objectiron = _dereq_(73);
+var _objectiron = _dereq_(74);
 
 var _objectiron2 = _interopRequireDefault(_objectiron);
 
@@ -20073,27 +20808,27 @@ var _externalsXml2json = _dereq_(3);
 
 var _externalsXml2json2 = _interopRequireDefault(_externalsXml2json);
 
-var _matchersStringMatcher = _dereq_(72);
+var _matchersStringMatcher = _dereq_(73);
 
 var _matchersStringMatcher2 = _interopRequireDefault(_matchersStringMatcher);
 
-var _matchersDurationMatcher = _dereq_(70);
+var _matchersDurationMatcher = _dereq_(71);
 
 var _matchersDurationMatcher2 = _interopRequireDefault(_matchersDurationMatcher);
 
-var _matchersDateTimeMatcher = _dereq_(69);
+var _matchersDateTimeMatcher = _dereq_(70);
 
 var _matchersDateTimeMatcher2 = _interopRequireDefault(_matchersDateTimeMatcher);
 
-var _matchersNumericMatcher = _dereq_(71);
+var _matchersNumericMatcher = _dereq_(72);
 
 var _matchersNumericMatcher2 = _interopRequireDefault(_matchersNumericMatcher);
 
-var _mapsRepresentationBaseValuesMap = _dereq_(66);
+var _mapsRepresentationBaseValuesMap = _dereq_(67);
 
 var _mapsRepresentationBaseValuesMap2 = _interopRequireDefault(_mapsRepresentationBaseValuesMap);
 
-var _mapsSegmentValuesMap = _dereq_(67);
+var _mapsSegmentValuesMap = _dereq_(68);
 
 var _mapsSegmentValuesMap2 = _interopRequireDefault(_mapsSegmentValuesMap);
 
@@ -20171,7 +20906,7 @@ DashParser.__dashjs_factory_name = 'DashParser';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(DashParser);
 module.exports = exports['default'];
 
-},{"3":3,"46":46,"48":48,"66":66,"67":67,"69":69,"70":70,"71":71,"72":72,"73":73}],64:[function(_dereq_,module,exports){
+},{"3":3,"47":47,"49":49,"67":67,"68":68,"70":70,"71":71,"72":72,"73":73,"74":74}],65:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -20246,7 +20981,7 @@ var CommonProperty = (function () {
 exports["default"] = CommonProperty;
 module.exports = exports["default"];
 
-},{}],65:[function(_dereq_,module,exports){
+},{}],66:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -20292,7 +21027,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'd
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-var _CommonProperty = _dereq_(64);
+var _CommonProperty = _dereq_(65);
 
 var _CommonProperty2 = _interopRequireDefault(_CommonProperty);
 
@@ -20336,7 +21071,7 @@ var MapNode = (function () {
 exports['default'] = MapNode;
 module.exports = exports['default'];
 
-},{"64":64}],66:[function(_dereq_,module,exports){
+},{"65":65}],67:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -20384,11 +21119,11 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _MapNode2 = _dereq_(65);
+var _MapNode2 = _dereq_(66);
 
 var _MapNode3 = _interopRequireDefault(_MapNode2);
 
-var _constantsDashConstants = _dereq_(60);
+var _constantsDashConstants = _dereq_(61);
 
 var _constantsDashConstants2 = _interopRequireDefault(_constantsDashConstants);
 
@@ -20409,7 +21144,7 @@ var RepresentationBaseValuesMap = (function (_MapNode) {
 exports['default'] = RepresentationBaseValuesMap;
 module.exports = exports['default'];
 
-},{"60":60,"65":65}],67:[function(_dereq_,module,exports){
+},{"61":61,"66":66}],68:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -20457,11 +21192,11 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _MapNode2 = _dereq_(65);
+var _MapNode2 = _dereq_(66);
 
 var _MapNode3 = _interopRequireDefault(_MapNode2);
 
-var _constantsDashConstants = _dereq_(60);
+var _constantsDashConstants = _dereq_(61);
 
 var _constantsDashConstants2 = _interopRequireDefault(_constantsDashConstants);
 
@@ -20482,7 +21217,7 @@ var SegmentValuesMap = (function (_MapNode) {
 exports['default'] = SegmentValuesMap;
 module.exports = exports['default'];
 
-},{"60":60,"65":65}],68:[function(_dereq_,module,exports){
+},{"61":61,"66":66}],69:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -20554,7 +21289,7 @@ var BaseMatcher = (function () {
 exports["default"] = BaseMatcher;
 module.exports = exports["default"];
 
-},{}],69:[function(_dereq_,module,exports){
+},{}],70:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -20602,7 +21337,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _BaseMatcher2 = _dereq_(68);
+var _BaseMatcher2 = _dereq_(69);
 
 var _BaseMatcher3 = _interopRequireDefault(_BaseMatcher2);
 
@@ -20646,7 +21381,7 @@ var DateTimeMatcher = (function (_BaseMatcher) {
 exports['default'] = DateTimeMatcher;
 module.exports = exports['default'];
 
-},{"68":68}],70:[function(_dereq_,module,exports){
+},{"69":69}],71:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -20694,15 +21429,15 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _BaseMatcher2 = _dereq_(68);
+var _BaseMatcher2 = _dereq_(69);
 
 var _BaseMatcher3 = _interopRequireDefault(_BaseMatcher2);
 
-var _streamingConstantsConstants = _dereq_(101);
+var _streamingConstantsConstants = _dereq_(102);
 
 var _streamingConstantsConstants2 = _interopRequireDefault(_streamingConstantsConstants);
 
-var _constantsDashConstants = _dereq_(60);
+var _constantsDashConstants = _dereq_(61);
 
 var _constantsDashConstants2 = _interopRequireDefault(_constantsDashConstants);
 
@@ -20750,7 +21485,7 @@ var DurationMatcher = (function (_BaseMatcher) {
 exports['default'] = DurationMatcher;
 module.exports = exports['default'];
 
-},{"101":101,"60":60,"68":68}],71:[function(_dereq_,module,exports){
+},{"102":102,"61":61,"69":69}],72:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -20798,7 +21533,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _BaseMatcher2 = _dereq_(68);
+var _BaseMatcher2 = _dereq_(69);
 
 var _BaseMatcher3 = _interopRequireDefault(_BaseMatcher2);
 
@@ -20823,7 +21558,7 @@ var NumericMatcher = (function (_BaseMatcher) {
 exports['default'] = NumericMatcher;
 module.exports = exports['default'];
 
-},{"68":68}],72:[function(_dereq_,module,exports){
+},{"69":69}],73:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -20873,11 +21608,11 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _BaseMatcher2 = _dereq_(68);
+var _BaseMatcher2 = _dereq_(69);
 
 var _BaseMatcher3 = _interopRequireDefault(_BaseMatcher2);
 
-var _constantsDashConstants = _dereq_(60);
+var _constantsDashConstants = _dereq_(61);
 
 var _constantsDashConstants2 = _interopRequireDefault(_constantsDashConstants);
 
@@ -20911,7 +21646,7 @@ var StringMatcher = (function (_BaseMatcher) {
 exports['default'] = StringMatcher;
 module.exports = exports['default'];
 
-},{"60":60,"68":68}],73:[function(_dereq_,module,exports){
+},{"61":61,"69":69}],74:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -20950,7 +21685,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -21045,7 +21780,7 @@ var factory = _coreFactoryMaker2['default'].getClassFactory(ObjectIron);
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"48":48}],74:[function(_dereq_,module,exports){
+},{"49":49}],75:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -21085,11 +21820,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _SegmentsUtils = _dereq_(77);
+var _SegmentsUtils = _dereq_(78);
 
 function ListSegmentsGetter(config, isDynamic) {
 
@@ -21149,7 +21884,7 @@ var factory = _coreFactoryMaker2['default'].getClassFactory(ListSegmentsGetter);
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"48":48,"77":77}],75:[function(_dereq_,module,exports){
+},{"49":49,"78":78}],76:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -21257,7 +21992,7 @@ function _decimalAdjust(type, value, exp) {
 }
 module.exports = exports['default'];
 
-},{}],76:[function(_dereq_,module,exports){
+},{}],77:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -21296,23 +22031,23 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsDashConstants = _dereq_(60);
+var _constantsDashConstants = _dereq_(61);
 
 var _constantsDashConstants2 = _interopRequireDefault(_constantsDashConstants);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _TimelineSegmentsGetter = _dereq_(80);
+var _TimelineSegmentsGetter = _dereq_(81);
 
 var _TimelineSegmentsGetter2 = _interopRequireDefault(_TimelineSegmentsGetter);
 
-var _TemplateSegmentsGetter = _dereq_(78);
+var _TemplateSegmentsGetter = _dereq_(79);
 
 var _TemplateSegmentsGetter2 = _interopRequireDefault(_TemplateSegmentsGetter);
 
-var _ListSegmentsGetter = _dereq_(74);
+var _ListSegmentsGetter = _dereq_(75);
 
 var _ListSegmentsGetter2 = _interopRequireDefault(_ListSegmentsGetter);
 
@@ -21387,7 +22122,7 @@ var factory = _coreFactoryMaker2['default'].getClassFactory(SegmentsGetter);
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"48":48,"60":60,"74":74,"78":78,"80":80}],77:[function(_dereq_,module,exports){
+},{"49":49,"61":61,"75":75,"79":79,"81":81}],78:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -21434,7 +22169,7 @@ exports.decideSegmentListRangeForTemplate = decideSegmentListRangeForTemplate;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _voSegment = _dereq_(88);
+var _voSegment = _dereq_(89);
 
 var _voSegment2 = _interopRequireDefault(_voSegment);
 
@@ -21691,7 +22426,7 @@ function decideSegmentListRangeForTemplate(timelineConverter, isDynamic, represe
     return range;
 }
 
-},{"88":88}],78:[function(_dereq_,module,exports){
+},{"89":89}],79:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -21731,11 +22466,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _SegmentsUtils = _dereq_(77);
+var _SegmentsUtils = _dereq_(78);
 
 function TemplateSegmentsGetter(config, isDynamic) {
 
@@ -21802,7 +22537,7 @@ var factory = _coreFactoryMaker2['default'].getClassFactory(TemplateSegmentsGett
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"48":48,"77":77}],79:[function(_dereq_,module,exports){
+},{"49":49,"78":78}],80:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -21841,15 +22576,15 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -22043,7 +22778,7 @@ TimelineConverter.__dashjs_factory_name = 'TimelineConverter';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(TimelineConverter);
 module.exports = exports['default'];
 
-},{"47":47,"48":48,"53":53}],80:[function(_dereq_,module,exports){
+},{"48":48,"49":49,"54":54}],81:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -22083,15 +22818,15 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _streamingConstantsConstants = _dereq_(101);
+var _streamingConstantsConstants = _dereq_(102);
 
 var _streamingConstantsConstants2 = _interopRequireDefault(_streamingConstantsConstants);
 
-var _SegmentsUtils = _dereq_(77);
+var _SegmentsUtils = _dereq_(78);
 
 function TimelineSegmentsGetter(config, isDynamic) {
 
@@ -22253,7 +22988,7 @@ var factory = _coreFactoryMaker2['default'].getClassFactory(TimelineSegmentsGett
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"101":101,"48":48,"77":77}],81:[function(_dereq_,module,exports){
+},{"102":102,"49":49,"78":78}],82:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -22307,7 +23042,7 @@ var AdaptationSet = function AdaptationSet() {
 exports["default"] = AdaptationSet;
 module.exports = exports["default"];
 
-},{}],82:[function(_dereq_,module,exports){
+},{}],83:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -22378,7 +23113,7 @@ BaseURL.DEFAULT_DVB_WEIGHT = DEFAULT_DVB_WEIGHT;
 exports['default'] = BaseURL;
 module.exports = exports['default'];
 
-},{}],83:[function(_dereq_,module,exports){
+},{}],84:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -22435,7 +23170,7 @@ var Event = function Event() {
 exports['default'] = Event;
 module.exports = exports['default'];
 
-},{}],84:[function(_dereq_,module,exports){
+},{}],85:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -22492,7 +23227,7 @@ var EventStream = function EventStream() {
 exports['default'] = EventStream;
 module.exports = exports['default'];
 
-},{}],85:[function(_dereq_,module,exports){
+},{}],86:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -22551,7 +23286,7 @@ var Mpd = function Mpd() {
 exports["default"] = Mpd;
 module.exports = exports["default"];
 
-},{}],86:[function(_dereq_,module,exports){
+},{}],87:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -22609,7 +23344,7 @@ Period.DEFAULT_ID = 'defaultId';
 exports['default'] = Period;
 module.exports = exports['default'];
 
-},{}],87:[function(_dereq_,module,exports){
+},{}],88:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -22657,7 +23392,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'd
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-var _constantsDashConstants = _dereq_(60);
+var _constantsDashConstants = _dereq_(61);
 
 var _constantsDashConstants2 = _interopRequireDefault(_constantsDashConstants);
 
@@ -22709,7 +23444,7 @@ var Representation = (function () {
 exports['default'] = Representation;
 module.exports = exports['default'];
 
-},{"60":60}],88:[function(_dereq_,module,exports){
+},{"61":61}],89:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -22784,7 +23519,7 @@ var Segment = function Segment() {
 exports["default"] = Segment;
 module.exports = exports["default"];
 
-},{}],89:[function(_dereq_,module,exports){
+},{}],90:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -22838,7 +23573,7 @@ var UTCTiming = function UTCTiming() {
 exports['default'] = UTCTiming;
 module.exports = exports['default'];
 
-},{}],90:[function(_dereq_,module,exports){
+},{}],91:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -22877,35 +23612,35 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _netHTTPLoader = _dereq_(148);
+var _netHTTPLoader = _dereq_(149);
 
 var _netHTTPLoader2 = _interopRequireDefault(_netHTTPLoader);
 
-var _voHeadRequest = _dereq_(218);
+var _voHeadRequest = _dereq_(219);
 
 var _voHeadRequest2 = _interopRequireDefault(_voHeadRequest);
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _streamingUtilsBoxParser = _dereq_(197);
+var _streamingUtilsBoxParser = _dereq_(198);
 
 var _streamingUtilsBoxParser2 = _interopRequireDefault(_streamingUtilsBoxParser);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -23028,7 +23763,7 @@ FragmentLoader.__dashjs_factory_name = 'FragmentLoader';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(FragmentLoader);
 module.exports = exports['default'];
 
-},{"148":148,"197":197,"215":215,"218":218,"47":47,"48":48,"50":50,"53":53}],91:[function(_dereq_,module,exports){
+},{"149":149,"198":198,"216":216,"219":219,"48":48,"49":49,"51":51,"54":54}],92:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -23067,53 +23802,53 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _controllersXlinkController = _dereq_(116);
+var _controllersXlinkController = _dereq_(117);
 
 var _controllersXlinkController2 = _interopRequireDefault(_controllersXlinkController);
 
-var _netHTTPLoader = _dereq_(148);
+var _netHTTPLoader = _dereq_(149);
 
 var _netHTTPLoader2 = _interopRequireDefault(_netHTTPLoader);
 
-var _utilsURLUtils = _dereq_(210);
+var _utilsURLUtils = _dereq_(211);
 
 var _utilsURLUtils2 = _interopRequireDefault(_utilsURLUtils);
 
-var _voTextRequest = _dereq_(226);
+var _voTextRequest = _dereq_(227);
 
 var _voTextRequest2 = _interopRequireDefault(_voTextRequest);
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
-var _voMetricsHTTPRequest = _dereq_(235);
+var _voMetricsHTTPRequest = _dereq_(236);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _dashParserDashParser = _dereq_(63);
+var _dashParserDashParser = _dereq_(64);
 
 var _dashParserDashParser2 = _interopRequireDefault(_dashParserDashParser);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
@@ -23301,7 +24036,7 @@ var factory = _coreFactoryMaker2['default'].getClassFactory(ManifestLoader);
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"101":101,"116":116,"148":148,"210":210,"215":215,"226":226,"235":235,"46":46,"47":47,"48":48,"50":50,"53":53,"63":63}],92:[function(_dereq_,module,exports){
+},{"102":102,"117":117,"149":149,"211":211,"216":216,"227":227,"236":236,"47":47,"48":48,"49":49,"51":51,"54":54,"64":64}],93:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -23340,23 +24075,23 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
@@ -23531,7 +24266,7 @@ ManifestUpdater.__dashjs_factory_name = 'ManifestUpdater';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(ManifestUpdater);
 module.exports = exports['default'];
 
-},{"46":46,"47":47,"48":48,"50":50,"53":53}],93:[function(_dereq_,module,exports){
+},{"47":47,"48":48,"49":49,"51":51,"54":54}],94:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -23570,141 +24305,141 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _constantsMetricsConstants = _dereq_(102);
+var _constantsMetricsConstants = _dereq_(103);
 
 var _constantsMetricsConstants2 = _interopRequireDefault(_constantsMetricsConstants);
 
-var _controllersPlaybackController = _dereq_(112);
+var _controllersPlaybackController = _dereq_(113);
 
 var _controllersPlaybackController2 = _interopRequireDefault(_controllersPlaybackController);
 
-var _controllersStreamController = _dereq_(114);
+var _controllersStreamController = _dereq_(115);
 
 var _controllersStreamController2 = _interopRequireDefault(_controllersStreamController);
 
-var _controllersMediaController = _dereq_(110);
+var _controllersMediaController = _dereq_(111);
 
 var _controllersMediaController2 = _interopRequireDefault(_controllersMediaController);
 
-var _controllersBaseURLController = _dereq_(105);
+var _controllersBaseURLController = _dereq_(106);
 
 var _controllersBaseURLController2 = _interopRequireDefault(_controllersBaseURLController);
 
-var _ManifestLoader = _dereq_(91);
+var _ManifestLoader = _dereq_(92);
 
 var _ManifestLoader2 = _interopRequireDefault(_ManifestLoader);
 
-var _utilsErrorHandler = _dereq_(202);
+var _utilsErrorHandler = _dereq_(203);
 
 var _utilsErrorHandler2 = _interopRequireDefault(_utilsErrorHandler);
 
-var _utilsCapabilities = _dereq_(198);
+var _utilsCapabilities = _dereq_(199);
 
 var _utilsCapabilities2 = _interopRequireDefault(_utilsCapabilities);
 
-var _textTextTracks = _dereq_(193);
+var _textTextTracks = _dereq_(194);
 
 var _textTextTracks2 = _interopRequireDefault(_textTextTracks);
 
-var _utilsRequestModifier = _dereq_(207);
+var _utilsRequestModifier = _dereq_(208);
 
 var _utilsRequestModifier2 = _interopRequireDefault(_utilsRequestModifier);
 
-var _textTextController = _dereq_(191);
+var _textTextController = _dereq_(192);
 
 var _textTextController2 = _interopRequireDefault(_textTextController);
 
-var _modelsURIFragmentModel = _dereq_(145);
+var _modelsURIFragmentModel = _dereq_(146);
 
 var _modelsURIFragmentModel2 = _interopRequireDefault(_modelsURIFragmentModel);
 
-var _modelsManifestModel = _dereq_(142);
+var _modelsManifestModel = _dereq_(143);
 
 var _modelsManifestModel2 = _interopRequireDefault(_modelsManifestModel);
 
-var _modelsMediaPlayerModel = _dereq_(143);
+var _modelsMediaPlayerModel = _dereq_(144);
 
 var _modelsMediaPlayerModel2 = _interopRequireDefault(_modelsMediaPlayerModel);
 
-var _modelsMetricsModel = _dereq_(144);
+var _modelsMetricsModel = _dereq_(145);
 
 var _modelsMetricsModel2 = _interopRequireDefault(_modelsMetricsModel);
 
-var _controllersAbrController = _dereq_(104);
+var _controllersAbrController = _dereq_(105);
 
 var _controllersAbrController2 = _interopRequireDefault(_controllersAbrController);
 
-var _modelsVideoModel = _dereq_(146);
+var _modelsVideoModel = _dereq_(147);
 
 var _modelsVideoModel2 = _interopRequireDefault(_modelsVideoModel);
 
-var _utilsDOMStorage = _dereq_(200);
+var _utilsDOMStorage = _dereq_(201);
 
 var _utilsDOMStorage2 = _interopRequireDefault(_utilsDOMStorage);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _MediaPlayerEvents = _dereq_(94);
+var _MediaPlayerEvents = _dereq_(95);
 
 var _MediaPlayerEvents2 = _interopRequireDefault(_MediaPlayerEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreVersion = _dereq_(49);
+var _coreVersion = _dereq_(50);
 
 //Dash
 
-var _dashDashAdapter = _dereq_(55);
+var _dashDashAdapter = _dereq_(56);
 
 var _dashDashAdapter2 = _interopRequireDefault(_dashDashAdapter);
 
-var _dashModelsDashManifestModel = _dereq_(62);
+var _dashModelsDashManifestModel = _dereq_(63);
 
 var _dashModelsDashManifestModel2 = _interopRequireDefault(_dashModelsDashManifestModel);
 
-var _dashDashMetrics = _dereq_(57);
+var _dashDashMetrics = _dereq_(58);
 
 var _dashDashMetrics2 = _interopRequireDefault(_dashDashMetrics);
 
-var _dashUtilsTimelineConverter = _dereq_(79);
+var _dashUtilsTimelineConverter = _dereq_(80);
 
 var _dashUtilsTimelineConverter2 = _interopRequireDefault(_dashUtilsTimelineConverter);
 
-var _voMetricsHTTPRequest = _dereq_(235);
+var _voMetricsHTTPRequest = _dereq_(236);
 
 var _externalsBase64 = _dereq_(1);
 
 var _externalsBase642 = _interopRequireDefault(_externalsBase64);
 
-var _codemIsoboxer = _dereq_(6);
+var _codemIsoboxer = _dereq_(9);
 
 var _codemIsoboxer2 = _interopRequireDefault(_codemIsoboxer);
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
-var _utilsSupervisorTools = _dereq_(208);
+var _utilsSupervisorTools = _dereq_(209);
 
 /**
  * @module MediaPlayer
@@ -23784,8 +24519,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-         INIT FUNCTIONS
-     ---------------------------------------------------------------------------
+          INIT FUNCTIONS
+      ---------------------------------------------------------------------------
     */
     function setup() {
         logger = debug.getLogger(instance);
@@ -24000,8 +24735,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-         PLAYBACK FUNCTIONS
-     ---------------------------------------------------------------------------
+          PLAYBACK FUNCTIONS
+      ---------------------------------------------------------------------------
     */
 
     /**
@@ -24467,8 +25202,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-         AUTO BITRATE
-     ---------------------------------------------------------------------------
+          AUTO BITRATE
+      ---------------------------------------------------------------------------
     */
     /**
      * When switching multi-bitrate content (auto or manual mode) this property specifies the maximum bitrate allowed.
@@ -24792,8 +25527,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-         MEDIA PLAYER CONFIGURATION
-     ---------------------------------------------------------------------------
+          MEDIA PLAYER CONFIGURATION
+      ---------------------------------------------------------------------------
     */
     /**
      * <p>Set to false to prevent stream from auto-playing when the view is attached.</p>
@@ -25632,8 +26367,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-         METRICS
-     ---------------------------------------------------------------------------
+          METRICS
+      ---------------------------------------------------------------------------
     */
     /**
      * Returns the DashMetrics.js Module. You use this Module to get access to all the public metrics
@@ -25660,8 +26395,8 @@ function MediaPlayer() {
     }
     /*
     ---------------------------------------------------------------------------
-         TEXT MANAGEMENT
-     ---------------------------------------------------------------------------
+          TEXT MANAGEMENT
+      ---------------------------------------------------------------------------
     */
     /**
      * Set default language for text. If default language is not one of text tracks, dash will choose the first one.
@@ -25819,8 +26554,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-         VIDEO ELEMENT MANAGEMENT
-     ---------------------------------------------------------------------------
+          VIDEO ELEMENT MANAGEMENT
+      ---------------------------------------------------------------------------
     */
 
     /**
@@ -25910,8 +26645,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-         STREAM AND TRACK MANAGEMENT
-     ---------------------------------------------------------------------------
+          STREAM AND TRACK MANAGEMENT
+      ---------------------------------------------------------------------------
     */
     /**
      * @param {string} type
@@ -26130,8 +26865,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-         PROTECTION MANAGEMENT
-     ---------------------------------------------------------------------------
+          PROTECTION MANAGEMENT
+      ---------------------------------------------------------------------------
     /**
      * Detects if Protection is included and returns an instance of ProtectionController.js
      * @memberof module:MediaPlayer
@@ -26173,8 +26908,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-         THUMBNAILS MANAGEMENT
-     ---------------------------------------------------------------------------
+          THUMBNAILS MANAGEMENT
+      ---------------------------------------------------------------------------
     */
 
     /**
@@ -26207,8 +26942,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-         PROTECTION CONTROLLER MANAGEMENT
-     ---------------------------------------------------------------------------
+          PROTECTION CONTROLLER MANAGEMENT
+      ---------------------------------------------------------------------------
     */
 
     /**
@@ -26228,8 +26963,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-         TOOLS AND OTHERS FUNCTIONS
-     ---------------------------------------------------------------------------
+          TOOLS AND OTHERS FUNCTIONS
+      ---------------------------------------------------------------------------
     */
     /**
      * Allows application to retrieve a manifest.  Manifest loading is asynchro
@@ -26788,7 +27523,7 @@ _coreFactoryMaker2['default'].updateClassFactory(MediaPlayer.__dashjs_factory_na
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"1":1,"101":101,"102":102,"104":104,"105":105,"110":110,"112":112,"114":114,"142":142,"143":143,"144":144,"145":145,"146":146,"191":191,"193":193,"198":198,"200":200,"202":202,"207":207,"208":208,"215":215,"235":235,"46":46,"47":47,"48":48,"49":49,"50":50,"53":53,"55":55,"57":57,"6":6,"62":62,"79":79,"91":91,"94":94}],94:[function(_dereq_,module,exports){
+},{"1":1,"102":102,"103":103,"105":105,"106":106,"111":111,"113":113,"115":115,"143":143,"144":144,"145":145,"146":146,"147":147,"192":192,"194":194,"199":199,"201":201,"203":203,"208":208,"209":209,"216":216,"236":236,"47":47,"48":48,"49":49,"50":50,"51":51,"54":54,"56":56,"58":58,"63":63,"80":80,"9":9,"92":92,"95":95}],95:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -26833,7 +27568,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _coreEventsEventsBase = _dereq_(54);
+var _coreEventsEventsBase = _dereq_(55);
 
 var _coreEventsEventsBase2 = _interopRequireDefault(_coreEventsEventsBase);
 
@@ -27151,7 +27886,7 @@ var mediaPlayerEvents = new MediaPlayerEvents();
 exports['default'] = mediaPlayerEvents;
 module.exports = exports['default'];
 
-},{"54":54}],95:[function(_dereq_,module,exports){
+},{"55":55}],96:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -27160,7 +27895,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _MediaPlayer = _dereq_(93);
+var _MediaPlayer = _dereq_(94);
 
 var _MediaPlayer2 = _interopRequireDefault(_MediaPlayer);
 
@@ -27304,7 +28039,7 @@ if (!avoidAutoCreate && typeof window !== 'undefined' && window && window.addEve
 exports['default'] = instance;
 module.exports = exports['default'];
 
-},{"93":93}],96:[function(_dereq_,module,exports){
+},{"94":94}],97:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -27343,11 +28078,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -27493,7 +28228,7 @@ var factory = _coreFactoryMaker2['default'].getClassFactory(PreBufferSink);
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"46":46,"48":48}],97:[function(_dereq_,module,exports){
+},{"47":47,"49":49}],98:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -27532,31 +28267,31 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _textTextController = _dereq_(191);
+var _textTextController = _dereq_(192);
 
 var _textTextController2 = _interopRequireDefault(_textTextController);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
@@ -27885,7 +28620,7 @@ var factory = _coreFactoryMaker2['default'].getClassFactory(SourceBufferSink);
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"191":191,"215":215,"46":46,"47":47,"48":48,"50":50,"53":53}],98:[function(_dereq_,module,exports){
+},{"192":192,"216":216,"47":47,"48":48,"49":49,"51":51,"54":54}],99:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -27924,47 +28659,47 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _StreamProcessor = _dereq_(99);
+var _StreamProcessor = _dereq_(100);
 
 var _StreamProcessor2 = _interopRequireDefault(_StreamProcessor);
 
-var _controllersEventController = _dereq_(108);
+var _controllersEventController = _dereq_(109);
 
 var _controllersEventController2 = _interopRequireDefault(_controllersEventController);
 
-var _controllersFragmentController = _dereq_(109);
+var _controllersFragmentController = _dereq_(110);
 
 var _controllersFragmentController2 = _interopRequireDefault(_controllersFragmentController);
 
-var _thumbnailThumbnailController = _dereq_(194);
+var _thumbnailThumbnailController = _dereq_(195);
 
 var _thumbnailThumbnailController2 = _interopRequireDefault(_thumbnailThumbnailController);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
@@ -28809,7 +29544,7 @@ Stream.__dashjs_factory_name = 'Stream';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(Stream);
 module.exports = exports['default'];
 
-},{"101":101,"108":108,"109":109,"194":194,"215":215,"46":46,"47":47,"48":48,"50":50,"53":53,"99":99}],99:[function(_dereq_,module,exports){
+},{"100":100,"102":102,"109":109,"110":110,"195":195,"216":216,"47":47,"48":48,"49":49,"51":51,"54":54}],100:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -28848,35 +29583,35 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _utilsLiveEdgeFinder = _dereq_(205);
+var _utilsLiveEdgeFinder = _dereq_(206);
 
 var _utilsLiveEdgeFinder2 = _interopRequireDefault(_utilsLiveEdgeFinder);
 
-var _controllersBufferController = _dereq_(107);
+var _controllersBufferController = _dereq_(108);
 
 var _controllersBufferController2 = _interopRequireDefault(_controllersBufferController);
 
-var _textTextBufferController = _dereq_(190);
+var _textTextBufferController = _dereq_(191);
 
 var _textTextBufferController2 = _interopRequireDefault(_textTextBufferController);
 
-var _controllersScheduleController = _dereq_(113);
+var _controllersScheduleController = _dereq_(114);
 
 var _controllersScheduleController2 = _interopRequireDefault(_controllersScheduleController);
 
-var _dashControllersRepresentationController = _dereq_(61);
+var _dashControllersRepresentationController = _dereq_(62);
 
 var _dashControllersRepresentationController2 = _interopRequireDefault(_dashControllersRepresentationController);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _dashDashHandler = _dereq_(56);
+var _dashDashHandler = _dereq_(57);
 
 var _dashDashHandler2 = _interopRequireDefault(_dashDashHandler);
 
@@ -29248,7 +29983,7 @@ StreamProcessor.__dashjs_factory_name = 'StreamProcessor';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(StreamProcessor);
 module.exports = exports['default'];
 
-},{"101":101,"107":107,"113":113,"190":190,"205":205,"48":48,"56":56,"61":61}],100:[function(_dereq_,module,exports){
+},{"102":102,"108":108,"114":114,"191":191,"206":206,"49":49,"57":57,"62":62}],101:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -29287,33 +30022,33 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
-var _netHTTPLoader = _dereq_(148);
+var _netHTTPLoader = _dereq_(149);
 
 var _netHTTPLoader2 = _interopRequireDefault(_netHTTPLoader);
 
-var _voMetricsHTTPRequest = _dereq_(235);
+var _voMetricsHTTPRequest = _dereq_(236);
 
-var _voTextRequest = _dereq_(226);
+var _voTextRequest = _dereq_(227);
 
 var _voTextRequest2 = _interopRequireDefault(_voTextRequest);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
@@ -29382,7 +30117,7 @@ XlinkLoader.__dashjs_factory_name = 'XlinkLoader';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(XlinkLoader);
 module.exports = exports['default'];
 
-},{"148":148,"215":215,"226":226,"235":235,"47":47,"48":48,"50":50,"53":53}],101:[function(_dereq_,module,exports){
+},{"149":149,"216":216,"227":227,"236":236,"48":48,"49":49,"51":51,"54":54}],102:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -29486,7 +30221,7 @@ var constants = new Constants();
 exports['default'] = constants;
 module.exports = exports['default'];
 
-},{}],102:[function(_dereq_,module,exports){
+},{}],103:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -29567,7 +30302,7 @@ var constants = new MetricsConstants();
 exports['default'] = constants;
 module.exports = exports['default'];
 
-},{}],103:[function(_dereq_,module,exports){
+},{}],104:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -29637,7 +30372,7 @@ var constants = new ProtectionConstants();
 exports['default'] = constants;
 module.exports = exports['default'];
 
-},{}],104:[function(_dereq_,module,exports){
+},{}],105:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -29677,65 +30412,65 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _rulesAbrABRRulesCollection = _dereq_(179);
+var _rulesAbrABRRulesCollection = _dereq_(180);
 
 var _rulesAbrABRRulesCollection2 = _interopRequireDefault(_rulesAbrABRRulesCollection);
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _constantsMetricsConstants = _dereq_(102);
+var _constantsMetricsConstants = _dereq_(103);
 
 var _constantsMetricsConstants2 = _interopRequireDefault(_constantsMetricsConstants);
 
-var _voBitrateInfo = _dereq_(214);
+var _voBitrateInfo = _dereq_(215);
 
 var _voBitrateInfo2 = _interopRequireDefault(_voBitrateInfo);
 
-var _modelsFragmentModel = _dereq_(141);
+var _modelsFragmentModel = _dereq_(142);
 
 var _modelsFragmentModel2 = _interopRequireDefault(_modelsFragmentModel);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _rulesRulesContext = _dereq_(175);
+var _rulesRulesContext = _dereq_(176);
 
 var _rulesRulesContext2 = _interopRequireDefault(_rulesRulesContext);
 
-var _rulesSwitchRequest = _dereq_(176);
+var _rulesSwitchRequest = _dereq_(177);
 
 var _rulesSwitchRequest2 = _interopRequireDefault(_rulesSwitchRequest);
 
-var _rulesSwitchRequestHistory = _dereq_(177);
+var _rulesSwitchRequestHistory = _dereq_(178);
 
 var _rulesSwitchRequestHistory2 = _interopRequireDefault(_rulesSwitchRequestHistory);
 
-var _rulesDroppedFramesHistory = _dereq_(174);
+var _rulesDroppedFramesHistory = _dereq_(175);
 
 var _rulesDroppedFramesHistory2 = _interopRequireDefault(_rulesDroppedFramesHistory);
 
-var _rulesThroughputHistory = _dereq_(178);
+var _rulesThroughputHistory = _dereq_(179);
 
 var _rulesThroughputHistory2 = _interopRequireDefault(_rulesThroughputHistory);
 
-var _voMetricsHTTPRequest = _dereq_(235);
+var _voMetricsHTTPRequest = _dereq_(236);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _utilsSupervisorTools = _dereq_(208);
+var _utilsSupervisorTools = _dereq_(209);
 
 var ABANDON_LOAD = 'abandonload';
 var ALLOW_LOAD = 'allowload';
@@ -30479,7 +31214,7 @@ _coreFactoryMaker2['default'].updateSingletonFactory(AbrController.__dashjs_fact
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"101":101,"102":102,"141":141,"174":174,"175":175,"176":176,"177":177,"178":178,"179":179,"208":208,"214":214,"235":235,"46":46,"47":47,"48":48,"53":53}],105:[function(_dereq_,module,exports){
+},{"102":102,"103":103,"142":142,"175":175,"176":176,"177":177,"178":178,"179":179,"180":180,"209":209,"215":215,"236":236,"47":47,"48":48,"49":49,"54":54}],106:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -30519,31 +31254,31 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _modelsBaseURLTreeModel = _dereq_(140);
+var _modelsBaseURLTreeModel = _dereq_(141);
 
 var _modelsBaseURLTreeModel2 = _interopRequireDefault(_modelsBaseURLTreeModel);
 
-var _utilsBaseURLSelector = _dereq_(196);
+var _utilsBaseURLSelector = _dereq_(197);
 
 var _utilsBaseURLSelector2 = _interopRequireDefault(_utilsBaseURLSelector);
 
-var _utilsURLUtils = _dereq_(210);
+var _utilsURLUtils = _dereq_(211);
 
 var _utilsURLUtils2 = _interopRequireDefault(_utilsURLUtils);
 
-var _dashVoBaseURL = _dereq_(82);
+var _dashVoBaseURL = _dereq_(83);
 
 var _dashVoBaseURL2 = _interopRequireDefault(_dashVoBaseURL);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
@@ -30650,7 +31385,7 @@ BaseURLController.__dashjs_factory_name = 'BaseURLController';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(BaseURLController);
 module.exports = exports['default'];
 
-},{"140":140,"196":196,"210":210,"47":47,"48":48,"53":53,"82":82}],106:[function(_dereq_,module,exports){
+},{"141":141,"197":197,"211":211,"48":48,"49":49,"54":54,"83":83}],107:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -30690,11 +31425,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
@@ -30754,7 +31489,7 @@ BlackListController.__dashjs_factory_name = 'BlackListController';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(BlackListController);
 module.exports = exports['default'];
 
-},{"47":47,"48":48}],107:[function(_dereq_,module,exports){
+},{"48":48,"49":49}],108:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -30793,63 +31528,63 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _modelsFragmentModel = _dereq_(141);
+var _modelsFragmentModel = _dereq_(142);
 
 var _modelsFragmentModel2 = _interopRequireDefault(_modelsFragmentModel);
 
-var _SourceBufferSink = _dereq_(97);
+var _SourceBufferSink = _dereq_(98);
 
 var _SourceBufferSink2 = _interopRequireDefault(_SourceBufferSink);
 
-var _PreBufferSink = _dereq_(96);
+var _PreBufferSink = _dereq_(97);
 
 var _PreBufferSink2 = _interopRequireDefault(_PreBufferSink);
 
-var _AbrController = _dereq_(104);
+var _AbrController = _dereq_(105);
 
 var _AbrController2 = _interopRequireDefault(_AbrController);
 
-var _MediaController = _dereq_(110);
+var _MediaController = _dereq_(111);
 
 var _MediaController2 = _interopRequireDefault(_MediaController);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _utilsBoxParser = _dereq_(197);
+var _utilsBoxParser = _dereq_(198);
 
 var _utilsBoxParser2 = _interopRequireDefault(_utilsBoxParser);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _utilsInitCache = _dereq_(203);
+var _utilsInitCache = _dereq_(204);
 
 var _utilsInitCache2 = _interopRequireDefault(_utilsInitCache);
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
-var _voMetricsHTTPRequest = _dereq_(235);
+var _voMetricsHTTPRequest = _dereq_(236);
 
 var BUFFER_LOADED = 'bufferLoaded';
 var BUFFER_EMPTY = 'bufferStalled';
@@ -31356,7 +32091,7 @@ function BufferController(config) {
         if ((!mediaPlayerModel.getLowLatencyEnabled() && bufferLevel < STALL_THRESHOLD || bufferLevel === 0) && !isBufferingCompleted) {
             notifyBufferStateChanged(BUFFER_EMPTY);
         } else {
-            if (isBufferingCompleted || bufferLevel >= mediaPlayerModel.getStableBufferTime()) {
+            if (isBufferingCompleted || bufferLevel >= streamProcessor.getStreamInfo().manifestInfo.minBufferTime) {
                 notifyBufferStateChanged(BUFFER_LOADED);
             }
         }
@@ -31737,7 +32472,7 @@ _coreFactoryMaker2['default'].updateClassFactory(BufferController.__dashjs_facto
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"101":101,"104":104,"110":110,"141":141,"197":197,"203":203,"215":215,"235":235,"46":46,"47":47,"48":48,"50":50,"53":53,"96":96,"97":97}],108:[function(_dereq_,module,exports){
+},{"102":102,"105":105,"111":111,"142":142,"198":198,"204":204,"216":216,"236":236,"47":47,"48":48,"49":49,"51":51,"54":54,"97":97,"98":98}],109:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -31777,23 +32512,23 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _netXHRLoader = _dereq_(149);
+var _netXHRLoader = _dereq_(150);
 
 var _netXHRLoader2 = _interopRequireDefault(_netXHRLoader);
 
@@ -32041,7 +32776,7 @@ EventController.__dashjs_factory_name = 'EventController';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(EventController);
 module.exports = exports['default'];
 
-},{"149":149,"46":46,"47":47,"48":48,"53":53}],109:[function(_dereq_,module,exports){
+},{"150":150,"47":47,"48":48,"49":49,"54":54}],110:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -32080,41 +32815,41 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _voMetricsHTTPRequest = _dereq_(235);
+var _voMetricsHTTPRequest = _dereq_(236);
 
-var _voDataChunk = _dereq_(216);
+var _voDataChunk = _dereq_(217);
 
 var _voDataChunk2 = _interopRequireDefault(_voDataChunk);
 
-var _modelsFragmentModel = _dereq_(141);
+var _modelsFragmentModel = _dereq_(142);
 
 var _modelsFragmentModel2 = _interopRequireDefault(_modelsFragmentModel);
 
-var _FragmentLoader = _dereq_(90);
+var _FragmentLoader = _dereq_(91);
 
 var _FragmentLoader2 = _interopRequireDefault(_FragmentLoader);
 
-var _utilsRequestModifier = _dereq_(207);
+var _utilsRequestModifier = _dereq_(208);
 
 var _utilsRequestModifier2 = _interopRequireDefault(_utilsRequestModifier);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
@@ -32236,7 +32971,7 @@ FragmentController.__dashjs_factory_name = 'FragmentController';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(FragmentController);
 module.exports = exports['default'];
 
-},{"101":101,"141":141,"207":207,"216":216,"235":235,"46":46,"47":47,"48":48,"53":53,"90":90}],110:[function(_dereq_,module,exports){
+},{"102":102,"142":142,"208":208,"217":217,"236":236,"47":47,"48":48,"49":49,"54":54,"91":91}],111:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -32275,23 +33010,23 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
@@ -32771,7 +33506,7 @@ _coreFactoryMaker2['default'].updateSingletonFactory(MediaController.__dashjs_fa
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"101":101,"46":46,"47":47,"48":48,"53":53}],111:[function(_dereq_,module,exports){
+},{"102":102,"47":47,"48":48,"49":49,"54":54}],112:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -32810,11 +33545,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
@@ -32909,7 +33644,7 @@ MediaSourceController.__dashjs_factory_name = 'MediaSourceController';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(MediaSourceController);
 module.exports = exports['default'];
 
-},{"46":46,"48":48}],112:[function(_dereq_,module,exports){
+},{"47":47,"49":49}],113:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -32948,27 +33683,27 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _BufferController = _dereq_(107);
+var _BufferController = _dereq_(108);
 
 var _BufferController2 = _interopRequireDefault(_BufferController);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
@@ -33764,7 +34499,7 @@ PlaybackController.__dashjs_factory_name = 'PlaybackController';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(PlaybackController);
 module.exports = exports['default'];
 
-},{"101":101,"107":107,"46":46,"47":47,"48":48,"53":53}],113:[function(_dereq_,module,exports){
+},{"102":102,"108":108,"47":47,"48":48,"49":49,"54":54}],114:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -33803,53 +34538,53 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _voMetricsPlayList = _dereq_(237);
+var _voMetricsPlayList = _dereq_(238);
 
-var _AbrController = _dereq_(104);
+var _AbrController = _dereq_(105);
 
 var _AbrController2 = _interopRequireDefault(_AbrController);
 
-var _BufferController = _dereq_(107);
+var _BufferController = _dereq_(108);
 
 var _BufferController2 = _interopRequireDefault(_BufferController);
 
-var _rulesSchedulingBufferLevelRule = _dereq_(186);
+var _rulesSchedulingBufferLevelRule = _dereq_(187);
 
 var _rulesSchedulingBufferLevelRule2 = _interopRequireDefault(_rulesSchedulingBufferLevelRule);
 
-var _rulesSchedulingNextFragmentRequestRule = _dereq_(187);
+var _rulesSchedulingNextFragmentRequestRule = _dereq_(188);
 
 var _rulesSchedulingNextFragmentRequestRule2 = _interopRequireDefault(_rulesSchedulingNextFragmentRequestRule);
 
-var _modelsFragmentModel = _dereq_(141);
+var _modelsFragmentModel = _dereq_(142);
 
 var _modelsFragmentModel2 = _interopRequireDefault(_modelsFragmentModel);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _MediaController = _dereq_(110);
+var _MediaController = _dereq_(111);
 
 var _MediaController2 = _interopRequireDefault(_MediaController);
 
-var _dashUtilsSegmentsUtils = _dereq_(77);
+var _dashUtilsSegmentsUtils = _dereq_(78);
 
 function ScheduleController(config) {
 
@@ -34539,7 +35274,7 @@ ScheduleController.__dashjs_factory_name = 'ScheduleController';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(ScheduleController);
 module.exports = exports['default'];
 
-},{"101":101,"104":104,"107":107,"110":110,"141":141,"186":186,"187":187,"237":237,"46":46,"47":47,"48":48,"53":53,"77":77}],114:[function(_dereq_,module,exports){
+},{"102":102,"105":105,"108":108,"111":111,"142":142,"187":187,"188":188,"238":238,"47":47,"48":48,"49":49,"54":54,"78":78}],115:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -34578,69 +35313,69 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _constantsMetricsConstants = _dereq_(102);
+var _constantsMetricsConstants = _dereq_(103);
 
 var _constantsMetricsConstants2 = _interopRequireDefault(_constantsMetricsConstants);
 
-var _Stream = _dereq_(98);
+var _Stream = _dereq_(99);
 
 var _Stream2 = _interopRequireDefault(_Stream);
 
-var _ManifestUpdater = _dereq_(92);
+var _ManifestUpdater = _dereq_(93);
 
 var _ManifestUpdater2 = _interopRequireDefault(_ManifestUpdater);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _voMetricsPlayList = _dereq_(237);
+var _voMetricsPlayList = _dereq_(238);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _utilsInitCache = _dereq_(203);
+var _utilsInitCache = _dereq_(204);
 
 var _utilsInitCache2 = _interopRequireDefault(_utilsInitCache);
 
-var _utilsURLUtils = _dereq_(210);
+var _utilsURLUtils = _dereq_(211);
 
 var _utilsURLUtils2 = _interopRequireDefault(_utilsURLUtils);
 
-var _MediaPlayerEvents = _dereq_(94);
+var _MediaPlayerEvents = _dereq_(95);
 
 var _MediaPlayerEvents2 = _interopRequireDefault(_MediaPlayerEvents);
 
-var _TimeSyncController = _dereq_(115);
+var _TimeSyncController = _dereq_(116);
 
 var _TimeSyncController2 = _interopRequireDefault(_TimeSyncController);
 
-var _BaseURLController = _dereq_(105);
+var _BaseURLController = _dereq_(106);
 
 var _BaseURLController2 = _interopRequireDefault(_BaseURLController);
 
-var _MediaSourceController = _dereq_(111);
+var _MediaSourceController = _dereq_(112);
 
 var _MediaSourceController2 = _interopRequireDefault(_MediaSourceController);
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
@@ -35644,7 +36379,7 @@ StreamController.__dashjs_factory_name = 'StreamController';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(StreamController);
 module.exports = exports['default'];
 
-},{"101":101,"102":102,"105":105,"111":111,"115":115,"203":203,"210":210,"215":215,"237":237,"46":46,"47":47,"48":48,"50":50,"53":53,"92":92,"94":94,"98":98}],115:[function(_dereq_,module,exports){
+},{"102":102,"103":103,"106":106,"112":112,"116":116,"204":204,"211":211,"216":216,"238":238,"47":47,"48":48,"49":49,"51":51,"54":54,"93":93,"95":95,"99":99}],116:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -35683,37 +36418,37 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
-var _voMetricsHTTPRequest = _dereq_(235);
+var _voMetricsHTTPRequest = _dereq_(236);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _utilsURLUtils = _dereq_(210);
+var _utilsURLUtils = _dereq_(211);
 
 var _utilsURLUtils2 = _interopRequireDefault(_utilsURLUtils);
 
@@ -36046,7 +36781,7 @@ _coreFactoryMaker2['default'].updateSingletonFactory(TimeSyncController.__dashjs
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"101":101,"210":210,"215":215,"235":235,"46":46,"47":47,"48":48,"50":50,"53":53}],116:[function(_dereq_,module,exports){
+},{"102":102,"211":211,"216":216,"236":236,"47":47,"48":48,"49":49,"51":51,"54":54}],117:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -36085,19 +36820,19 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _XlinkLoader = _dereq_(100);
+var _XlinkLoader = _dereq_(101);
 
 var _XlinkLoader2 = _interopRequireDefault(_XlinkLoader);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -36105,11 +36840,11 @@ var _externalsXml2json = _dereq_(3);
 
 var _externalsXml2json2 = _interopRequireDefault(_externalsXml2json);
 
-var _utilsURLUtils = _dereq_(210);
+var _utilsURLUtils = _dereq_(211);
 
 var _utilsURLUtils2 = _interopRequireDefault(_utilsURLUtils);
 
-var _dashConstantsDashConstants = _dereq_(60);
+var _dashConstantsDashConstants = _dereq_(61);
 
 var _dashConstantsDashConstants2 = _interopRequireDefault(_dashConstantsDashConstants);
 
@@ -36376,7 +37111,7 @@ XlinkController.__dashjs_factory_name = 'XlinkController';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(XlinkController);
 module.exports = exports['default'];
 
-},{"100":100,"210":210,"3":3,"47":47,"48":48,"53":53,"60":60}],117:[function(_dereq_,module,exports){
+},{"101":101,"211":211,"3":3,"48":48,"49":49,"54":54,"61":61}],118:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -36416,23 +37151,23 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _utilsDVBErrorsTranslator = _dereq_(131);
+var _utilsDVBErrorsTranslator = _dereq_(132);
 
 var _utilsDVBErrorsTranslator2 = _interopRequireDefault(_utilsDVBErrorsTranslator);
 
-var _MetricsReportingEvents = _dereq_(118);
+var _MetricsReportingEvents = _dereq_(119);
 
 var _MetricsReportingEvents2 = _interopRequireDefault(_MetricsReportingEvents);
 
-var _controllersMetricsCollectionController = _dereq_(119);
+var _controllersMetricsCollectionController = _dereq_(120);
 
 var _controllersMetricsCollectionController2 = _interopRequireDefault(_controllersMetricsCollectionController);
 
-var _metricsMetricsHandlerFactory = _dereq_(124);
+var _metricsMetricsHandlerFactory = _dereq_(125);
 
 var _metricsMetricsHandlerFactory2 = _interopRequireDefault(_metricsMetricsHandlerFactory);
 
-var _reportingReportingFactory = _dereq_(129);
+var _reportingReportingFactory = _dereq_(130);
 
 var _reportingReportingFactory2 = _interopRequireDefault(_reportingReportingFactory);
 
@@ -36490,7 +37225,7 @@ dashjs.FactoryMaker.updateClassFactory(MetricsReporting.__dashjs_factory_name, f
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"118":118,"119":119,"124":124,"129":129,"131":131}],118:[function(_dereq_,module,exports){
+},{"119":119,"120":120,"125":125,"130":130,"132":132}],119:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -36535,7 +37270,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _coreEventsEventsBase = _dereq_(54);
+var _coreEventsEventsBase = _dereq_(55);
 
 var _coreEventsEventsBase2 = _interopRequireDefault(_coreEventsEventsBase);
 
@@ -36558,7 +37293,7 @@ var metricsReportingEvents = new MetricsReportingEvents();
 exports['default'] = metricsReportingEvents;
 module.exports = exports['default'];
 
-},{"54":54}],119:[function(_dereq_,module,exports){
+},{"55":55}],120:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -36598,15 +37333,15 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _MetricsController = _dereq_(120);
+var _MetricsController = _dereq_(121);
 
 var _MetricsController2 = _interopRequireDefault(_MetricsController);
 
-var _utilsManifestParsing = _dereq_(133);
+var _utilsManifestParsing = _dereq_(134);
 
 var _utilsManifestParsing2 = _interopRequireDefault(_utilsManifestParsing);
 
-var _MetricsReportingEvents = _dereq_(118);
+var _MetricsReportingEvents = _dereq_(119);
 
 var _MetricsReportingEvents2 = _interopRequireDefault(_MetricsReportingEvents);
 
@@ -36688,7 +37423,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(MetricsCollectionContro
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"118":118,"120":120,"133":133}],120:[function(_dereq_,module,exports){
+},{"119":119,"121":121,"134":134}],121:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -36728,15 +37463,15 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _RangeController = _dereq_(122);
+var _RangeController = _dereq_(123);
 
 var _RangeController2 = _interopRequireDefault(_RangeController);
 
-var _ReportingController = _dereq_(123);
+var _ReportingController = _dereq_(124);
 
 var _ReportingController2 = _interopRequireDefault(_ReportingController);
 
-var _MetricsHandlersController = _dereq_(121);
+var _MetricsHandlersController = _dereq_(122);
 
 var _MetricsHandlersController2 = _interopRequireDefault(_MetricsHandlersController);
 
@@ -36806,7 +37541,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(MetricsController);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"121":121,"122":122,"123":123}],121:[function(_dereq_,module,exports){
+},{"122":122,"123":123,"124":124}],122:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -36846,7 +37581,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _metricsMetricsHandlerFactory = _dereq_(124);
+var _metricsMetricsHandlerFactory = _dereq_(125);
 
 var _metricsMetricsHandlerFactory2 = _interopRequireDefault(_metricsMetricsHandlerFactory);
 
@@ -36927,7 +37662,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(MetricsHandlersControll
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"124":124}],122:[function(_dereq_,module,exports){
+},{"125":125}],123:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -36967,7 +37702,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _utilsCustomTimeRanges = _dereq_(199);
+var _utilsCustomTimeRanges = _dereq_(200);
 
 var _utilsCustomTimeRanges2 = _interopRequireDefault(_utilsCustomTimeRanges);
 
@@ -37042,7 +37777,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(RangeController);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"199":199}],123:[function(_dereq_,module,exports){
+},{"200":200}],124:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -37082,7 +37817,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _reportingReportingFactory = _dereq_(129);
+var _reportingReportingFactory = _dereq_(130);
 
 var _reportingReportingFactory2 = _interopRequireDefault(_reportingReportingFactory);
 
@@ -37135,7 +37870,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(ReportingController);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"129":129}],124:[function(_dereq_,module,exports){
+},{"130":130}],125:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -37175,19 +37910,19 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _handlersBufferLevelHandler = _dereq_(125);
+var _handlersBufferLevelHandler = _dereq_(126);
 
 var _handlersBufferLevelHandler2 = _interopRequireDefault(_handlersBufferLevelHandler);
 
-var _handlersDVBErrorsHandler = _dereq_(126);
+var _handlersDVBErrorsHandler = _dereq_(127);
 
 var _handlersDVBErrorsHandler2 = _interopRequireDefault(_handlersDVBErrorsHandler);
 
-var _handlersHttpListHandler = _dereq_(128);
+var _handlersHttpListHandler = _dereq_(129);
 
 var _handlersHttpListHandler2 = _interopRequireDefault(_handlersHttpListHandler);
 
-var _handlersGenericMetricHandler = _dereq_(127);
+var _handlersGenericMetricHandler = _dereq_(128);
 
 var _handlersGenericMetricHandler2 = _interopRequireDefault(_handlersGenericMetricHandler);
 
@@ -37255,7 +37990,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(MetricsHandlerFacto
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"125":125,"126":126,"127":127,"128":128}],125:[function(_dereq_,module,exports){
+},{"126":126,"127":127,"128":128,"129":129}],126:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -37295,7 +38030,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _utilsHandlerHelpers = _dereq_(132);
+var _utilsHandlerHelpers = _dereq_(133);
 
 var _utilsHandlerHelpers2 = _interopRequireDefault(_utilsHandlerHelpers);
 
@@ -37378,7 +38113,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(BufferLevelHandler);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"132":132}],126:[function(_dereq_,module,exports){
+},{"133":133}],127:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -37418,7 +38153,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _MetricsReportingEvents = _dereq_(118);
+var _MetricsReportingEvents = _dereq_(119);
 
 var _MetricsReportingEvents2 = _interopRequireDefault(_MetricsReportingEvents);
 
@@ -37474,7 +38209,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(DVBErrorsHandler);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"118":118}],127:[function(_dereq_,module,exports){
+},{"119":119}],128:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -37550,7 +38285,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(GenericMetricHandler);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{}],128:[function(_dereq_,module,exports){
+},{}],129:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -37590,7 +38325,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _utilsHandlerHelpers = _dereq_(132);
+var _utilsHandlerHelpers = _dereq_(133);
 
 var _utilsHandlerHelpers2 = _interopRequireDefault(_utilsHandlerHelpers);
 
@@ -37672,7 +38407,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(HttpListHandler);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"132":132}],129:[function(_dereq_,module,exports){
+},{"133":133}],130:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -37712,7 +38447,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _reportersDVBReporting = _dereq_(130);
+var _reportersDVBReporting = _dereq_(131);
 
 var _reportersDVBReporting2 = _interopRequireDefault(_reportersDVBReporting);
 
@@ -37768,7 +38503,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(ReportingFactory);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"130":130}],130:[function(_dereq_,module,exports){
+},{"131":131}],131:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -37808,11 +38543,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _utilsMetricSerialiser = _dereq_(134);
+var _utilsMetricSerialiser = _dereq_(135);
 
 var _utilsMetricSerialiser2 = _interopRequireDefault(_utilsMetricSerialiser);
 
-var _utilsRNG = _dereq_(135);
+var _utilsRNG = _dereq_(136);
 
 var _utilsRNG2 = _interopRequireDefault(_utilsRNG);
 
@@ -37982,7 +38717,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(DVBReporting);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"134":134,"135":135}],131:[function(_dereq_,module,exports){
+},{"135":135,"136":136}],132:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -38022,11 +38757,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _voDVBErrors = _dereq_(136);
+var _voDVBErrors = _dereq_(137);
 
 var _voDVBErrors2 = _interopRequireDefault(_voDVBErrors);
 
-var _MetricsReportingEvents = _dereq_(118);
+var _MetricsReportingEvents = _dereq_(119);
 
 var _MetricsReportingEvents2 = _interopRequireDefault(_MetricsReportingEvents);
 
@@ -38164,7 +38899,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(DVBErrorsTranslator
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"118":118,"136":136}],132:[function(_dereq_,module,exports){
+},{"119":119,"137":137}],133:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -38244,7 +38979,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(HandlerHelpers);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{}],133:[function(_dereq_,module,exports){
+},{}],134:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -38253,15 +38988,15 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _voMetrics = _dereq_(137);
+var _voMetrics = _dereq_(138);
 
 var _voMetrics2 = _interopRequireDefault(_voMetrics);
 
-var _voRange = _dereq_(138);
+var _voRange = _dereq_(139);
 
 var _voRange2 = _interopRequireDefault(_voRange);
 
-var _voReporting = _dereq_(139);
+var _voReporting = _dereq_(140);
 
 var _voReporting2 = _interopRequireDefault(_voReporting);
 
@@ -38383,7 +39118,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(ManifestParsing);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"137":137,"138":138,"139":139}],134:[function(_dereq_,module,exports){
+},{"138":138,"139":139,"140":140}],135:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -38489,7 +39224,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(MetricSerialiser);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{}],135:[function(_dereq_,module,exports){
+},{}],136:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -38594,7 +39329,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(RNG);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{}],136:[function(_dereq_,module,exports){
+},{}],137:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -38632,61 +39367,61 @@ module.exports = exports['default'];
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
-    value: true
+        value: true
 });
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var DVBErrors = function DVBErrors() {
-    _classCallCheck(this, DVBErrors);
+        _classCallCheck(this, DVBErrors);
 
-    this.mpdurl = null;
-    // String - Absolute URL from which the MPD was originally
-    // retrieved (MPD updates will not change this value).
+        this.mpdurl = null;
+        // String - Absolute URL from which the MPD was originally
+        // retrieved (MPD updates will not change this value).
 
-    this.errorcode = null;
-    // String - The value of errorcode depends upon the type
-    // of error being reported. For an error listed in the
-    // ErrorType column below the value is as described in the
-    // Value column.
-    //
-    // ErrorType                                            Value
-    // ---------                                            -----
-    // HTTP error status code                               HTTP status code
-    // Unknown HTTP status code                             HTTP status code
-    // SSL connection failed                                "SSL" followed by SSL alert value
-    // DNS resolution failed                                "C00"
-    // Host unreachable                                     "C01"
-    // Connection refused                                   "C02"
-    // Connection error – Not otherwise specified           "C03"
-    // Corrupt media – ISO BMFF container cannot be parsed  "M00"
-    // Corrupt media – Not otherwise specified              "M01"
-    // Changing Base URL in use due to errors               "F00"
-    // Becoming an error reporting Player                   "S00"
+        this.errorcode = null;
+        // String - The value of errorcode depends upon the type
+        // of error being reported. For an error listed in the
+        // ErrorType column below the value is as described in the
+        // Value column.
+        //
+        // ErrorType                                            Value
+        // ---------                                            -----
+        // HTTP error status code                               HTTP status code
+        // Unknown HTTP status code                             HTTP status code
+        // SSL connection failed                                "SSL" followed by SSL alert value
+        // DNS resolution failed                                "C00"
+        // Host unreachable                                     "C01"
+        // Connection refused                                   "C02"
+        // Connection error – Not otherwise specified           "C03"
+        // Corrupt media – ISO BMFF container cannot be parsed  "M00"
+        // Corrupt media – Not otherwise specified              "M01"
+        // Changing Base URL in use due to errors               "F00"
+        // Becoming an error reporting Player                   "S00"
 
-    this.terror = null;
-    // Real-Time - Date and time at which error occurred in UTC,
-    // formatted as a combined date and time according to ISO 8601.
+        this.terror = null;
+        // Real-Time - Date and time at which error occurred in UTC,
+        // formatted as a combined date and time according to ISO 8601.
 
-    this.url = null;
-    // String - Absolute URL from which data was being requested
-    // when this error occurred. If the error report is in relation
-    // to corrupt media or changing BaseURL, this may be a null
-    // string if the URL from which the media was obtained or
-    // which led to the change of BaseURL is no longer known.
+        this.url = null;
+        // String - Absolute URL from which data was being requested
+        // when this error occurred. If the error report is in relation
+        // to corrupt media or changing BaseURL, this may be a null
+        // string if the URL from which the media was obtained or
+        // which led to the change of BaseURL is no longer known.
 
-    this.ipaddress = null;
-    // String - IP Address which the host name in "url" resolved to.
-    // If the error report is in relation to corrupt media or
-    // changing BaseURL, this may be a null string if the URL
-    // from which the media was obtained or which led to the
-    // change of BaseURL is no longer known.
+        this.ipaddress = null;
+        // String - IP Address which the host name in "url" resolved to.
+        // If the error report is in relation to corrupt media or
+        // changing BaseURL, this may be a null string if the URL
+        // from which the media was obtained or which led to the
+        // change of BaseURL is no longer known.
 
-    this.servicelocation = null;
-    // String - The value of the serviceLocation field in the
-    // BaseURL being used. In the event of this report indicating
-    // a change of BaseURL this is the value from the BaseURL
-    // being moved from.
+        this.servicelocation = null;
+        // String - The value of the serviceLocation field in the
+        // BaseURL being used. In the event of this report indicating
+        // a change of BaseURL this is the value from the BaseURL
+        // being moved from.
 };
 
 DVBErrors.SSL_CONNECTION_FAILED_PREFIX = 'SSL';
@@ -38702,7 +39437,7 @@ DVBErrors.BECAME_REPORTER = 'S00';
 exports['default'] = DVBErrors;
 module.exports = exports['default'];
 
-},{}],137:[function(_dereq_,module,exports){
+},{}],138:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -38756,7 +39491,7 @@ var Metrics = function Metrics() {
 exports['default'] = Metrics;
 module.exports = exports['default'];
 
-},{}],138:[function(_dereq_,module,exports){
+},{}],139:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -38813,7 +39548,7 @@ var Range = function Range() {
 exports["default"] = Range;
 module.exports = exports["default"];
 
-},{}],139:[function(_dereq_,module,exports){
+},{}],140:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -38867,7 +39602,7 @@ var Reporting = function Reporting() {
 exports['default'] = Reporting;
 module.exports = exports['default'];
 
-},{}],140:[function(_dereq_,module,exports){
+},{}],141:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -38909,11 +39644,11 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'd
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-var _utilsObjectUtils = _dereq_(206);
+var _utilsObjectUtils = _dereq_(207);
 
 var _utilsObjectUtils2 = _interopRequireDefault(_utilsObjectUtils);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -39060,7 +39795,7 @@ BaseURLTreeModel.__dashjs_factory_name = 'BaseURLTreeModel';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(BaseURLTreeModel);
 module.exports = exports['default'];
 
-},{"206":206,"48":48}],141:[function(_dereq_,module,exports){
+},{"207":207,"49":49}],142:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -39100,23 +39835,23 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _voFragmentRequest = _dereq_(217);
+var _voFragmentRequest = _dereq_(218);
 
 var _voFragmentRequest2 = _interopRequireDefault(_voFragmentRequest);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
@@ -39449,7 +40184,7 @@ _coreFactoryMaker2['default'].updateClassFactory(FragmentModel.__dashjs_factory_
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"217":217,"46":46,"47":47,"48":48,"53":53}],142:[function(_dereq_,module,exports){
+},{"218":218,"47":47,"48":48,"49":49,"54":54}],143:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -39488,15 +40223,15 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -39531,7 +40266,7 @@ ManifestModel.__dashjs_factory_name = 'ManifestModel';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(ManifestModel);
 module.exports = exports['default'];
 
-},{"47":47,"48":48,"53":53}],143:[function(_dereq_,module,exports){
+},{"48":48,"49":49,"54":54}],144:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -39572,25 +40307,25 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'd
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-var _dashVoUTCTiming = _dereq_(89);
+var _dashVoUTCTiming = _dereq_(90);
 
 var _dashVoUTCTiming2 = _interopRequireDefault(_dashVoUTCTiming);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _voMetricsHTTPRequest = _dereq_(235);
+var _voMetricsHTTPRequest = _dereq_(236);
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _rulesAbrABRRulesCollection = _dereq_(179);
+var _rulesAbrABRRulesCollection = _dereq_(180);
 
 var _rulesAbrABRRulesCollection2 = _interopRequireDefault(_rulesAbrABRRulesCollection);
 
-var _utilsSupervisorTools = _dereq_(208);
+var _utilsSupervisorTools = _dereq_(209);
 
 var LIVE_DELAY_FRAGMENT_COUNT = 4;
 
@@ -40258,7 +40993,7 @@ MediaPlayerModel.__dashjs_factory_name = 'MediaPlayerModel';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(MediaPlayerModel);
 module.exports = exports['default'];
 
-},{"101":101,"179":179,"208":208,"235":235,"48":48,"89":89}],144:[function(_dereq_,module,exports){
+},{"102":102,"180":180,"209":209,"236":236,"49":49,"90":90}],145:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -40297,59 +41032,59 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _constantsMetricsConstants = _dereq_(102);
+var _constantsMetricsConstants = _dereq_(103);
 
 var _constantsMetricsConstants2 = _interopRequireDefault(_constantsMetricsConstants);
 
-var _voMetricsList = _dereq_(223);
+var _voMetricsList = _dereq_(224);
 
 var _voMetricsList2 = _interopRequireDefault(_voMetricsList);
 
-var _voMetricsHTTPRequest = _dereq_(235);
+var _voMetricsHTTPRequest = _dereq_(236);
 
-var _voMetricsRepresentationSwitch = _dereq_(238);
+var _voMetricsRepresentationSwitch = _dereq_(239);
 
 var _voMetricsRepresentationSwitch2 = _interopRequireDefault(_voMetricsRepresentationSwitch);
 
-var _voMetricsBufferLevel = _dereq_(231);
+var _voMetricsBufferLevel = _dereq_(232);
 
 var _voMetricsBufferLevel2 = _interopRequireDefault(_voMetricsBufferLevel);
 
-var _voMetricsBufferState = _dereq_(232);
+var _voMetricsBufferState = _dereq_(233);
 
 var _voMetricsBufferState2 = _interopRequireDefault(_voMetricsBufferState);
 
-var _voMetricsDVRInfo = _dereq_(233);
+var _voMetricsDVRInfo = _dereq_(234);
 
 var _voMetricsDVRInfo2 = _interopRequireDefault(_voMetricsDVRInfo);
 
-var _voMetricsDroppedFrames = _dereq_(234);
+var _voMetricsDroppedFrames = _dereq_(235);
 
 var _voMetricsDroppedFrames2 = _interopRequireDefault(_voMetricsDroppedFrames);
 
-var _voMetricsManifestUpdate = _dereq_(236);
+var _voMetricsManifestUpdate = _dereq_(237);
 
-var _voMetricsSchedulingInfo = _dereq_(240);
+var _voMetricsSchedulingInfo = _dereq_(241);
 
 var _voMetricsSchedulingInfo2 = _interopRequireDefault(_voMetricsSchedulingInfo);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _voMetricsRequestsQueue = _dereq_(239);
+var _voMetricsRequestsQueue = _dereq_(240);
 
 var _voMetricsRequestsQueue2 = _interopRequireDefault(_voMetricsRequestsQueue);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -40688,7 +41423,7 @@ MetricsModel.__dashjs_factory_name = 'MetricsModel';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(MetricsModel);
 module.exports = exports['default'];
 
-},{"101":101,"102":102,"223":223,"231":231,"232":232,"233":233,"234":234,"235":235,"236":236,"238":238,"239":239,"240":240,"47":47,"48":48,"53":53}],145:[function(_dereq_,module,exports){
+},{"102":102,"103":103,"224":224,"232":232,"233":233,"234":234,"235":235,"236":236,"237":237,"239":239,"240":240,"241":241,"48":48,"49":49,"54":54}],146:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -40728,11 +41463,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _voURIFragmentData = _dereq_(230);
+var _voURIFragmentData = _dereq_(231);
 
 var _voURIFragmentData2 = _interopRequireDefault(_voURIFragmentData);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -40791,7 +41526,7 @@ URIFragmentModel.__dashjs_factory_name = 'URIFragmentModel';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(URIFragmentModel);
 module.exports = exports['default'];
 
-},{"230":230,"48":48}],146:[function(_dereq_,module,exports){
+},{"231":231,"49":49}],147:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -40831,19 +41566,19 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
@@ -41257,7 +41992,7 @@ VideoModel.__dashjs_factory_name = 'VideoModel';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(VideoModel);
 module.exports = exports['default'];
 
-},{"46":46,"47":47,"48":48,"53":53}],147:[function(_dereq_,module,exports){
+},{"47":47,"48":48,"49":49,"54":54}],148:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -41297,7 +42032,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -41579,7 +42314,7 @@ var factory = _coreFactoryMaker2['default'].getClassFactory(FetchLoader);
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"48":48}],148:[function(_dereq_,module,exports){
+},{"49":49}],149:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -41620,25 +42355,25 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'd
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-var _XHRLoader = _dereq_(149);
+var _XHRLoader = _dereq_(150);
 
 var _XHRLoader2 = _interopRequireDefault(_XHRLoader);
 
-var _FetchLoader = _dereq_(147);
+var _FetchLoader = _dereq_(148);
 
 var _FetchLoader2 = _interopRequireDefault(_FetchLoader);
 
-var _voMetricsHTTPRequest = _dereq_(235);
+var _voMetricsHTTPRequest = _dereq_(236);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
@@ -41918,7 +42653,7 @@ var factory = _coreFactoryMaker2['default'].getClassFactory(HTTPLoader);
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"147":147,"149":149,"215":215,"235":235,"48":48,"50":50}],149:[function(_dereq_,module,exports){
+},{"148":148,"150":150,"216":216,"236":236,"49":49,"51":51}],150:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -41957,7 +42692,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -42031,7 +42766,7 @@ var factory = _coreFactoryMaker2['default'].getClassFactory(XHRLoader);
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"48":48}],150:[function(_dereq_,module,exports){
+},{"49":49}],151:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -42269,7 +43004,7 @@ var CommonEncryption = (function () {
 exports['default'] = CommonEncryption;
 module.exports = exports['default'];
 
-},{}],151:[function(_dereq_,module,exports){
+},{}],152:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -42308,31 +43043,31 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _controllersProtectionController = _dereq_(153);
+var _controllersProtectionController = _dereq_(154);
 
 var _controllersProtectionController2 = _interopRequireDefault(_controllersProtectionController);
 
-var _controllersProtectionKeyController = _dereq_(154);
+var _controllersProtectionKeyController = _dereq_(155);
 
 var _controllersProtectionKeyController2 = _interopRequireDefault(_controllersProtectionKeyController);
 
-var _ProtectionEvents = _dereq_(152);
+var _ProtectionEvents = _dereq_(153);
 
 var _ProtectionEvents2 = _interopRequireDefault(_ProtectionEvents);
 
-var _errorsProtectionErrors = _dereq_(159);
+var _errorsProtectionErrors = _dereq_(160);
 
 var _errorsProtectionErrors2 = _interopRequireDefault(_errorsProtectionErrors);
 
-var _modelsProtectionModel_21Jan2015 = _dereq_(161);
+var _modelsProtectionModel_21Jan2015 = _dereq_(162);
 
 var _modelsProtectionModel_21Jan20152 = _interopRequireDefault(_modelsProtectionModel_21Jan2015);
 
-var _modelsProtectionModel_3Feb2014 = _dereq_(162);
+var _modelsProtectionModel_3Feb2014 = _dereq_(163);
 
 var _modelsProtectionModel_3Feb20142 = _interopRequireDefault(_modelsProtectionModel_3Feb2014);
 
-var _modelsProtectionModel_01b = _dereq_(160);
+var _modelsProtectionModel_01b = _dereq_(161);
 
 var _modelsProtectionModel_01b2 = _interopRequireDefault(_modelsProtectionModel_01b);
 
@@ -42487,7 +43222,7 @@ dashjs.FactoryMaker.updateClassFactory(Protection.__dashjs_factory_name, factory
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"152":152,"153":153,"154":154,"159":159,"160":160,"161":161,"162":162}],152:[function(_dereq_,module,exports){
+},{"153":153,"154":154,"155":155,"160":160,"161":161,"162":162,"163":163}],153:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -42532,7 +43267,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _coreEventsEventsBase = _dereq_(54);
+var _coreEventsEventsBase = _dereq_(55);
 
 var _coreEventsEventsBase2 = _interopRequireDefault(_coreEventsEventsBase);
 
@@ -42696,7 +43431,7 @@ var protectionEvents = new ProtectionEvents();
 exports['default'] = protectionEvents;
 module.exports = exports['default'];
 
-},{"54":54}],153:[function(_dereq_,module,exports){
+},{"55":55}],154:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -42736,23 +43471,23 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _CommonEncryption = _dereq_(150);
+var _CommonEncryption = _dereq_(151);
 
 var _CommonEncryption2 = _interopRequireDefault(_CommonEncryption);
 
-var _voMediaCapability = _dereq_(172);
+var _voMediaCapability = _dereq_(173);
 
 var _voMediaCapability2 = _interopRequireDefault(_voMediaCapability);
 
-var _voKeySystemConfiguration = _dereq_(171);
+var _voKeySystemConfiguration = _dereq_(172);
 
 var _voKeySystemConfiguration2 = _interopRequireDefault(_voKeySystemConfiguration);
 
-var _errorsProtectionErrors = _dereq_(159);
+var _errorsProtectionErrors = _dereq_(160);
 
 var _errorsProtectionErrors2 = _interopRequireDefault(_errorsProtectionErrors);
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
@@ -43499,7 +44234,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(ProtectionController);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"150":150,"159":159,"171":171,"172":172,"215":215}],154:[function(_dereq_,module,exports){
+},{"151":151,"160":160,"172":172,"173":173,"216":216}],155:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -43538,43 +44273,43 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _CommonEncryption = _dereq_(150);
+var _CommonEncryption = _dereq_(151);
 
 var _CommonEncryption2 = _interopRequireDefault(_CommonEncryption);
 
-var _drmKeySystemClearKey = _dereq_(155);
+var _drmKeySystemClearKey = _dereq_(156);
 
 var _drmKeySystemClearKey2 = _interopRequireDefault(_drmKeySystemClearKey);
 
-var _drmKeySystemW3CClearKey = _dereq_(157);
+var _drmKeySystemW3CClearKey = _dereq_(158);
 
 var _drmKeySystemW3CClearKey2 = _interopRequireDefault(_drmKeySystemW3CClearKey);
 
-var _drmKeySystemWidevine = _dereq_(158);
+var _drmKeySystemWidevine = _dereq_(159);
 
 var _drmKeySystemWidevine2 = _interopRequireDefault(_drmKeySystemWidevine);
 
-var _drmKeySystemPlayReady = _dereq_(156);
+var _drmKeySystemPlayReady = _dereq_(157);
 
 var _drmKeySystemPlayReady2 = _interopRequireDefault(_drmKeySystemPlayReady);
 
-var _serversDRMToday = _dereq_(164);
+var _serversDRMToday = _dereq_(165);
 
 var _serversDRMToday2 = _interopRequireDefault(_serversDRMToday);
 
-var _serversPlayReady = _dereq_(165);
+var _serversPlayReady = _dereq_(166);
 
 var _serversPlayReady2 = _interopRequireDefault(_serversPlayReady);
 
-var _serversWidevine = _dereq_(166);
+var _serversWidevine = _dereq_(167);
 
 var _serversWidevine2 = _interopRequireDefault(_serversWidevine);
 
-var _serversClearKey = _dereq_(163);
+var _serversClearKey = _dereq_(164);
 
 var _serversClearKey2 = _interopRequireDefault(_serversClearKey);
 
-var _constantsProtectionConstants = _dereq_(103);
+var _constantsProtectionConstants = _dereq_(104);
 
 var _constantsProtectionConstants2 = _interopRequireDefault(_constantsProtectionConstants);
 
@@ -43896,7 +44631,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(ProtectionKeyContro
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"103":103,"150":150,"155":155,"156":156,"157":157,"158":158,"163":163,"164":164,"165":165,"166":166}],155:[function(_dereq_,module,exports){
+},{"104":104,"151":151,"156":156,"157":157,"158":158,"159":159,"164":164,"165":165,"166":166,"167":167}],156:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -43936,19 +44671,19 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _voKeyPair = _dereq_(169);
+var _voKeyPair = _dereq_(170);
 
 var _voKeyPair2 = _interopRequireDefault(_voKeyPair);
 
-var _voClearKeyKeySet = _dereq_(167);
+var _voClearKeyKeySet = _dereq_(168);
 
 var _voClearKeyKeySet2 = _interopRequireDefault(_voClearKeyKeySet);
 
-var _CommonEncryption = _dereq_(150);
+var _CommonEncryption = _dereq_(151);
 
 var _CommonEncryption2 = _interopRequireDefault(_CommonEncryption);
 
-var _constantsProtectionConstants = _dereq_(103);
+var _constantsProtectionConstants = _dereq_(104);
 
 var _constantsProtectionConstants2 = _interopRequireDefault(_constantsProtectionConstants);
 
@@ -44038,7 +44773,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(KeySystemClearKey);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"103":103,"150":150,"167":167,"169":169}],156:[function(_dereq_,module,exports){
+},{"104":104,"151":151,"168":168,"170":170}],157:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -44084,11 +44819,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _CommonEncryption = _dereq_(150);
+var _CommonEncryption = _dereq_(151);
 
 var _CommonEncryption2 = _interopRequireDefault(_CommonEncryption);
 
-var _constantsProtectionConstants = _dereq_(103);
+var _constantsProtectionConstants = _dereq_(104);
 
 var _constantsProtectionConstants2 = _interopRequireDefault(_constantsProtectionConstants);
 
@@ -44364,7 +45099,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(KeySystemPlayReady)
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"103":103,"150":150}],157:[function(_dereq_,module,exports){
+},{"104":104,"151":151}],158:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -44404,19 +45139,19 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _voKeyPair = _dereq_(169);
+var _voKeyPair = _dereq_(170);
 
 var _voKeyPair2 = _interopRequireDefault(_voKeyPair);
 
-var _voClearKeyKeySet = _dereq_(167);
+var _voClearKeyKeySet = _dereq_(168);
 
 var _voClearKeyKeySet2 = _interopRequireDefault(_voClearKeyKeySet);
 
-var _CommonEncryption = _dereq_(150);
+var _CommonEncryption = _dereq_(151);
 
 var _CommonEncryption2 = _interopRequireDefault(_CommonEncryption);
 
-var _constantsProtectionConstants = _dereq_(103);
+var _constantsProtectionConstants = _dereq_(104);
 
 var _constantsProtectionConstants2 = _interopRequireDefault(_constantsProtectionConstants);
 
@@ -44506,7 +45241,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(KeySystemW3CClearKe
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"103":103,"150":150,"167":167,"169":169}],158:[function(_dereq_,module,exports){
+},{"104":104,"151":151,"168":168,"170":170}],159:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -44553,11 +45288,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _CommonEncryption = _dereq_(150);
+var _CommonEncryption = _dereq_(151);
 
 var _CommonEncryption2 = _interopRequireDefault(_CommonEncryption);
 
-var _constantsProtectionConstants = _dereq_(103);
+var _constantsProtectionConstants = _dereq_(104);
 
 var _constantsProtectionConstants2 = _interopRequireDefault(_constantsProtectionConstants);
 
@@ -44629,7 +45364,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(KeySystemWidevine);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"103":103,"150":150}],159:[function(_dereq_,module,exports){
+},{"104":104,"151":151}],160:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -44674,7 +45409,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _coreErrorsErrorsBase = _dereq_(51);
+var _coreErrorsErrorsBase = _dereq_(52);
 
 var _coreErrorsErrorsBase2 = _interopRequireDefault(_coreErrorsErrorsBase);
 
@@ -44776,7 +45511,7 @@ var protectionErrors = new ProtectionErrors();
 exports['default'] = protectionErrors;
 module.exports = exports['default'];
 
-},{"51":51}],160:[function(_dereq_,module,exports){
+},{"52":52}],161:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -44824,31 +45559,31 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _controllersProtectionKeyController = _dereq_(154);
+var _controllersProtectionKeyController = _dereq_(155);
 
 var _controllersProtectionKeyController2 = _interopRequireDefault(_controllersProtectionKeyController);
 
-var _voNeedKey = _dereq_(173);
+var _voNeedKey = _dereq_(174);
 
 var _voNeedKey2 = _interopRequireDefault(_voNeedKey);
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
-var _voKeyMessage = _dereq_(168);
+var _voKeyMessage = _dereq_(169);
 
 var _voKeyMessage2 = _interopRequireDefault(_voKeyMessage);
 
-var _voKeySystemConfiguration = _dereq_(171);
+var _voKeySystemConfiguration = _dereq_(172);
 
 var _voKeySystemConfiguration2 = _interopRequireDefault(_voKeySystemConfiguration);
 
-var _voKeySystemAccess = _dereq_(170);
+var _voKeySystemAccess = _dereq_(171);
 
 var _voKeySystemAccess2 = _interopRequireDefault(_voKeySystemAccess);
 
-var _errorsProtectionErrors = _dereq_(159);
+var _errorsProtectionErrors = _dereq_(160);
 
 var _errorsProtectionErrors2 = _interopRequireDefault(_errorsProtectionErrors);
 
@@ -45237,7 +45972,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(ProtectionModel_01b);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"154":154,"159":159,"168":168,"170":170,"171":171,"173":173,"215":215}],161:[function(_dereq_,module,exports){
+},{"155":155,"160":160,"169":169,"171":171,"172":172,"174":174,"216":216}],162:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -45285,31 +46020,31 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _controllersProtectionKeyController = _dereq_(154);
+var _controllersProtectionKeyController = _dereq_(155);
 
 var _controllersProtectionKeyController2 = _interopRequireDefault(_controllersProtectionKeyController);
 
-var _voNeedKey = _dereq_(173);
+var _voNeedKey = _dereq_(174);
 
 var _voNeedKey2 = _interopRequireDefault(_voNeedKey);
 
-var _errorsProtectionErrors = _dereq_(159);
+var _errorsProtectionErrors = _dereq_(160);
 
 var _errorsProtectionErrors2 = _interopRequireDefault(_errorsProtectionErrors);
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
-var _voKeyMessage = _dereq_(168);
+var _voKeyMessage = _dereq_(169);
 
 var _voKeyMessage2 = _interopRequireDefault(_voKeyMessage);
 
-var _voKeySystemAccess = _dereq_(170);
+var _voKeySystemAccess = _dereq_(171);
 
 var _voKeySystemAccess2 = _interopRequireDefault(_voKeySystemAccess);
 
-var _constantsProtectionConstants = _dereq_(103);
+var _constantsProtectionConstants = _dereq_(104);
 
 var _constantsProtectionConstants2 = _interopRequireDefault(_constantsProtectionConstants);
 
@@ -45461,9 +46196,14 @@ function ProtectionModel_21Jan2015(config) {
         });
     }
 
-    function createKeySession(initData, protData, sessionType) {
+    function createKeySession(initData, protData, sessionType, cdmData) {
         if (!keySystem || !mediaKeys) {
             throw new Error('Can not create sessions until you have selected a key system');
+        }
+
+        // Patch for StickTV: provide CustomData to PlayReady CDM using setServerCertificate API
+        if (cdmData && keySystem.systemString === 'com.microsoft.playready') {
+            mediaKeys.setServerCertificate(new Uint8Array(cdmData));
         }
 
         var session = mediaKeys.createSession(sessionType);
@@ -45750,7 +46490,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(ProtectionModel_21Jan20
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"103":103,"154":154,"159":159,"168":168,"170":170,"173":173,"215":215}],162:[function(_dereq_,module,exports){
+},{"104":104,"155":155,"160":160,"169":169,"171":171,"174":174,"216":216}],163:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -45799,31 +46539,31 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _controllersProtectionKeyController = _dereq_(154);
+var _controllersProtectionKeyController = _dereq_(155);
 
 var _controllersProtectionKeyController2 = _interopRequireDefault(_controllersProtectionKeyController);
 
-var _voNeedKey = _dereq_(173);
+var _voNeedKey = _dereq_(174);
 
 var _voNeedKey2 = _interopRequireDefault(_voNeedKey);
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
-var _errorsProtectionErrors = _dereq_(159);
+var _errorsProtectionErrors = _dereq_(160);
 
 var _errorsProtectionErrors2 = _interopRequireDefault(_errorsProtectionErrors);
 
-var _voKeyMessage = _dereq_(168);
+var _voKeyMessage = _dereq_(169);
 
 var _voKeyMessage2 = _interopRequireDefault(_voKeyMessage);
 
-var _voKeySystemConfiguration = _dereq_(171);
+var _voKeySystemConfiguration = _dereq_(172);
 
 var _voKeySystemConfiguration2 = _interopRequireDefault(_voKeySystemConfiguration);
 
-var _voKeySystemAccess = _dereq_(170);
+var _voKeySystemAccess = _dereq_(171);
 
 var _voKeySystemAccess2 = _interopRequireDefault(_voKeySystemAccess);
 
@@ -46160,7 +46900,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(ProtectionModel_3Feb201
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"154":154,"159":159,"168":168,"170":170,"171":171,"173":173,"215":215}],163:[function(_dereq_,module,exports){
+},{"155":155,"160":160,"169":169,"171":171,"172":172,"174":174,"216":216}],164:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -46209,11 +46949,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _voKeyPair = _dereq_(169);
+var _voKeyPair = _dereq_(170);
 
 var _voKeyPair2 = _interopRequireDefault(_voKeyPair);
 
-var _voClearKeyKeySet = _dereq_(167);
+var _voClearKeyKeySet = _dereq_(168);
 
 var _voClearKeyKeySet2 = _interopRequireDefault(_voClearKeyKeySet);
 
@@ -46275,7 +47015,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(ClearKey);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"167":167,"169":169}],164:[function(_dereq_,module,exports){
+},{"168":168,"170":170}],165:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -46322,7 +47062,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsProtectionConstants = _dereq_(103);
+var _constantsProtectionConstants = _dereq_(104);
 
 var _constantsProtectionConstants2 = _interopRequireDefault(_constantsProtectionConstants);
 
@@ -46396,7 +47136,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(DRMToday);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"103":103}],165:[function(_dereq_,module,exports){
+},{"104":104}],166:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -46552,7 +47292,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(PlayReady);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{}],166:[function(_dereq_,module,exports){
+},{}],167:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -46629,7 +47369,7 @@ exports['default'] = dashjs.FactoryMaker.getSingletonFactory(Widevine);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{}],167:[function(_dereq_,module,exports){
+},{}],168:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -46735,7 +47475,7 @@ var ClearKeyKeySet = (function () {
 exports['default'] = ClearKeyKeySet;
 module.exports = exports['default'];
 
-},{}],168:[function(_dereq_,module,exports){
+},{}],169:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -46800,7 +47540,7 @@ function KeyMessage(sessionToken, message, defaultURL, messageType) {
 exports['default'] = KeyMessage;
 module.exports = exports['default'];
 
-},{}],169:[function(_dereq_,module,exports){
+},{}],170:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -46860,7 +47600,7 @@ function KeyPair(keyID, key) {
 exports["default"] = KeyPair;
 module.exports = exports["default"];
 
-},{}],170:[function(_dereq_,module,exports){
+},{}],171:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -46924,7 +47664,7 @@ function KeySystemAccess(keySystem, ksConfiguration) {
 exports["default"] = KeySystemAccess;
 module.exports = exports["default"];
 
-},{}],171:[function(_dereq_,module,exports){
+},{}],172:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -47003,7 +47743,7 @@ function KeySystemConfiguration(audioCapabilities, videoCapabilities, distinctiv
 exports['default'] = KeySystemConfiguration;
 module.exports = exports['default'];
 
-},{}],172:[function(_dereq_,module,exports){
+},{}],173:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -47063,7 +47803,7 @@ function MediaCapability(contentType, robustness) {
 exports["default"] = MediaCapability;
 module.exports = exports["default"];
 
-},{}],173:[function(_dereq_,module,exports){
+},{}],174:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -47122,7 +47862,7 @@ function NeedKey(initData, initDataType) {
 exports["default"] = NeedKey;
 module.exports = exports["default"];
 
-},{}],174:[function(_dereq_,module,exports){
+},{}],175:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -47131,7 +47871,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -47183,7 +47923,7 @@ var factory = _coreFactoryMaker2['default'].getClassFactory(DroppedFramesHistory
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"48":48}],175:[function(_dereq_,module,exports){
+},{"49":49}],176:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -47223,7 +47963,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -47301,7 +48041,7 @@ RulesContext.__dashjs_factory_name = 'RulesContext';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(RulesContext);
 module.exports = exports['default'];
 
-},{"48":48}],176:[function(_dereq_,module,exports){
+},{"49":49}],177:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -47341,7 +48081,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -47393,7 +48133,7 @@ _coreFactoryMaker2['default'].updateClassFactory(SwitchRequest.__dashjs_factory_
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"48":48}],177:[function(_dereq_,module,exports){
+},{"49":49}],178:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -47433,11 +48173,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _SwitchRequest = _dereq_(176);
+var _SwitchRequest = _dereq_(177);
 
 var _SwitchRequest2 = _interopRequireDefault(_SwitchRequest);
 
@@ -47499,7 +48239,7 @@ var factory = _coreFactoryMaker2['default'].getClassFactory(SwitchRequestHistory
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"176":176,"48":48}],178:[function(_dereq_,module,exports){
+},{"177":177,"49":49}],179:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -47539,11 +48279,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -47782,7 +48522,7 @@ ThroughputHistory.__dashjs_factory_name = 'ThroughputHistory';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(ThroughputHistory);
 module.exports = exports['default'];
 
-},{"101":101,"48":48}],179:[function(_dereq_,module,exports){
+},{"102":102,"49":49}],180:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -47821,35 +48561,35 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _ThroughputRule = _dereq_(185);
+var _ThroughputRule = _dereq_(186);
 
 var _ThroughputRule2 = _interopRequireDefault(_ThroughputRule);
 
-var _InsufficientBufferRule = _dereq_(183);
+var _InsufficientBufferRule = _dereq_(184);
 
 var _InsufficientBufferRule2 = _interopRequireDefault(_InsufficientBufferRule);
 
-var _AbandonRequestsRule = _dereq_(180);
+var _AbandonRequestsRule = _dereq_(181);
 
 var _AbandonRequestsRule2 = _interopRequireDefault(_AbandonRequestsRule);
 
-var _DroppedFramesRule = _dereq_(182);
+var _DroppedFramesRule = _dereq_(183);
 
 var _DroppedFramesRule2 = _interopRequireDefault(_DroppedFramesRule);
 
-var _SwitchHistoryRule = _dereq_(184);
+var _SwitchHistoryRule = _dereq_(185);
 
 var _SwitchHistoryRule2 = _interopRequireDefault(_SwitchHistoryRule);
 
-var _BolaRule = _dereq_(181);
+var _BolaRule = _dereq_(182);
 
 var _BolaRule2 = _interopRequireDefault(_BolaRule);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _SwitchRequest = _dereq_(176);
+var _SwitchRequest = _dereq_(177);
 
 var _SwitchRequest2 = _interopRequireDefault(_SwitchRequest);
 
@@ -48010,7 +48750,7 @@ _coreFactoryMaker2['default'].updateSingletonFactory(ABRRulesCollection.__dashjs
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"176":176,"180":180,"181":181,"182":182,"183":183,"184":184,"185":185,"48":48}],180:[function(_dereq_,module,exports){
+},{"177":177,"181":181,"182":182,"183":183,"184":184,"185":185,"186":186,"49":49}],181:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -48049,15 +48789,15 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _SwitchRequest = _dereq_(176);
+var _SwitchRequest = _dereq_(177);
 
 var _SwitchRequest2 = _interopRequireDefault(_SwitchRequest);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
@@ -48189,7 +48929,7 @@ AbandonRequestsRule.__dashjs_factory_name = 'AbandonRequestsRule';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(AbandonRequestsRule);
 module.exports = exports['default'];
 
-},{"176":176,"46":46,"48":48}],181:[function(_dereq_,module,exports){
+},{"177":177,"47":47,"49":49}],182:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -48231,29 +48971,29 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsMetricsConstants = _dereq_(102);
+var _constantsMetricsConstants = _dereq_(103);
 
 var _constantsMetricsConstants2 = _interopRequireDefault(_constantsMetricsConstants);
 
-var _SwitchRequest = _dereq_(176);
+var _SwitchRequest = _dereq_(177);
 
 var _SwitchRequest2 = _interopRequireDefault(_SwitchRequest);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _voMetricsHTTPRequest = _dereq_(235);
+var _voMetricsHTTPRequest = _dereq_(236);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
@@ -48764,7 +49504,7 @@ BolaRule.__dashjs_factory_name = 'BolaRule';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(BolaRule);
 module.exports = exports['default'];
 
-},{"102":102,"176":176,"235":235,"46":46,"47":47,"48":48,"53":53}],182:[function(_dereq_,module,exports){
+},{"103":103,"177":177,"236":236,"47":47,"48":48,"49":49,"54":54}],183:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -48773,15 +49513,15 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _SwitchRequest = _dereq_(176);
+var _SwitchRequest = _dereq_(177);
 
 var _SwitchRequest2 = _interopRequireDefault(_SwitchRequest);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
@@ -48837,7 +49577,7 @@ DroppedFramesRule.__dashjs_factory_name = 'DroppedFramesRule';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(DroppedFramesRule);
 module.exports = exports['default'];
 
-},{"176":176,"46":46,"48":48}],183:[function(_dereq_,module,exports){
+},{"177":177,"47":47,"49":49}],184:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -48876,31 +49616,31 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _controllersBufferController = _dereq_(107);
+var _controllersBufferController = _dereq_(108);
 
 var _controllersBufferController2 = _interopRequireDefault(_controllersBufferController);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _SwitchRequest = _dereq_(176);
+var _SwitchRequest = _dereq_(177);
 
 var _SwitchRequest2 = _interopRequireDefault(_SwitchRequest);
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
@@ -49021,7 +49761,7 @@ InsufficientBufferRule.__dashjs_factory_name = 'InsufficientBufferRule';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(InsufficientBufferRule);
 module.exports = exports['default'];
 
-},{"101":101,"107":107,"176":176,"46":46,"47":47,"48":48,"53":53}],184:[function(_dereq_,module,exports){
+},{"102":102,"108":108,"177":177,"47":47,"48":48,"49":49,"54":54}],185:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -49030,15 +49770,15 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _SwitchRequest = _dereq_(176);
+var _SwitchRequest = _dereq_(177);
 
 var _SwitchRequest2 = _interopRequireDefault(_SwitchRequest);
 
@@ -49099,7 +49839,7 @@ SwitchHistoryRule.__dashjs_factory_name = 'SwitchHistoryRule';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(SwitchHistoryRule);
 module.exports = exports['default'];
 
-},{"176":176,"46":46,"48":48}],185:[function(_dereq_,module,exports){
+},{"177":177,"47":47,"49":49}],186:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -49138,27 +49878,27 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _controllersBufferController = _dereq_(107);
+var _controllersBufferController = _dereq_(108);
 
 var _controllersBufferController2 = _interopRequireDefault(_controllersBufferController);
 
-var _controllersAbrController = _dereq_(104);
+var _controllersAbrController = _dereq_(105);
 
 var _controllersAbrController2 = _interopRequireDefault(_controllersAbrController);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _SwitchRequest = _dereq_(176);
+var _SwitchRequest = _dereq_(177);
 
 var _SwitchRequest2 = _interopRequireDefault(_SwitchRequest);
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
@@ -49237,7 +49977,7 @@ ThroughputRule.__dashjs_factory_name = 'ThroughputRule';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(ThroughputRule);
 module.exports = exports['default'];
 
-},{"101":101,"104":104,"107":107,"176":176,"46":46,"48":48}],186:[function(_dereq_,module,exports){
+},{"102":102,"105":105,"108":108,"177":177,"47":47,"49":49}],187:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -49276,11 +50016,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -49345,7 +50085,7 @@ BufferLevelRule.__dashjs_factory_name = 'BufferLevelRule';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(BufferLevelRule);
 module.exports = exports['default'];
 
-},{"101":101,"48":48}],187:[function(_dereq_,module,exports){
+},{"102":102,"49":49}],188:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -49384,19 +50124,19 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _streamingVoFragmentRequest = _dereq_(217);
+var _streamingVoFragmentRequest = _dereq_(218);
 
 var _streamingVoFragmentRequest2 = _interopRequireDefault(_streamingVoFragmentRequest);
 
@@ -49487,7 +50227,7 @@ NextFragmentRequestRule.__dashjs_factory_name = 'NextFragmentRequestRule';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(NextFragmentRequestRule);
 module.exports = exports['default'];
 
-},{"101":101,"217":217,"46":46,"48":48}],188:[function(_dereq_,module,exports){
+},{"102":102,"218":218,"47":47,"49":49}],189:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -49526,7 +50266,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -49816,7 +50556,7 @@ EmbeddedTextHtmlRender.__dashjs_factory_name = 'EmbeddedTextHtmlRender';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(EmbeddedTextHtmlRender);
 module.exports = exports['default'];
 
-},{"48":48}],189:[function(_dereq_,module,exports){
+},{"49":49}],190:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -49855,39 +50595,39 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _utilsInitCache = _dereq_(203);
+var _utilsInitCache = _dereq_(204);
 
 var _utilsInitCache2 = _interopRequireDefault(_utilsInitCache);
 
-var _SourceBufferSink = _dereq_(97);
+var _SourceBufferSink = _dereq_(98);
 
 var _SourceBufferSink2 = _interopRequireDefault(_SourceBufferSink);
 
-var _streamingTextTextController = _dereq_(191);
+var _streamingTextTextController = _dereq_(192);
 
 var _streamingTextTextController2 = _interopRequireDefault(_streamingTextTextController);
 
-var _streamingVoDashJSError = _dereq_(215);
+var _streamingVoDashJSError = _dereq_(216);
 
 var _streamingVoDashJSError2 = _interopRequireDefault(_streamingVoDashJSError);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
@@ -50086,7 +50826,7 @@ NotFragmentedTextBufferController.__dashjs_factory_name = BUFFER_CONTROLLER_TYPE
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(NotFragmentedTextBufferController);
 module.exports = exports['default'];
 
-},{"101":101,"191":191,"203":203,"215":215,"47":47,"48":48,"50":50,"53":53,"97":97}],190:[function(_dereq_,module,exports){
+},{"102":102,"192":192,"204":204,"216":216,"48":48,"49":49,"51":51,"54":54,"98":98}],191:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -50125,19 +50865,19 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _controllersBufferController = _dereq_(107);
+var _controllersBufferController = _dereq_(108);
 
 var _controllersBufferController2 = _interopRequireDefault(_controllersBufferController);
 
-var _NotFragmentedTextBufferController = _dereq_(189);
+var _NotFragmentedTextBufferController = _dereq_(190);
 
 var _NotFragmentedTextBufferController2 = _interopRequireDefault(_NotFragmentedTextBufferController);
 
@@ -50291,7 +51031,7 @@ TextBufferController.__dashjs_factory_name = 'TextBufferController';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(TextBufferController);
 module.exports = exports['default'];
 
-},{"101":101,"107":107,"189":189,"48":48}],191:[function(_dereq_,module,exports){
+},{"102":102,"108":108,"190":190,"49":49}],192:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -50330,39 +51070,39 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _TextSourceBuffer = _dereq_(192);
+var _TextSourceBuffer = _dereq_(193);
 
 var _TextSourceBuffer2 = _interopRequireDefault(_TextSourceBuffer);
 
-var _TextTracks = _dereq_(193);
+var _TextTracks = _dereq_(194);
 
 var _TextTracks2 = _interopRequireDefault(_TextTracks);
 
-var _utilsVTTParser = _dereq_(211);
+var _utilsVTTParser = _dereq_(212);
 
 var _utilsVTTParser2 = _interopRequireDefault(_utilsVTTParser);
 
-var _utilsTTMLParser = _dereq_(209);
+var _utilsTTMLParser = _dereq_(210);
 
 var _utilsTTMLParser2 = _interopRequireDefault(_utilsTTMLParser);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _utilsSupervisorTools = _dereq_(208);
+var _utilsSupervisorTools = _dereq_(209);
 
 function TextController() {
 
@@ -50654,7 +51394,7 @@ TextController.__dashjs_factory_name = 'TextController';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(TextController);
 module.exports = exports['default'];
 
-},{"101":101,"192":192,"193":193,"208":208,"209":209,"211":211,"47":47,"48":48,"53":53}],192:[function(_dereq_,module,exports){
+},{"102":102,"193":193,"194":194,"209":209,"210":210,"212":212,"48":48,"49":49,"54":54}],193:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -50693,41 +51433,41 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _voMetricsHTTPRequest = _dereq_(235);
+var _voMetricsHTTPRequest = _dereq_(236);
 
-var _voTextTrackInfo = _dereq_(227);
+var _voTextTrackInfo = _dereq_(228);
 
 var _voTextTrackInfo2 = _interopRequireDefault(_voTextTrackInfo);
 
-var _utilsBoxParser = _dereq_(197);
+var _utilsBoxParser = _dereq_(198);
 
 var _utilsBoxParser2 = _interopRequireDefault(_utilsBoxParser);
 
-var _utilsCustomTimeRanges = _dereq_(199);
+var _utilsCustomTimeRanges = _dereq_(200);
 
 var _utilsCustomTimeRanges2 = _interopRequireDefault(_utilsCustomTimeRanges);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _TextTracks = _dereq_(193);
+var _TextTracks = _dereq_(194);
 
 var _TextTracks2 = _interopRequireDefault(_TextTracks);
 
-var _EmbeddedTextHtmlRender = _dereq_(188);
+var _EmbeddedTextHtmlRender = _dereq_(189);
 
 var _EmbeddedTextHtmlRender2 = _interopRequireDefault(_EmbeddedTextHtmlRender);
 
-var _codemIsoboxer = _dereq_(6);
+var _codemIsoboxer = _dereq_(9);
 
 var _codemIsoboxer2 = _interopRequireDefault(_codemIsoboxer);
 
@@ -50735,19 +51475,19 @@ var _externalsCea608Parser = _dereq_(2);
 
 var _externalsCea608Parser2 = _interopRequireDefault(_externalsCea608Parser);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
@@ -51326,7 +52066,7 @@ TextSourceBuffer.__dashjs_factory_name = 'TextSourceBuffer';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(TextSourceBuffer);
 module.exports = exports['default'];
 
-},{"101":101,"188":188,"193":193,"197":197,"199":199,"2":2,"215":215,"227":227,"235":235,"46":46,"47":47,"48":48,"50":50,"53":53,"6":6}],193:[function(_dereq_,module,exports){
+},{"102":102,"189":189,"194":194,"198":198,"2":2,"200":200,"216":216,"228":228,"236":236,"47":47,"48":48,"49":49,"51":51,"54":54,"9":9}],194:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -51365,27 +52105,27 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _imsc = _dereq_(41);
+var _imsc = _dereq_(16);
 
 function TextTracks() {
 
@@ -52022,7 +52762,7 @@ TextTracks.__dashjs_factory_name = 'TextTracks';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(TextTracks);
 module.exports = exports['default'];
 
-},{"101":101,"41":41,"46":46,"47":47,"48":48,"53":53}],194:[function(_dereq_,module,exports){
+},{"102":102,"16":16,"47":47,"48":48,"49":49,"54":54}],195:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -52062,27 +52802,27 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _voThumbnail = _dereq_(228);
+var _voThumbnail = _dereq_(229);
 
 var _voThumbnail2 = _interopRequireDefault(_voThumbnail);
 
-var _ThumbnailTracks = _dereq_(195);
+var _ThumbnailTracks = _dereq_(196);
 
 var _ThumbnailTracks2 = _interopRequireDefault(_ThumbnailTracks);
 
-var _voBitrateInfo = _dereq_(214);
+var _voBitrateInfo = _dereq_(215);
 
 var _voBitrateInfo2 = _interopRequireDefault(_voBitrateInfo);
 
-var _dashUtilsSegmentsUtils = _dereq_(77);
+var _dashUtilsSegmentsUtils = _dereq_(78);
 
 function ThumbnailController(config) {
 
@@ -52186,7 +52926,7 @@ ThumbnailController.__dashjs_factory_name = 'ThumbnailController';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(ThumbnailController);
 module.exports = exports['default'];
 
-},{"101":101,"195":195,"214":214,"228":228,"48":48,"77":77}],195:[function(_dereq_,module,exports){
+},{"102":102,"196":196,"215":215,"229":229,"49":49,"78":78}],196:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -52225,37 +52965,37 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _dashConstantsDashConstants = _dereq_(60);
+var _dashConstantsDashConstants = _dereq_(61);
 
 var _dashConstantsDashConstants2 = _interopRequireDefault(_dashConstantsDashConstants);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _voThumbnailTrackInfo = _dereq_(229);
+var _voThumbnailTrackInfo = _dereq_(230);
 
 var _voThumbnailTrackInfo2 = _interopRequireDefault(_voThumbnailTrackInfo);
 
-var _streamingUtilsURLUtils = _dereq_(210);
+var _streamingUtilsURLUtils = _dereq_(211);
 
 var _streamingUtilsURLUtils2 = _interopRequireDefault(_streamingUtilsURLUtils);
 
-var _dashUtilsSegmentsUtils = _dereq_(77);
+var _dashUtilsSegmentsUtils = _dereq_(78);
 
-var _dashSegmentBaseLoader = _dereq_(58);
+var _dashSegmentBaseLoader = _dereq_(59);
 
 var _dashSegmentBaseLoader2 = _interopRequireDefault(_dashSegmentBaseLoader);
 
-var _streamingUtilsBoxParser = _dereq_(197);
+var _streamingUtilsBoxParser = _dereq_(198);
 
 var _streamingUtilsBoxParser2 = _interopRequireDefault(_streamingUtilsBoxParser);
 
-var _streamingNetXHRLoader = _dereq_(149);
+var _streamingNetXHRLoader = _dereq_(150);
 
 var _streamingNetXHRLoader2 = _interopRequireDefault(_streamingNetXHRLoader);
 
@@ -52498,7 +53238,7 @@ function ThumbnailTracks(config) {
 ThumbnailTracks.__dashjs_factory_name = 'ThumbnailTracks';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(ThumbnailTracks);
 
-},{"101":101,"149":149,"197":197,"210":210,"229":229,"48":48,"58":58,"60":60,"77":77}],196:[function(_dereq_,module,exports){
+},{"102":102,"150":150,"198":198,"211":211,"230":230,"49":49,"59":59,"61":61,"78":78}],197:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -52538,39 +53278,39 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreErrorsErrors = _dereq_(50);
+var _coreErrorsErrors = _dereq_(51);
 
 var _coreErrorsErrors2 = _interopRequireDefault(_coreErrorsErrors);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _controllersBlacklistController = _dereq_(106);
+var _controllersBlacklistController = _dereq_(107);
 
 var _controllersBlacklistController2 = _interopRequireDefault(_controllersBlacklistController);
 
-var _baseUrlResolutionDVBSelector = _dereq_(213);
+var _baseUrlResolutionDVBSelector = _dereq_(214);
 
 var _baseUrlResolutionDVBSelector2 = _interopRequireDefault(_baseUrlResolutionDVBSelector);
 
-var _baseUrlResolutionBasicSelector = _dereq_(212);
+var _baseUrlResolutionBasicSelector = _dereq_(213);
 
 var _baseUrlResolutionBasicSelector2 = _interopRequireDefault(_baseUrlResolutionBasicSelector);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _voDashJSError = _dereq_(215);
+var _voDashJSError = _dereq_(216);
 
 var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
@@ -52678,7 +53418,7 @@ BaseURLSelector.__dashjs_factory_name = 'BaseURLSelector';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(BaseURLSelector);
 module.exports = exports['default'];
 
-},{"101":101,"106":106,"212":212,"213":213,"215":215,"47":47,"48":48,"50":50,"53":53}],197:[function(_dereq_,module,exports){
+},{"102":102,"107":107,"213":213,"214":214,"216":216,"48":48,"49":49,"51":51,"54":54}],198:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -52718,23 +53458,23 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _IsoFile = _dereq_(204);
+var _IsoFile = _dereq_(205);
 
 var _IsoFile2 = _interopRequireDefault(_IsoFile);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _codemIsoboxer = _dereq_(6);
+var _codemIsoboxer = _dereq_(9);
 
 var _codemIsoboxer2 = _interopRequireDefault(_codemIsoboxer);
 
-var _voIsoBoxSearchInfo = _dereq_(220);
+var _voIsoBoxSearchInfo = _dereq_(221);
 
 var _voIsoBoxSearchInfo2 = _interopRequireDefault(_voIsoBoxSearchInfo);
 
@@ -52969,7 +53709,7 @@ BoxParser.__dashjs_factory_name = 'BoxParser';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(BoxParser);
 module.exports = exports['default'];
 
-},{"204":204,"220":220,"46":46,"48":48,"6":6}],198:[function(_dereq_,module,exports){
+},{"205":205,"221":221,"47":47,"49":49,"9":9}],199:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -53008,7 +53748,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -53069,7 +53809,7 @@ Capabilities.__dashjs_factory_name = 'Capabilities';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(Capabilities);
 module.exports = exports['default'];
 
-},{"48":48}],199:[function(_dereq_,module,exports){
+},{"49":49}],200:[function(_dereq_,module,exports){
 /**
 * The copyright in this software is being made available under the BSD License,
 * included below. This software may be subject to other third party and contributor
@@ -53108,11 +53848,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _utilsSupervisorTools = _dereq_(208);
+var _utilsSupervisorTools = _dereq_(209);
 
 function CustomTimeRanges() /*config*/{
     var customTimeRangeArray = [];
@@ -53242,7 +53982,7 @@ CustomTimeRanges.__dashjs_factory_name = 'CustomTimeRanges';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(CustomTimeRanges);
 module.exports = exports['default'];
 
-},{"208":208,"48":48}],200:[function(_dereq_,module,exports){
+},{"209":209,"49":49}],201:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -53281,15 +54021,15 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
@@ -53343,7 +54083,7 @@ function DOMStorage(config) {
 
         /* When Safari (OS X or iOS) is in private browsing mode, it appears as though localStorage is available, but trying to call setItem throws an exception.
          http://stackoverflow.com/questions/14555347/html5-localstorage-error-with-safari-quota-exceeded-err-dom-exception-22-an
-          Check if the storage can be used
+           Check if the storage can be used
          */
         try {
             storage.setItem(testKey, testValue);
@@ -53477,7 +54217,7 @@ var factory = _coreFactoryMaker2['default'].getSingletonFactory(DOMStorage);
 exports['default'] = factory;
 module.exports = exports['default'];
 
-},{"101":101,"46":46,"48":48}],201:[function(_dereq_,module,exports){
+},{"102":102,"47":47,"49":49}],202:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -53486,7 +54226,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -53758,7 +54498,7 @@ EBMLParser.__dashjs_factory_name = 'EBMLParser';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(EBMLParser);
 module.exports = exports['default'];
 
-},{"48":48}],202:[function(_dereq_,module,exports){
+},{"49":49}],203:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -53792,20 +54532,20 @@ module.exports = exports['default'];
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
-  value: true
+    value: true
 });
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -53814,107 +54554,107 @@ var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
  */
 function ErrorHandler() {
 
-  var instance = undefined;
-  var context = this.context;
-  var eventBus = (0, _coreEventBus2['default'])(context).getInstance();
+    var instance = undefined;
+    var context = this.context;
+    var eventBus = (0, _coreEventBus2['default'])(context).getInstance();
 
-  /**
-   * @param {number} err  "mediasource"|"mediakeys"
-   * @memberof module:ErrorHandler
-   * @deprecated
-   */
-  function capabilityError(err) {
-    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'capability', event: err });
-  }
+    /**
+     * @param {number} err  "mediasource"|"mediakeys"
+     * @memberof module:ErrorHandler
+     * @deprecated
+     */
+    function capabilityError(err) {
+        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'capability', event: err });
+    }
 
-  /**
-   * @param {string} id "manifest"|"SIDX"|"content"|"initialization"|"xlink"
-   * @param {string} url ""
-   * @param {object} request {XMLHttpRequest instance}
-   * @memberof module:ErrorHandler
-   * @deprecated
-   */
-  function downloadError(id, url, request) {
-    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'download', event: { id: id, url: url, request: request } });
-  }
+    /**
+     * @param {string} id "manifest"|"SIDX"|"content"|"initialization"|"xlink"
+     * @param {string} url ""
+     * @param {object} request {XMLHttpRequest instance}
+     * @memberof module:ErrorHandler
+     * @deprecated
+     */
+    function downloadError(id, url, request) {
+        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'download', event: { id: id, url: url, request: request } });
+    }
 
-  /**
-   * @param {string} message ""
-   * @param {string} id "parse"|"nostreams"
-   * @param {obj} manifest {parsed manifest}
-   * @param {obj} err
-   * @memberof module:ErrorHandler
-   * @deprecated
-   */
-  function manifestError(message, id, manifest, err) {
-    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'manifestError', event: { message: message, id: id, manifest: manifest, event: err } });
-  }
+    /**
+     * @param {string} message ""
+     * @param {string} id "parse"|"nostreams"
+     * @param {obj} manifest {parsed manifest}
+     * @param {obj} err
+     * @memberof module:ErrorHandler
+     * @deprecated
+     */
+    function manifestError(message, id, manifest, err) {
+        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'manifestError', event: { message: message, id: id, manifest: manifest, event: err } });
+    }
 
-  /**
-   * @param {string} message ''
-   * @param {string} id 'parse'
-   * @param {string} ccContent ''
-   * @memberof module:ErrorHandler
-   * @deprecated
-   */
-  function timedTextError(message, id, ccContent) {
-    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'cc', event: { message: message, id: id, cc: ccContent } });
-  }
+    /**
+     * @param {string} message ''
+     * @param {string} id 'parse'
+     * @param {string} ccContent ''
+     * @memberof module:ErrorHandler
+     * @deprecated
+     */
+    function timedTextError(message, id, ccContent) {
+        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'cc', event: { message: message, id: id, cc: ccContent } });
+    }
 
-  /**
-   * @param {string} err
-   * @memberof module:ErrorHandler
-   * @deprecated
-   */
-  function mediaSourceError(err) {
-    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'mediasource', event: err });
-  }
+    /**
+     * @param {string} err
+     * @memberof module:ErrorHandler
+     * @deprecated
+     */
+    function mediaSourceError(err) {
+        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'mediasource', event: err });
+    }
 
-  /**
-   * @param {string} err
-   * @memberof module:ErrorHandler
-   * @deprecated
-   */
-  function mediaKeySessionError(err) {
-    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'key_session', event: err });
-  }
+    /**
+     * @param {string} err
+     * @memberof module:ErrorHandler
+     * @deprecated
+     */
+    function mediaKeySessionError(err) {
+        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'key_session', event: err });
+    }
 
-  /**
-   * @param {string} err
-   * @memberof module:ErrorHandler
-   * @deprecated
-   */
-  function mediaKeyMessageError(err) {
-    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'key_message', event: err });
-  }
+    /**
+     * @param {string} err
+     * @memberof module:ErrorHandler
+     * @deprecated
+     */
+    function mediaKeyMessageError(err) {
+        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'key_message', event: err });
+    }
 
-  /**
-   * @param {object} err DashJSError with code, message and data attributes
-   * @memberof module:ErrorHandler
-   */
-  function error(err) {
-    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: err });
-  }
+    /**
+     * @param {object} err DashJSError with code, message and data attributes
+     * @memberof module:ErrorHandler
+     */
+    function error(err) {
+        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: err });
+    }
 
-  instance = {
-    capabilityError: capabilityError,
-    downloadError: downloadError,
-    manifestError: manifestError,
-    timedTextError: timedTextError,
-    mediaSourceError: mediaSourceError,
-    mediaKeySessionError: mediaKeySessionError,
-    mediaKeyMessageError: mediaKeyMessageError,
-    error: error
-  };
+    instance = {
+        capabilityError: capabilityError,
+        downloadError: downloadError,
+        manifestError: manifestError,
+        timedTextError: timedTextError,
+        mediaSourceError: mediaSourceError,
+        mediaKeySessionError: mediaKeySessionError,
+        mediaKeyMessageError: mediaKeyMessageError,
+        error: error
+    };
 
-  return instance;
+    return instance;
 }
 
 ErrorHandler.__dashjs_factory_name = 'ErrorHandler';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(ErrorHandler);
 module.exports = exports['default'];
 
-},{"47":47,"48":48,"53":53}],203:[function(_dereq_,module,exports){
+},{"48":48,"49":49,"54":54}],204:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -53958,7 +54698,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -53999,7 +54739,7 @@ InitCache.__dashjs_factory_name = 'InitCache';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(InitCache);
 module.exports = exports['default'];
 
-},{"48":48}],204:[function(_dereq_,module,exports){
+},{"49":49}],205:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -54039,11 +54779,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _voIsoBox = _dereq_(219);
+var _voIsoBox = _dereq_(220);
 
 var _voIsoBox2 = _interopRequireDefault(_voIsoBox);
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -54135,7 +54875,7 @@ IsoFile.__dashjs_factory_name = 'IsoFile';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(IsoFile);
 module.exports = exports['default'];
 
-},{"219":219,"48":48}],205:[function(_dereq_,module,exports){
+},{"220":220,"49":49}],206:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -54174,11 +54914,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
@@ -54229,86 +54969,7 @@ LiveEdgeFinder.__dashjs_factory_name = 'LiveEdgeFinder';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(LiveEdgeFinder);
 module.exports = exports['default'];
 
-},{"101":101,"48":48}],206:[function(_dereq_,module,exports){
-/**
- * The copyright in this software is being made available under the BSD License,
- * included below. This software may be subject to other third party and contributor
- * rights, including patent rights, and no such rights are granted under this license.
- *
- * Copyright (c) 2013, Dash Industry Forum.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *  * Redistributions of source code must retain the above copyright notice, this
- *  list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright notice,
- *  this list of conditions and the following disclaimer in the documentation and/or
- *  other materials provided with the distribution.
- *  * Neither the name of Dash Industry Forum nor the names of its
- *  contributors may be used to endorse or promote products derived from this software
- *  without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS AND ANY
- *  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- *  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- *  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *  POSSIBILITY OF SUCH DAMAGE.
- */
-
-'use strict';
-
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-var _coreFactoryMaker = _dereq_(48);
-
-var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
-
-var _fastDeepEqual = _dereq_(7);
-
-var _fastDeepEqual2 = _interopRequireDefault(_fastDeepEqual);
-
-/**
- * @module ObjectUtils
- * @description Provides utility functions for objects
- */
-function ObjectUtils() {
-
-  var instance = undefined;
-
-  /**
-   * Returns true if objects are equal
-   * @return {boolean}
-   * @param {object} obj1
-   * @param {object} obj2
-   * @memberof module:ObjectUtils
-   * @instance
-   */
-  function areEqual(obj1, obj2) {
-    return (0, _fastDeepEqual2['default'])(obj1, obj2);
-  }
-
-  instance = {
-    areEqual: areEqual
-  };
-
-  return instance;
-}
-
-ObjectUtils.__dashjs_factory_name = 'ObjectUtils';
-exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(ObjectUtils);
-module.exports = exports['default'];
-
-},{"48":48,"7":7}],207:[function(_dereq_,module,exports){
+},{"102":102,"49":49}],207:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -54348,7 +55009,86 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
+
+var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
+
+var _fastDeepEqual = _dereq_(11);
+
+var _fastDeepEqual2 = _interopRequireDefault(_fastDeepEqual);
+
+/**
+ * @module ObjectUtils
+ * @description Provides utility functions for objects
+ */
+function ObjectUtils() {
+
+    var instance = undefined;
+
+    /**
+     * Returns true if objects are equal
+     * @return {boolean}
+     * @param {object} obj1
+     * @param {object} obj2
+     * @memberof module:ObjectUtils
+     * @instance
+     */
+    function areEqual(obj1, obj2) {
+        return (0, _fastDeepEqual2['default'])(obj1, obj2);
+    }
+
+    instance = {
+        areEqual: areEqual
+    };
+
+    return instance;
+}
+
+ObjectUtils.__dashjs_factory_name = 'ObjectUtils';
+exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(ObjectUtils);
+module.exports = exports['default'];
+
+},{"11":11,"49":49}],208:[function(_dereq_,module,exports){
+/**
+ * The copyright in this software is being made available under the BSD License,
+ * included below. This software may be subject to other third party and contributor
+ * rights, including patent rights, and no such rights are granted under this license.
+ *
+ * Copyright (c) 2013, Dash Industry Forum.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *  * Redistributions of source code must retain the above copyright notice, this
+ *  list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *  this list of conditions and the following disclaimer in the documentation and/or
+ *  other materials provided with the distribution.
+ *  * Neither the name of Dash Industry Forum nor the names of its
+ *  contributors may be used to endorse or promote products derived from this software
+ *  without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS AND ANY
+ *  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ *  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ *  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ */
+
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -54376,7 +55116,7 @@ RequestModifier.__dashjs_factory_name = 'RequestModifier';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(RequestModifier);
 module.exports = exports['default'];
 
-},{"48":48}],208:[function(_dereq_,module,exports){
+},{"49":49}],209:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -54419,7 +55159,7 @@ exports.checkIsVideoOrAudioType = checkIsVideoOrAudioType;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
@@ -54449,7 +55189,7 @@ function checkIsVideoOrAudioType(type) {
     }
 }
 
-},{"101":101}],209:[function(_dereq_,module,exports){
+},{"102":102}],210:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -54488,23 +55228,23 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var _coreEventBus = _dereq_(47);
+var _coreEventBus = _dereq_(48);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
 
-var _coreEventsEvents = _dereq_(53);
+var _coreEventsEvents = _dereq_(54);
 
 var _coreEventsEvents2 = _interopRequireDefault(_coreEventsEvents);
 
-var _imsc = _dereq_(41);
+var _imsc = _dereq_(16);
 
 function TTMLParser() {
 
@@ -54639,7 +55379,7 @@ TTMLParser.__dashjs_factory_name = 'TTMLParser';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(TTMLParser);
 module.exports = exports['default'];
 
-},{"41":41,"46":46,"47":47,"48":48,"53":53}],210:[function(_dereq_,module,exports){
+},{"16":16,"47":47,"48":48,"49":49,"54":54}],211:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -54679,7 +55419,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -54919,7 +55659,7 @@ URLUtils.__dashjs_factory_name = 'URLUtils';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(URLUtils);
 module.exports = exports['default'];
 
-},{"48":48}],211:[function(_dereq_,module,exports){
+},{"49":49}],212:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -54958,11 +55698,11 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
-var _coreDebug = _dereq_(46);
+var _coreDebug = _dereq_(47);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
@@ -55129,7 +55869,7 @@ VTTParser.__dashjs_factory_name = 'VTTParser';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(VTTParser);
 module.exports = exports['default'];
 
-},{"46":46,"48":48}],212:[function(_dereq_,module,exports){
+},{"47":47,"49":49}],213:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -55169,7 +55909,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -55206,7 +55946,7 @@ BasicSelector.__dashjs_factory_name = 'BasicSelector';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(BasicSelector);
 module.exports = exports['default'];
 
-},{"48":48}],213:[function(_dereq_,module,exports){
+},{"49":49}],214:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -55245,7 +55985,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _coreFactoryMaker = _dereq_(48);
+var _coreFactoryMaker = _dereq_(49);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 
@@ -55359,7 +56099,7 @@ DVBSelector.__dashjs_factory_name = 'DVBSelector';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(DVBSelector);
 module.exports = exports['default'];
 
-},{"48":48}],214:[function(_dereq_,module,exports){
+},{"49":49}],215:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -55416,7 +56156,7 @@ var BitrateInfo = function BitrateInfo() {
 exports["default"] = BitrateInfo;
 module.exports = exports["default"];
 
-},{}],215:[function(_dereq_,module,exports){
+},{}],216:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -55470,7 +56210,7 @@ var DashJSError = function DashJSError(code, message, data) {
 exports["default"] = DashJSError;
 module.exports = exports["default"];
 
-},{}],216:[function(_dereq_,module,exports){
+},{}],217:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -55535,7 +56275,7 @@ function DataChunk() {
 exports["default"] = DataChunk;
 module.exports = exports["default"];
 
-},{}],217:[function(_dereq_,module,exports){
+},{}],218:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -55612,7 +56352,7 @@ FragmentRequest.ACTION_COMPLETE = 'complete';
 exports['default'] = FragmentRequest;
 module.exports = exports['default'];
 
-},{}],218:[function(_dereq_,module,exports){
+},{}],219:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -55661,7 +56401,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _FragmentRequest2 = _dereq_(217);
+var _FragmentRequest2 = _dereq_(218);
 
 var _FragmentRequest3 = _interopRequireDefault(_FragmentRequest2);
 
@@ -55682,7 +56422,7 @@ var HeadRequest = (function (_FragmentRequest) {
 exports['default'] = HeadRequest;
 module.exports = exports['default'];
 
-},{"217":217}],219:[function(_dereq_,module,exports){
+},{"218":218}],220:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -55841,7 +56581,7 @@ var IsoBox = (function () {
 exports['default'] = IsoBox;
 module.exports = exports['default'];
 
-},{}],220:[function(_dereq_,module,exports){
+},{}],221:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -55895,7 +56635,7 @@ var IsoBoxSearchInfo = function IsoBoxSearchInfo(lastCompletedOffset, found, siz
 exports["default"] = IsoBoxSearchInfo;
 module.exports = exports["default"];
 
-},{}],221:[function(_dereq_,module,exports){
+},{}],222:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -55953,7 +56693,7 @@ var ManifestInfo = function ManifestInfo() {
 exports["default"] = ManifestInfo;
 module.exports = exports["default"];
 
-},{}],222:[function(_dereq_,module,exports){
+},{}],223:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -56044,7 +56784,7 @@ var MediaInfo = (function () {
 exports["default"] = MediaInfo;
 module.exports = exports["default"];
 
-},{}],223:[function(_dereq_,module,exports){
+},{}],224:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -56107,7 +56847,7 @@ var MetricsList = function MetricsList() {
 exports["default"] = MetricsList;
 module.exports = exports["default"];
 
-},{}],224:[function(_dereq_,module,exports){
+},{}],225:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -56164,7 +56904,7 @@ var RepresentationInfo = function RepresentationInfo() {
 exports["default"] = RepresentationInfo;
 module.exports = exports["default"];
 
-},{}],225:[function(_dereq_,module,exports){
+},{}],226:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -56221,7 +56961,7 @@ var StreamInfo = function StreamInfo() {
 exports["default"] = StreamInfo;
 module.exports = exports["default"];
 
-},{}],226:[function(_dereq_,module,exports){
+},{}],227:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -56270,11 +57010,11 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _constantsConstants = _dereq_(101);
+var _constantsConstants = _dereq_(102);
 
 var _constantsConstants2 = _interopRequireDefault(_constantsConstants);
 
-var _FragmentRequest2 = _dereq_(217);
+var _FragmentRequest2 = _dereq_(218);
 
 var _FragmentRequest3 = _interopRequireDefault(_FragmentRequest2);
 
@@ -56297,7 +57037,7 @@ var TextRequest = (function (_FragmentRequest) {
 exports['default'] = TextRequest;
 module.exports = exports['default'];
 
-},{"101":101,"217":217}],227:[function(_dereq_,module,exports){
+},{"102":102,"218":218}],228:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -56355,7 +57095,7 @@ var TextTrackInfo = function TextTrackInfo() {
 exports["default"] = TextTrackInfo;
 module.exports = exports["default"];
 
-},{}],228:[function(_dereq_,module,exports){
+},{}],229:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -56411,7 +57151,7 @@ var Thumbnail = function Thumbnail() {
 exports["default"] = Thumbnail;
 module.exports = exports["default"];
 
-},{}],229:[function(_dereq_,module,exports){
+},{}],230:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -56474,7 +57214,7 @@ var ThumbnailTrackInfo = function ThumbnailTrackInfo() {
 exports['default'] = ThumbnailTrackInfo;
 module.exports = exports['default'];
 
-},{}],230:[function(_dereq_,module,exports){
+},{}],231:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -56547,7 +57287,7 @@ exports["default"] = URIFragmentData;
 */
 module.exports = exports["default"];
 
-},{}],231:[function(_dereq_,module,exports){
+},{}],232:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -56614,7 +57354,7 @@ function BufferLevel() {
 exports["default"] = BufferLevel;
 module.exports = exports["default"];
 
-},{}],232:[function(_dereq_,module,exports){
+},{}],233:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -56655,7 +57395,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'd
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-var _controllersBufferController = _dereq_(107);
+var _controllersBufferController = _dereq_(108);
 
 var _controllersBufferController2 = _interopRequireDefault(_controllersBufferController);
 
@@ -56685,7 +57425,7 @@ function BufferState() {
 exports['default'] = BufferState;
 module.exports = exports['default'];
 
-},{"107":107}],233:[function(_dereq_,module,exports){
+},{"108":108}],234:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -56755,7 +57495,7 @@ function DVRInfo() {
 exports["default"] = DVRInfo;
 module.exports = exports["default"];
 
-},{}],234:[function(_dereq_,module,exports){
+},{}],235:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -56819,7 +57559,7 @@ function DroppedFrames() {
 exports["default"] = DroppedFrames;
 module.exports = exports["default"];
 
-},{}],235:[function(_dereq_,module,exports){
+},{}],236:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -56998,7 +57738,7 @@ HTTPRequest.OTHER_TYPE = 'other';
 exports.HTTPRequest = HTTPRequest;
 exports.HTTPRequestTrace = HTTPRequestTrace;
 
-},{}],236:[function(_dereq_,module,exports){
+},{}],237:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -57196,7 +57936,7 @@ exports.ManifestUpdate = ManifestUpdate;
 exports.ManifestUpdateStreamInfo = ManifestUpdateStreamInfo;
 exports.ManifestUpdateRepresentationInfo = ManifestUpdateRepresentationInfo;
 
-},{}],237:[function(_dereq_,module,exports){
+},{}],238:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -57356,7 +58096,7 @@ PlayListTrace.FAILURE_STOP_REASON = 'failure';
 exports.PlayList = PlayList;
 exports.PlayListTrace = PlayListTrace;
 
-},{}],238:[function(_dereq_,module,exports){
+},{}],239:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -57436,7 +58176,7 @@ function RepresentationSwitch() {
 exports["default"] = RepresentationSwitch;
 module.exports = exports["default"];
 
-},{}],239:[function(_dereq_,module,exports){
+},{}],240:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -57501,7 +58241,7 @@ function RequestsQueue() {
 exports["default"] = RequestsQueue;
 module.exports = exports["default"];
 
-},{}],240:[function(_dereq_,module,exports){
+},{}],241:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
