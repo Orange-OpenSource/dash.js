@@ -91,7 +91,8 @@ function BufferController(config) {
         seekClearedBufferingCompleted,
         pendingPruningRanges,
         bufferResetInProgress,
-        mediaChunk;
+        mediaChunk,
+        seeking;
 
 
     function setup() {
@@ -301,6 +302,12 @@ function BufferController(config) {
             }
         }
 
+        // Seeking event was received while appending segment, then clear buffer now
+        if (seeking) {
+            seeking = false;
+            pruneAllSafely();
+        }
+
         const dataEvent = {
             sender: instance,
             quality: appendedBytesInfo.quality,
@@ -334,7 +341,11 @@ function BufferController(config) {
         }
         if (type !== Constants.FRAGMENTED_TEXT) {
             // remove buffer after seeking operations
-            pruneAllSafely();
+            if (buffer.getBuffer().updating) {
+                seeking = true;
+            } else {
+                pruneAllSafely();
+            }
         } else {
             onPlaybackProgression();
         }
@@ -868,6 +879,7 @@ function BufferController(config) {
         bufferLevel = 0;
         wallclockTicked = 0;
         pendingPruningRanges = [];
+        seeking = false;
 
         if (buffer) {
             if (!errored) {
