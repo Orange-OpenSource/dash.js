@@ -1002,16 +1002,6 @@ function StreamController() {
             mediaSource = null;
         }
         videoModel = null;
-        if (protectionController) {
-            protectionController.setMediaElement(null);
-            protectionController = null;
-            protectionData = null;
-            if (manifestModel.getValue()) {
-                eventBus.trigger(Events.PROTECTION_DESTROYED, {
-                    data: manifestModel.getValue().url
-                });
-            }
-        }
 
         eventBus.trigger(Events.STREAM_TEARDOWN_COMPLETE);
         resetInitialSettings();
