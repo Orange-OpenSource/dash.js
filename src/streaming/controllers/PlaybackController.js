@@ -718,7 +718,8 @@ function PlaybackController() {
                 }
                 if (checkTimeInRanges(earliestTime, ranges)) {
                     if (!isSeeking() && !compatibleWithPreviousStream && earliestTime !== 0) {
-                        seek(earliestTime, true, true);
+                        // PATCH: seek to earliest time + 0.1 to avoid playback freeze on CleTV
+                        seek(earliestTime + 0.1, true, true);
                     }
                     commonEarliestTime[streamInfo.id].started = true;
                 }
@@ -728,7 +729,8 @@ function PlaybackController() {
             if (commonEarliestTime[streamInfo.id][type]) {
                 earliestTime = commonEarliestTime[streamInfo.id][type] > initialStartTime ? commonEarliestTime[streamInfo.id][type] : initialStartTime;
                 if (!isSeeking() && !compatibleWithPreviousStream) {
-                    seek(earliestTime, false, true);
+                    // PATCH: seek to earliest time + 0.1 to avoid playback freeze on CleTV
+                    seek(earliestTime + 0.1, false, true);
                 }
                 commonEarliestTime[streamInfo.id].started = true;
             }
