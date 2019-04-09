@@ -218,6 +218,8 @@ function Stream(config) {
 
     function reset() {
 
+        stopEventController();
+
         if (playbackController) {
             playbackController.pause();
         }
