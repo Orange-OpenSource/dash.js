@@ -1,4 +1,76 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
+(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(_dereq_,module,exports){
+/**
+ * The copyright in this software is being made available under the BSD License,
+ * included below. This software may be subject to other third party and contributor
+ * rights, including patent rights, and no such rights are granted under this license.
+ *
+ * Copyright (c) 2013, Dash Industry Forum.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *  * Redistributions of source code must retain the above copyright notice, this
+ *  list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *  this list of conditions and the following disclaimer in the documentation and/or
+ *  other materials provided with the distribution.
+ *  * Neither the name of Dash Industry Forum nor the names of its
+ *  contributors may be used to endorse or promote products derived from this software
+ *  without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS AND ANY
+ *  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ *  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ *  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * @class
+ * @ignore
+ */
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var ErrorsBase = (function () {
+    function ErrorsBase() {
+        _classCallCheck(this, ErrorsBase);
+    }
+
+    _createClass(ErrorsBase, [{
+        key: 'extend',
+        value: function extend(errors, config) {
+            if (!errors) return;
+
+            var override = config ? config.override : false;
+            var publicOnly = config ? config.publicOnly : false;
+
+            for (var err in errors) {
+                if (!errors.hasOwnProperty(err) || this[err] && !override) continue;
+                if (publicOnly && errors[err].indexOf('public_') === -1) continue;
+                this[err] = errors[err];
+            }
+        }
+    }]);
+
+    return ErrorsBase;
+})();
+
+exports['default'] = ErrorsBase;
+module.exports = exports['default'];
+
+},{}],2:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -70,7 +142,7 @@ var EventsBase = (function () {
 exports['default'] = EventsBase;
 module.exports = exports['default'];
 
-},{}],2:[function(_dereq_,module,exports){
+},{}],3:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -115,7 +187,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var _coreEventsEventsBase = _dereq_(1);
+var _coreEventsEventsBase = _dereq_(2);
 
 var _coreEventsEventsBase2 = _interopRequireDefault(_coreEventsEventsBase);
 
@@ -137,7 +209,7 @@ var mssEvents = new MssEvents();
 exports['default'] = mssEvents;
 module.exports = exports['default'];
 
-},{"1":1}],3:[function(_dereq_,module,exports){
+},{"2":2}],4:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -177,37 +249,39 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _MssEvents = _dereq_(2);
+var _MssEvents = _dereq_(3);
 
 var _MssEvents2 = _interopRequireDefault(_MssEvents);
 
-var _MssFragmentMoofProcessor = _dereq_(4);
+var _MssFragmentMoofProcessor = _dereq_(5);
 
 var _MssFragmentMoofProcessor2 = _interopRequireDefault(_MssFragmentMoofProcessor);
+
+var _streamingVoFragmentRequest = _dereq_(15);
+
+var _streamingVoFragmentRequest2 = _interopRequireDefault(_streamingVoFragmentRequest);
 
 function MssFragmentInfoController(config) {
 
     config = config || {};
     var context = this.context;
 
-    var instance = undefined;
-    var logger = undefined;
-    var fragmentModel = undefined;
-    var indexHandler = undefined;
-    var started = undefined;
-    var type = undefined;
-    var bufferTimeout = undefined;
-    var _fragmentInfoTime = undefined;
-    var startFragmentInfoDate = undefined;
-    var startTimeStampValue = undefined;
-    var deltaTime = undefined;
-    var segmentDuration = undefined;
+    var instance = undefined,
+        logger = undefined,
+        fragmentModel = undefined,
+        started = undefined,
+        type = undefined,
+        bufferTimeout = undefined,
+        startTime = undefined,
+        startFragmentTime = undefined,
+        index = undefined;
 
     var streamProcessor = config.streamProcessor;
     var eventBus = config.eventBus;
-    var metricsModel = config.metricsModel;
+    var dashMetrics = config.dashMetrics;
     var playbackController = config.playbackController;
     var ISOBoxer = config.ISOBoxer;
+    var baseURLController = config.baseURLController;
     var debug = config.debug;
     var controllerType = 'MssFragmentInfoController';
 
@@ -218,174 +292,29 @@ function MssFragmentInfoController(config) {
     function initialize() {
         started = false;
 
-        startFragmentInfoDate = null;
-        startTimeStampValue = null;
-        deltaTime = 0;
-        segmentDuration = NaN;
+        startTime = null;
+        startFragmentTime = null;
 
-        // register to stream processor as external controller
+        // Register to StreamProcessor as external controller
         streamProcessor.registerExternalController(instance);
         type = streamProcessor.getType();
         fragmentModel = streamProcessor.getFragmentModel();
-        indexHandler = streamProcessor.getIndexHandler();
-    }
-
-    function getCurrentRepresentation() {
-        var representationController = streamProcessor.getRepresentationController();
-        var representation = representationController.getCurrentRepresentation();
-
-        return representation;
-    }
-
-    function sendRequest(request) {
-        fragmentModel.executeRequest(request);
-    }
-
-    function asFragmentInfoRequest(request) {
-        if (request && request.url) {
-            request.url = request.url.replace('Fragments', 'FragmentInfo');
-            request.type = 'FragmentInfoSegment';
-        }
-
-        return request;
-    }
-
-    function onFragmentRequest(request) {
-        // Check if current request signals end of stream
-        if (request !== null && request.action === request.ACTION_COMPLETE) {
-            doStop();
-            return;
-        }
-
-        if (request !== null) {
-            _fragmentInfoTime = request.startTime + request.duration;
-            request = asFragmentInfoRequest(request);
-
-            if (streamProcessor.getFragmentModel().isFragmentLoadedOrPending(request)) {
-                request = indexHandler.getNextSegmentRequest(getCurrentRepresentation());
-                onFragmentRequest(request);
-                return;
-            }
-
-            logger.debug('onFragmentRequest ' + request.url);
-
-            // Download the fragment info segment
-            sendRequest(request);
-        } else {
-            // No more fragment in current list
-            logger.debug('bufferFragmentInfo failed');
-        }
-    }
-
-    function bufferFragmentInfo() {
-        var segmentTime = undefined;
-
-        // Check if running state
-        if (!started) {
-            return;
-        }
-
-        logger.debug('Start buffering process...');
-
-        // Get next segment time
-        segmentTime = _fragmentInfoTime;
-
-        logger.debug('LoadNextFragment for time: ' + segmentTime);
-
-        var representation = getCurrentRepresentation();
-        var request = indexHandler.getSegmentRequestForTime(representation, segmentTime);
-        onFragmentRequest(request);
-    }
-
-    function delayLoadNextFragmentInfo(delay) {
-        var delayMs = Math.round(Math.min(delay * 1000, 2000));
-
-        logger.debug('Check buffer delta = ' + delayMs + ' ms');
-
-        clearTimeout(bufferTimeout);
-        bufferTimeout = setTimeout(function () {
-            bufferTimeout = null;
-            bufferFragmentInfo();
-        }, delayMs);
-    }
-
-    function onFragmentInfoLoadedCompleted(e) {
-        if (e.streamProcessor !== streamProcessor) {
-            return;
-        }
-
-        var request = e.fragmentInfo.request;
-        var deltaDate = undefined,
-            deltaTimeStamp = undefined;
-
-        if (!e.fragmentInfo.response) {
-            logger.error('Load error', request.url);
-            return;
-        }
-
-        segmentDuration = request.duration;
-        logger.debug('FragmentInfo loaded ', request.url);
-        try {
-            // update segment list
-            var mssFragmentMoofProcessor = (0, _MssFragmentMoofProcessor2['default'])(context).create({
-                metricsModel: metricsModel,
-                playbackController: playbackController,
-                ISOBoxer: ISOBoxer,
-                debug: debug
-            });
-            mssFragmentMoofProcessor.updateSegmentList(e.fragmentInfo, streamProcessor);
-
-            deltaDate = (new Date().getTime() - startFragmentInfoDate) / 1000;
-            deltaTimeStamp = _fragmentInfoTime + segmentDuration - startTimeStampValue;
-            deltaTime = deltaTimeStamp - deltaDate > 0 ? deltaTimeStamp - deltaDate : 0;
-            delayLoadNextFragmentInfo(deltaTime);
-        } catch (e) {
-            logger.fatal('Internal error while processing fragment info segment ');
-        }
-    }
-
-    function startPlayback() {
-        if (!started) {
-            return;
-        }
-
-        startFragmentInfoDate = new Date().getTime();
-        startTimeStampValue = _fragmentInfoTime;
-
-        logger.debug('startPlayback');
-
-        // Start buffering process
-        bufferFragmentInfo.call(this);
     }
 
     function doStart() {
-        var segments = undefined;
-
         if (started === true) {
             return;
         }
 
+        logger.debug('Do start');
+
         eventBus.on(_MssEvents2['default'].FRAGMENT_INFO_LOADING_COMPLETED, onFragmentInfoLoadedCompleted, instance);
 
         started = true;
-        logger.debug('Do start');
+        startTime = new Date().getTime();
+        index = 0;
 
-        var representation = getCurrentRepresentation();
-        segments = representation.segments;
-
-        if (segments && segments.length > 0) {
-            _fragmentInfoTime = segments[segments.length - 1].presentationStartTime - segments[segments.length - 1].duration;
-
-            startPlayback();
-        } else {
-            indexHandler.updateSegmentList(representation);
-            segments = representation.segments;
-            if (segments && segments.length > 0) {
-                _fragmentInfoTime = segments[segments.length - 1].presentationStartTime - segments[segments.length - 1].duration;
-            }
-
-            startPlayback();
-        }
+        loadNextFragmentInfo();
     }
 
     function doStop() {
@@ -400,17 +329,131 @@ function MssFragmentInfoController(config) {
         clearTimeout(bufferTimeout);
         started = false;
 
-        startFragmentInfoDate = null;
-        startTimeStampValue = null;
-    }
-
-    function getType() {
-        return type;
+        startTime = null;
+        startFragmentTime = null;
     }
 
     function reset() {
         doStop();
         streamProcessor.unregisterExternalController(instance);
+    }
+
+    function loadNextFragmentInfo() {
+        // Check if running state
+        if (!started) {
+            return;
+        }
+
+        // Get last segment from SegmentTimeline
+        var representation = getCurrentRepresentation();
+        var manifest = representation.adaptation.period.mpd.manifest;
+        var adaptation = manifest.Period_asArray[representation.adaptation.period.index].AdaptationSet_asArray[representation.adaptation.index];
+        var segments = adaptation.SegmentTemplate.SegmentTimeline.S_asArray;
+        var segment = segments[segments.length - 1];
+
+        logger.debug('Last fragment time: ' + segment.t / adaptation.SegmentTemplate.timescale);
+
+        // Generate segment request
+        var request = getRequestForSegment(adaptation, representation, segment);
+
+        // Send segment request
+        requestFragment.call(this, request);
+    }
+
+    function delayLoadNextFragmentInfo(delay) {
+        clearTimeout(bufferTimeout);
+        bufferTimeout = setTimeout(function () {
+            bufferTimeout = null;
+            loadNextFragmentInfo();
+        }, delay * 1000);
+    }
+
+    function getRequestForSegment(adaptation, representation, segment) {
+        var timescale = adaptation.SegmentTemplate.timescale;
+        var request = new _streamingVoFragmentRequest2['default']();
+
+        request.mediaType = type;
+        request.type = 'FragmentInfoSegment';
+        // request.range = segment.mediaRange;
+        request.startTime = segment.t / timescale;
+        request.duration = segment.d / timescale;
+        request.timescale = timescale;
+        // request.availabilityStartTime = segment.availabilityStartTime;
+        // request.availabilityEndTime = segment.availabilityEndTime;
+        // request.wallStartTime = segment.wallStartTime;
+        request.quality = representation.index;
+        request.index = index++;
+        request.mediaInfo = streamProcessor.getMediaInfo();
+        request.adaptationIndex = representation.adaptation.index;
+        request.representationId = representation.id;
+        request.url = baseURLController.resolve(representation.path).url + adaptation.SegmentTemplate.media;
+        request.url = request.url.replace('$Bandwidth$', representation.bandwidth);
+        request.url = request.url.replace('$Time$', segment.tManifest ? segment.tManifest : segment.t);
+        request.url = request.url.replace('/Fragments(', '/FragmentInfo(');
+
+        return request;
+    }
+
+    function getCurrentRepresentation() {
+        var representationController = streamProcessor.getRepresentationController();
+        var representation = representationController.getCurrentRepresentation();
+
+        return representation;
+    }
+
+    function requestFragment(request) {
+
+        logger.debug('Load fragment for time: ' + request.startTime);
+        if (streamProcessor.getFragmentModel().isFragmentLoadedOrPending(request)) {
+            // We may have reached end of timeline in case of start-over streams
+            logger.debug('No more fragments');
+            return;
+        }
+
+        fragmentModel.executeRequest(request);
+    }
+
+    function onFragmentInfoLoadedCompleted(e) {
+        if (e.streamProcessor !== streamProcessor) {
+            return;
+        }
+
+        var request = e.fragmentInfo.request;
+        if (!e.fragmentInfo.response) {
+            logger.error('Load error', request.url);
+            return;
+        }
+
+        var deltaFragmentTime = undefined,
+            deltaTime = undefined;
+
+        logger.debug('FragmentInfo loaded: ', request.url);
+
+        if (!startFragmentTime) {
+            startFragmentTime = request.startTime;
+        }
+
+        try {
+            // Process FramgentInfo in order to update segment timeline (DVR window)
+            var mssFragmentMoofProcessor = (0, _MssFragmentMoofProcessor2['default'])(context).create({
+                dashMetrics: dashMetrics,
+                playbackController: playbackController,
+                ISOBoxer: ISOBoxer,
+                eventBus: eventBus,
+                debug: debug
+            });
+            mssFragmentMoofProcessor.updateSegmentList(e.fragmentInfo, streamProcessor);
+
+            deltaTime = (new Date().getTime() - startTime) / 1000;
+            deltaFragmentTime = request.startTime + request.duration - startFragmentTime;
+            delayLoadNextFragmentInfo(Math.max(0, deltaFragmentTime - deltaTime));
+        } catch (e) {
+            logger.fatal('Internal error while processing fragment info segment ');
+        }
+    }
+
+    function getType() {
+        return type;
     }
 
     instance = {
@@ -431,7 +474,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(MssFragmentInfoControll
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"2":2,"4":4}],4:[function(_dereq_,module,exports){
+},{"15":15,"3":3,"5":5}],5:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -462,29 +505,46 @@ module.exports = exports['default'];
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-
-/**
- * @module MssFragmentMoovProcessor
- * @param {Object} config object
- */
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
     value: true
 });
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var _streamingVoDashJSError = _dereq_(13);
+
+var _streamingVoDashJSError2 = _interopRequireDefault(_streamingVoDashJSError);
+
+var _errorsMssErrors = _dereq_(9);
+
+var _errorsMssErrors2 = _interopRequireDefault(_errorsMssErrors);
+
+var _streamingMediaPlayerEvents = _dereq_(12);
+
+var _streamingMediaPlayerEvents2 = _interopRequireDefault(_streamingMediaPlayerEvents);
+
+/**
+ * @module MssFragmentMoovProcessor
+ * @param {Object} config object
+ */
 function MssFragmentMoofProcessor(config) {
 
     config = config || {};
     var instance = undefined,
+        type = undefined,
         logger = undefined;
-    var metricsModel = config.metricsModel;
+    var dashMetrics = config.dashMetrics;
     var playbackController = config.playbackController;
     var errorHandler = config.errHandler;
+    var eventBus = config.eventBus;
     var ISOBoxer = config.ISOBoxer;
     var debug = config.debug;
 
     function setup() {
         logger = debug.getLogger(instance);
+        type = '';
     }
 
     function processTfrf(request, tfrf, tfdt, streamProcessor) {
@@ -496,12 +556,14 @@ function MssFragmentMoofProcessor(config) {
         var adaptation = manifest.Period_asArray[representation.adaptation.period.index].AdaptationSet_asArray[representation.adaptation.index];
         var timescale = adaptation.SegmentTemplate.timescale;
 
-        if (manifest.type !== 'dynamic') {
+        type = streamProcessor.getType();
+
+        if (manifest.type !== 'dynamic' && !manifest.timeShiftBufferDepth) {
             return;
         }
 
         if (!tfrf) {
-            errorHandler.mssError('MSS_NO_TFRF : Missing tfrf in live media segment');
+            errorHandler.error(new _streamingVoDashJSError2['default'](_errorsMssErrors2['default'].MSS_NO_TFRF_CODE, _errorsMssErrors2['default'].MSS_NO_TFRF_MESSAGE));
             return;
         }
 
@@ -509,11 +571,11 @@ function MssFragmentMoofProcessor(config) {
         var segments = adaptation.SegmentTemplate.SegmentTimeline.S;
         var entries = tfrf.entry;
         var entry = undefined,
-            segmentTime = undefined;
+            segmentTime = undefined,
+            range = undefined;
         var segment = null;
         var t = 0;
         var availabilityStartTime = null;
-        var range = undefined;
 
         if (entries.length === 0) {
             return;
@@ -522,16 +584,29 @@ function MssFragmentMoofProcessor(config) {
         // Consider only first tfrf entry (to avoid pre-condition failure on fragment info requests)
         entry = entries[0];
 
+        // In case of start-over streams, check if we have reached end of original manifest duration (set in timeShiftBufferDepth)
+        // => then do not update anymore timeline
+        if (manifest.type === 'static') {
+            // Get first segment time
+            segmentTime = segments[0].tManifest ? parseFloat(segments[0].tManifest) : segments[0].t;
+            if (entry.fragment_absolute_time > segmentTime + manifest.timeShiftBufferDepth * timescale) {
+                return;
+            }
+        }
+
+        logger.debug('entry - t = ', entry.fragment_absolute_time / timescale);
+
         // Get last segment time
         segmentTime = segments[segments.length - 1].tManifest ? parseFloat(segments[segments.length - 1].tManifest) : segments[segments.length - 1].t;
+        logger.debug('Last segment - t = ', segmentTime / timescale);
 
         // Check if we have to append new segment to timeline
         if (entry.fragment_absolute_time <= segmentTime) {
             // Update DVR window range
             // => set range end to end time of current segment
             range = {
-                start: segments[0].t / adaptation.SegmentTemplate.timescale,
-                end: tfdt.baseMediaDecodeTime / adaptation.SegmentTemplate.timescale + request.duration
+                start: segments[0].t / timescale,
+                end: tfdt.baseMediaDecodeTime / timescale + request.duration
             };
 
             updateDVR(request.mediaType, range, streamProcessor.getStreamInfo().manifestInfo);
@@ -542,44 +617,58 @@ function MssFragmentMoofProcessor(config) {
         segment = {};
         segment.t = entry.fragment_absolute_time;
         segment.d = entry.fragment_duration;
+        // If timestamps starts at 0 relative to 1st segment (dynamic to static) then update segment time
+        if (segments[0].tManifest) {
+            segment.t -= parseFloat(segments[0].tManifest) - segments[0].t;
+            segment.tManifest = entry.fragment_absolute_time;
+        }
         segments.push(segment);
 
-        if (manifest.timeShiftBufferDepth && manifest.timeShiftBufferDepth > 0) {
-            // Get timestamp of the last segment
-            segment = segments[segments.length - 1];
-            t = segment.t;
-
-            // Determine the segments' availability start time
-            availabilityStartTime = t - manifest.timeShiftBufferDepth * timescale;
-
-            // Remove segments prior to availability start time
-            segment = segments[0];
-            while (segment.t < availabilityStartTime) {
-                logger.debug('Remove segment  - t = ' + segment.t / timescale);
-                segments.splice(0, 1);
-                segment = segments[0];
+        // In case of static start-over streams, update content duration
+        if (manifest.type === 'static') {
+            if (type === 'video') {
+                segment = segments[segments.length - 1];
+                var end = (segment.t + segment.d) / timescale;
+                if (end > representation.adaptation.period.duration) {
+                    eventBus.trigger(_streamingMediaPlayerEvents2['default'].MANIFEST_VALIDITY_CHANGED, { sender: this, newDuration: end });
+                }
             }
-
-            // Update DVR window range
-            // => set range end to end time of current segment
-            range = {
-                start: segments[0].t / adaptation.SegmentTemplate.timescale,
-                end: tfdt.baseMediaDecodeTime / adaptation.SegmentTemplate.timescale + request.duration
-            };
-
-            updateDVR(request.mediaType, range, streamProcessor.getStreamInfo().manifestInfo);
+            return;
         }
+        // In case of live streams, update segment timeline according to DVR window
+        else if (manifest.timeShiftBufferDepth && manifest.timeShiftBufferDepth > 0) {
+                // Get timestamp of the last segment
+                segment = segments[segments.length - 1];
+                t = segment.t;
+
+                // Determine the segments' availability start time
+                availabilityStartTime = Math.round((t - manifest.timeShiftBufferDepth * timescale) / timescale);
+
+                // Remove segments prior to availability start time
+                segment = segments[0];
+                while (Math.round(segment.t / timescale) < availabilityStartTime) {
+                    logger.debug('Remove segment  - t = ' + segment.t / timescale);
+                    segments.splice(0, 1);
+                    segment = segments[0];
+                }
+
+                // Update DVR window range => set range end to end time of current segment
+                range = {
+                    start: segments[0].t / timescale,
+                    end: tfdt.baseMediaDecodeTime / timescale + request.duration
+                };
+
+                updateDVR(type, range, streamProcessor.getStreamInfo().manifestInfo);
+            }
 
         indexHandler.updateSegmentList(representation);
     }
 
     function updateDVR(type, range, manifestInfo) {
-        var dvrInfos = metricsModel.getMetricsFor(type).DVRInfo;
-        if (dvrInfos) {
-            if (dvrInfos.length === 0 || dvrInfos.length > 0 && range.end > dvrInfos[dvrInfos.length - 1].range.end) {
-                logger.debug('Update DVR Infos [' + range.start + ' - ' + range.end + ']');
-                metricsModel.addDVRInfo(type, playbackController.getTime(), manifestInfo, range);
-            }
+        var dvrInfos = dashMetrics.getCurrentDVRInfo(type);
+        if (!dvrInfos || range.end > dvrInfos.range.end) {
+            logger.debug('Update DVR Infos [' + range.start + ' - ' + range.end + ']');
+            dashMetrics.addDVRInfo(type, playbackController.getTime(), manifestInfo, range);
         }
     }
 
@@ -598,7 +687,6 @@ function MssFragmentMoofProcessor(config) {
     }
 
     function convertFragment(e, sp) {
-
         var i = undefined;
 
         // e.request contains request description object
@@ -724,9 +812,14 @@ function MssFragmentMoofProcessor(config) {
         }
     }
 
+    function getType() {
+        return type;
+    }
+
     instance = {
         convertFragment: convertFragment,
-        updateSegmentList: updateSegmentList
+        updateSegmentList: updateSegmentList,
+        getType: getType
     };
 
     setup();
@@ -738,7 +831,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(MssFragmentMoofProcesso
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{}],5:[function(_dereq_,module,exports){
+},{"12":12,"13":13,"9":9}],6:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -770,621 +863,627 @@ module.exports = exports['default'];
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+        value: true
+});
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var _errorsMssErrors = _dereq_(9);
+
+var _errorsMssErrors2 = _interopRequireDefault(_errorsMssErrors);
+
 /**
  * @module MssFragmentMoovProcessor
  * @param {Object} config object
  */
-'use strict';
-
-Object.defineProperty(exports, '__esModule', {
-    value: true
-});
 function MssFragmentMoovProcessor(config) {
-    config = config || {};
-    var NALUTYPE_SPS = 7;
-    var NALUTYPE_PPS = 8;
-    var constants = config.constants;
-    var ISOBoxer = config.ISOBoxer;
+        config = config || {};
+        var NALUTYPE_SPS = 7;
+        var NALUTYPE_PPS = 8;
+        var constants = config.constants;
+        var ISOBoxer = config.ISOBoxer;
 
-    var protectionController = config.protectionController;
-    var instance = undefined,
-        period = undefined,
-        adaptationSet = undefined,
-        representation = undefined,
-        contentProtection = undefined,
-        timescale = undefined,
-        trackId = undefined;
+        var protectionController = config.protectionController;
+        var instance = undefined,
+            period = undefined,
+            adaptationSet = undefined,
+            representation = undefined,
+            contentProtection = undefined,
+            timescale = undefined,
+            trackId = undefined;
 
-    function createFtypBox(isoFile) {
-        var ftyp = ISOBoxer.createBox('ftyp', isoFile);
-        ftyp.major_brand = 'iso6';
-        ftyp.minor_version = 1; // is an informative integer for the minor version of the major brand
-        ftyp.compatible_brands = []; //is a list, to the end of the box, of brands isom, iso6 and msdh
-        ftyp.compatible_brands[0] = 'isom'; // => decimal ASCII value for isom
-        ftyp.compatible_brands[1] = 'iso6'; // => decimal ASCII value for iso6
-        ftyp.compatible_brands[2] = 'msdh'; // => decimal ASCII value for msdh
+        function createFtypBox(isoFile) {
+                var ftyp = ISOBoxer.createBox('ftyp', isoFile);
+                ftyp.major_brand = 'iso6';
+                ftyp.minor_version = 1; // is an informative integer for the minor version of the major brand
+                ftyp.compatible_brands = []; //is a list, to the end of the box, of brands isom, iso6 and msdh
+                ftyp.compatible_brands[0] = 'isom'; // => decimal ASCII value for isom
+                ftyp.compatible_brands[1] = 'iso6'; // => decimal ASCII value for iso6
+                ftyp.compatible_brands[2] = 'msdh'; // => decimal ASCII value for msdh
 
-        return ftyp;
-    }
-
-    function createMoovBox(isoFile) {
-
-        // moov box
-        var moov = ISOBoxer.createBox('moov', isoFile);
-
-        // moov/mvhd
-        createMvhdBox(moov);
-
-        // moov/trak
-        var trak = ISOBoxer.createBox('trak', moov);
-
-        // moov/trak/tkhd
-        createTkhdBox(trak);
-
-        // moov/trak/mdia
-        var mdia = ISOBoxer.createBox('mdia', trak);
-
-        // moov/trak/mdia/mdhd
-        createMdhdBox(mdia);
-
-        // moov/trak/mdia/hdlr
-        createHdlrBox(mdia);
-
-        // moov/trak/mdia/minf
-        var minf = ISOBoxer.createBox('minf', mdia);
-
-        switch (adaptationSet.type) {
-            case constants.VIDEO:
-                // moov/trak/mdia/minf/vmhd
-                createVmhdBox(minf);
-                break;
-            case constants.AUDIO:
-                // moov/trak/mdia/minf/smhd
-                createSmhdBox(minf);
-                break;
-            default:
-                break;
+                return ftyp;
         }
 
-        // moov/trak/mdia/minf/dinf
-        var dinf = ISOBoxer.createBox('dinf', minf);
+        function createMoovBox(isoFile) {
 
-        // moov/trak/mdia/minf/dinf/dref
-        createDrefBox(dinf);
+                // moov box
+                var moov = ISOBoxer.createBox('moov', isoFile);
 
-        // moov/trak/mdia/minf/stbl
-        var stbl = ISOBoxer.createBox('stbl', minf);
+                // moov/mvhd
+                createMvhdBox(moov);
 
-        // Create empty stts, stsc, stco and stsz boxes
-        // Use data field as for codem-isoboxer unknown boxes for setting fields value
+                // moov/trak
+                var trak = ISOBoxer.createBox('trak', moov);
 
-        // moov/trak/mdia/minf/stbl/stts
-        var stts = ISOBoxer.createFullBox('stts', stbl);
-        stts._data = [0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, entry_count = 0
+                // moov/trak/tkhd
+                createTkhdBox(trak);
 
-        // moov/trak/mdia/minf/stbl/stsc
-        var stsc = ISOBoxer.createFullBox('stsc', stbl);
-        stsc._data = [0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, entry_count = 0
+                // moov/trak/mdia
+                var mdia = ISOBoxer.createBox('mdia', trak);
 
-        // moov/trak/mdia/minf/stbl/stco
-        var stco = ISOBoxer.createFullBox('stco', stbl);
-        stco._data = [0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, entry_count = 0
+                // moov/trak/mdia/mdhd
+                createMdhdBox(mdia);
 
-        // moov/trak/mdia/minf/stbl/stsz
-        var stsz = ISOBoxer.createFullBox('stsz', stbl);
-        stsz._data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, sample_size = 0, sample_count = 0
+                // moov/trak/mdia/hdlr
+                createHdlrBox(mdia);
 
-        // moov/trak/mdia/minf/stbl/stsd
-        createStsdBox(stbl);
+                // moov/trak/mdia/minf
+                var minf = ISOBoxer.createBox('minf', mdia);
 
-        // moov/mvex
-        var mvex = ISOBoxer.createBox('mvex', moov);
+                switch (adaptationSet.type) {
+                        case constants.VIDEO:
+                                // moov/trak/mdia/minf/vmhd
+                                createVmhdBox(minf);
+                                break;
+                        case constants.AUDIO:
+                                // moov/trak/mdia/minf/smhd
+                                createSmhdBox(minf);
+                                break;
+                        default:
+                                break;
+                }
 
-        // moov/mvex/trex
-        createTrexBox(mvex);
+                // moov/trak/mdia/minf/dinf
+                var dinf = ISOBoxer.createBox('dinf', minf);
 
-        if (contentProtection && protectionController) {
-            var supportedKS = protectionController.getSupportedKeySystemsFromContentProtection(contentProtection);
-            createProtectionSystemSpecificHeaderBox(moov, supportedKS);
-        }
-    }
+                // moov/trak/mdia/minf/dinf/dref
+                createDrefBox(dinf);
 
-    function createMvhdBox(moov) {
+                // moov/trak/mdia/minf/stbl
+                var stbl = ISOBoxer.createBox('stbl', minf);
 
-        var mvhd = ISOBoxer.createFullBox('mvhd', moov);
+                // Create empty stts, stsc, stco and stsz boxes
+                // Use data field as for codem-isoboxer unknown boxes for setting fields value
 
-        mvhd.version = 1; // version = 1  in order to have 64bits duration value
+                // moov/trak/mdia/minf/stbl/stts
+                var stts = ISOBoxer.createFullBox('stts', stbl);
+                stts._data = [0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, entry_count = 0
 
-        mvhd.creation_time = 0; // the creation time of the presentation => ignore (set to 0)
-        mvhd.modification_time = 0; // the most recent time the presentation was modified => ignore (set to 0)
-        mvhd.timescale = timescale; // the time-scale for the entire presentation => 10000000 for MSS
-        mvhd.duration = Math.round(period.duration * timescale); // the length of the presentation (in the indicated timescale) =>  take duration of period
-        mvhd.rate = 1.0; // 16.16 number, '1.0' = normal playback
-        mvhd.volume = 1.0; // 8.8 number, '1.0' = full volume
-        mvhd.reserved1 = 0;
-        mvhd.reserved2 = [0x0, 0x0];
-        mvhd.matrix = [1, 0, 0, // provides a transformation matrix for the video;
-        0, 1, 0, // (u,v,w) are restricted here to (0,0,1)
-        0, 0, 16384];
-        mvhd.pre_defined = [0, 0, 0, 0, 0, 0];
-        mvhd.next_track_ID = trackId + 1; // indicates a value to use for the track ID of the next track to be added to this presentation
+                // moov/trak/mdia/minf/stbl/stsc
+                var stsc = ISOBoxer.createFullBox('stsc', stbl);
+                stsc._data = [0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, entry_count = 0
 
-        return mvhd;
-    }
+                // moov/trak/mdia/minf/stbl/stco
+                var stco = ISOBoxer.createFullBox('stco', stbl);
+                stco._data = [0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, entry_count = 0
 
-    function createTkhdBox(trak) {
+                // moov/trak/mdia/minf/stbl/stsz
+                var stsz = ISOBoxer.createFullBox('stsz', stbl);
+                stsz._data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, sample_size = 0, sample_count = 0
 
-        var tkhd = ISOBoxer.createFullBox('tkhd', trak);
+                // moov/trak/mdia/minf/stbl/stsd
+                createStsdBox(stbl);
 
-        tkhd.version = 1; // version = 1  in order to have 64bits duration value
-        tkhd.flags = 0x1 | // Track_enabled (0x000001): Indicates that the track is enabled
-        0x2 | // Track_in_movie (0x000002):  Indicates that the track is used in the presentation
-        0x4; // Track_in_preview (0x000004):  Indicates that the track is used when previewing the presentation
+                // moov/mvex
+                var mvex = ISOBoxer.createBox('mvex', moov);
 
-        tkhd.creation_time = 0; // the creation time of the presentation => ignore (set to 0)
-        tkhd.modification_time = 0; // the most recent time the presentation was modified => ignore (set to 0)
-        tkhd.track_ID = trackId; // uniquely identifies this track over the entire life-time of this presentation
-        tkhd.reserved1 = 0;
-        tkhd.duration = Math.round(period.duration * timescale); // the duration of this track (in the timescale indicated in the Movie Header Box) =>  take duration of period
-        tkhd.reserved2 = [0x0, 0x0];
-        tkhd.layer = 0; // specifies the front-to-back ordering of video tracks; tracks with lower numbers are closer to the viewer => 0 since only one video track
-        tkhd.alternate_group = 0; // specifies a group or collection of tracks => ignore
-        tkhd.volume = 1.0; // '1.0' = full volume
-        tkhd.reserved3 = 0;
-        tkhd.matrix = [1, 0, 0, // provides a transformation matrix for the video;
-        0, 1, 0, // (u,v,w) are restricted here to (0,0,1)
-        0, 0, 16384];
-        tkhd.width = representation.width; // visual presentation width
-        tkhd.height = representation.height; // visual presentation height
+                // moov/mvex/trex
+                createTrexBox(mvex);
 
-        return tkhd;
-    }
-
-    function createMdhdBox(mdia) {
-
-        var mdhd = ISOBoxer.createFullBox('mdhd', mdia);
-
-        mdhd.version = 1; // version = 1  in order to have 64bits duration value
-
-        mdhd.creation_time = 0; // the creation time of the presentation => ignore (set to 0)
-        mdhd.modification_time = 0; // the most recent time the presentation was modified => ignore (set to 0)
-        mdhd.timescale = timescale; // the time-scale for the entire presentation
-        mdhd.duration = Math.round(period.duration * timescale); // the duration of this media (in the scale of the timescale). If the duration cannot be determined then duration is set to all 1s.
-        mdhd.language = adaptationSet.lang || 'und'; // declares the language code for this media (see getLanguageCode())
-        mdhd.pre_defined = 0;
-
-        return mdhd;
-    }
-
-    function createHdlrBox(mdia) {
-
-        var hdlr = ISOBoxer.createFullBox('hdlr', mdia);
-
-        hdlr.pre_defined = 0;
-        switch (adaptationSet.type) {
-            case constants.VIDEO:
-                hdlr.handler_type = 'vide';
-                break;
-            case constants.AUDIO:
-                hdlr.handler_type = 'soun';
-                break;
-            default:
-                hdlr.handler_type = 'meta';
-                break;
-        }
-        hdlr.name = representation.id;
-        hdlr.reserved = [0, 0, 0];
-
-        return hdlr;
-    }
-
-    function createVmhdBox(minf) {
-
-        var vmhd = ISOBoxer.createFullBox('vmhd', minf);
-
-        vmhd.flags = 1;
-
-        vmhd.graphicsmode = 0; // specifies a composition mode for this video track, from the following enumerated set, which may be extended by derived specifications: copy = 0 copy over the existing image
-        vmhd.opcolor = [0, 0, 0]; // is a set of 3 colour values (red, green, blue) available for use by graphics modes
-
-        return vmhd;
-    }
-
-    function createSmhdBox(minf) {
-
-        var smhd = ISOBoxer.createFullBox('smhd', minf);
-
-        smhd.flags = 1;
-
-        smhd.balance = 0; // is a fixed-point 8.8 number that places mono audio tracks in a stereo space; 0 is centre (the normal value); full left is -1.0 and full right is 1.0.
-        smhd.reserved = 0;
-
-        return smhd;
-    }
-
-    function createDrefBox(dinf) {
-
-        var dref = ISOBoxer.createFullBox('dref', dinf);
-
-        dref.entry_count = 1;
-        dref.entries = [];
-
-        var url = ISOBoxer.createFullBox('url ', dref, false);
-        url.location = '';
-        url.flags = 1;
-
-        dref.entries.push(url);
-
-        return dref;
-    }
-
-    function createStsdBox(stbl) {
-
-        var stsd = ISOBoxer.createFullBox('stsd', stbl);
-
-        stsd.entries = [];
-        switch (adaptationSet.type) {
-            case constants.VIDEO:
-            case constants.AUDIO:
-                stsd.entries.push(createSampleEntry(stsd));
-                break;
-            default:
-                break;
+                if (contentProtection && protectionController) {
+                        var supportedKS = protectionController.getSupportedKeySystemsFromContentProtection(contentProtection);
+                        createProtectionSystemSpecificHeaderBox(moov, supportedKS);
+                }
         }
 
-        stsd.entry_count = stsd.entries.length; // is an integer that counts the actual entries
-        return stsd;
-    }
+        function createMvhdBox(moov) {
 
-    function createSampleEntry(stsd) {
-        var codec = representation.codecs.substring(0, representation.codecs.indexOf('.'));
+                var mvhd = ISOBoxer.createFullBox('mvhd', moov);
 
-        switch (codec) {
-            case 'avc1':
-                return createAVCVisualSampleEntry(stsd, codec);
-            case 'mp4a':
-                return createMP4AudioSampleEntry(stsd, codec);
-            default:
-                throw {
-                    name: 'Unsupported codec',
-                    message: 'Unsupported codec',
-                    data: {
-                        codec: codec
-                    }
-                };
-        }
-    }
+                mvhd.version = 1; // version = 1  in order to have 64bits duration value
 
-    function createAVCVisualSampleEntry(stsd, codec) {
-        var avc1 = undefined;
+                mvhd.creation_time = 0; // the creation time of the presentation => ignore (set to 0)
+                mvhd.modification_time = 0; // the most recent time the presentation was modified => ignore (set to 0)
+                mvhd.timescale = timescale; // the time-scale for the entire presentation => 10000000 for MSS
+                mvhd.duration = Math.round(period.duration * timescale); // the length of the presentation (in the indicated timescale) =>  take duration of period
+                mvhd.rate = 1.0; // 16.16 number, '1.0' = normal playback
+                mvhd.volume = 1.0; // 8.8 number, '1.0' = full volume
+                mvhd.reserved1 = 0;
+                mvhd.reserved2 = [0x0, 0x0];
+                mvhd.matrix = [1, 0, 0, // provides a transformation matrix for the video;
+                0, 1, 0, // (u,v,w) are restricted here to (0,0,1)
+                0, 0, 16384];
+                mvhd.pre_defined = [0, 0, 0, 0, 0, 0];
+                mvhd.next_track_ID = trackId + 1; // indicates a value to use for the track ID of the next track to be added to this presentation
 
-        if (contentProtection) {
-            avc1 = ISOBoxer.createBox('encv', stsd, false);
-        } else {
-            avc1 = ISOBoxer.createBox('avc1', stsd, false);
+                return mvhd;
         }
 
-        // SampleEntry fields
-        avc1.reserved1 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
-        avc1.data_reference_index = 1;
+        function createTkhdBox(trak) {
 
-        // VisualSampleEntry fields
-        avc1.pre_defined1 = 0;
-        avc1.reserved2 = 0;
-        avc1.pre_defined2 = [0, 0, 0];
-        avc1.height = representation.height;
-        avc1.width = representation.width;
-        avc1.horizresolution = 72; // 72 dpi
-        avc1.vertresolution = 72; // 72 dpi
-        avc1.reserved3 = 0;
-        avc1.frame_count = 1; // 1 compressed video frame per sample
-        avc1.compressorname = [0x0A, 0x41, 0x56, 0x43, 0x20, 0x43, 0x6F, 0x64, // = 'AVC Coding';
-        0x69, 0x6E, 0x67, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-        avc1.depth = 0x0018; // 0x0018 – images are in colour with no alpha.
-        avc1.pre_defined3 = 65535;
-        avc1.config = createAVC1ConfigurationRecord();
-        if (contentProtection) {
-            // Create and add Protection Scheme Info Box
-            var sinf = ISOBoxer.createBox('sinf', avc1);
+                var tkhd = ISOBoxer.createFullBox('tkhd', trak);
 
-            // Create and add Original Format Box => indicate codec type of the encrypted content
-            createOriginalFormatBox(sinf, codec);
+                tkhd.version = 1; // version = 1  in order to have 64bits duration value
+                tkhd.flags = 0x1 | // Track_enabled (0x000001): Indicates that the track is enabled
+                0x2 | // Track_in_movie (0x000002):  Indicates that the track is used in the presentation
+                0x4; // Track_in_preview (0x000004):  Indicates that the track is used when previewing the presentation
 
-            // Create and add Scheme Type box
-            createSchemeTypeBox(sinf);
+                tkhd.creation_time = 0; // the creation time of the presentation => ignore (set to 0)
+                tkhd.modification_time = 0; // the most recent time the presentation was modified => ignore (set to 0)
+                tkhd.track_ID = trackId; // uniquely identifies this track over the entire life-time of this presentation
+                tkhd.reserved1 = 0;
+                tkhd.duration = Math.round(period.duration * timescale); // the duration of this track (in the timescale indicated in the Movie Header Box) =>  take duration of period
+                tkhd.reserved2 = [0x0, 0x0];
+                tkhd.layer = 0; // specifies the front-to-back ordering of video tracks; tracks with lower numbers are closer to the viewer => 0 since only one video track
+                tkhd.alternate_group = 0; // specifies a group or collection of tracks => ignore
+                tkhd.volume = 1.0; // '1.0' = full volume
+                tkhd.reserved3 = 0;
+                tkhd.matrix = [1, 0, 0, // provides a transformation matrix for the video;
+                0, 1, 0, // (u,v,w) are restricted here to (0,0,1)
+                0, 0, 16384];
+                tkhd.width = representation.width; // visual presentation width
+                tkhd.height = representation.height; // visual presentation height
 
-            // Create and add Scheme Information Box
-            createSchemeInformationBox(sinf);
+                return tkhd;
         }
 
-        return avc1;
-    }
+        function createMdhdBox(mdia) {
 
-    function createAVC1ConfigurationRecord() {
+                var mdhd = ISOBoxer.createFullBox('mdhd', mdia);
 
-        var avcC = null;
-        var avcCLength = 15; // length = 15 by default (0 SPS and 0 PPS)
+                mdhd.version = 1; // version = 1  in order to have 64bits duration value
 
-        // First get all SPS and PPS from codecPrivateData
-        var sps = [];
-        var pps = [];
-        var AVCProfileIndication = 0;
-        var AVCLevelIndication = 0;
-        var profile_compatibility = 0;
+                mdhd.creation_time = 0; // the creation time of the presentation => ignore (set to 0)
+                mdhd.modification_time = 0; // the most recent time the presentation was modified => ignore (set to 0)
+                mdhd.timescale = timescale; // the time-scale for the entire presentation
+                mdhd.duration = Math.round(period.duration * timescale); // the duration of this media (in the scale of the timescale). If the duration cannot be determined then duration is set to all 1s.
+                mdhd.language = adaptationSet.lang || 'und'; // declares the language code for this media (see getLanguageCode())
+                mdhd.pre_defined = 0;
 
-        var nalus = representation.codecPrivateData.split('00000001').slice(1);
-        var naluBytes = undefined,
-            naluType = undefined;
-
-        for (var _i = 0; _i < nalus.length; _i++) {
-            naluBytes = hexStringtoBuffer(nalus[_i]);
-
-            naluType = naluBytes[0] & 0x1F;
-
-            switch (naluType) {
-                case NALUTYPE_SPS:
-                    sps.push(naluBytes);
-                    avcCLength += naluBytes.length + 2; // 2 = sequenceParameterSetLength field length
-                    break;
-                case NALUTYPE_PPS:
-                    pps.push(naluBytes);
-                    avcCLength += naluBytes.length + 2; // 2 = pictureParameterSetLength field length
-                    break;
-                default:
-                    break;
-            }
+                return mdhd;
         }
 
-        // Get profile and level from SPS
-        if (sps.length > 0) {
-            AVCProfileIndication = sps[0][1];
-            profile_compatibility = sps[0][2];
-            AVCLevelIndication = sps[0][3];
+        function createHdlrBox(mdia) {
+
+                var hdlr = ISOBoxer.createFullBox('hdlr', mdia);
+
+                hdlr.pre_defined = 0;
+                switch (adaptationSet.type) {
+                        case constants.VIDEO:
+                                hdlr.handler_type = 'vide';
+                                break;
+                        case constants.AUDIO:
+                                hdlr.handler_type = 'soun';
+                                break;
+                        default:
+                                hdlr.handler_type = 'meta';
+                                break;
+                }
+                hdlr.name = representation.id;
+                hdlr.reserved = [0, 0, 0];
+
+                return hdlr;
         }
 
-        // Generate avcC buffer
-        avcC = new Uint8Array(avcCLength);
+        function createVmhdBox(minf) {
 
-        var i = 0;
-        // length
-        avcC[i++] = (avcCLength & 0xFF000000) >> 24;
-        avcC[i++] = (avcCLength & 0x00FF0000) >> 16;
-        avcC[i++] = (avcCLength & 0x0000FF00) >> 8;
-        avcC[i++] = avcCLength & 0x000000FF;
-        avcC.set([0x61, 0x76, 0x63, 0x43], i); // type = 'avcC'
-        i += 4;
-        avcC[i++] = 1; // configurationVersion = 1
-        avcC[i++] = AVCProfileIndication;
-        avcC[i++] = profile_compatibility;
-        avcC[i++] = AVCLevelIndication;
-        avcC[i++] = 0xFF; // '11111' + lengthSizeMinusOne = 3
-        avcC[i++] = 0xE0 | sps.length; // '111' + numOfSequenceParameterSets
-        for (var n = 0; n < sps.length; n++) {
-            avcC[i++] = (sps[n].length & 0xFF00) >> 8;
-            avcC[i++] = sps[n].length & 0x00FF;
-            avcC.set(sps[n], i);
-            i += sps[n].length;
-        }
-        avcC[i++] = pps.length; // numOfPictureParameterSets
-        for (var n = 0; n < pps.length; n++) {
-            avcC[i++] = (pps[n].length & 0xFF00) >> 8;
-            avcC[i++] = pps[n].length & 0x00FF;
-            avcC.set(pps[n], i);
-            i += pps[n].length;
+                var vmhd = ISOBoxer.createFullBox('vmhd', minf);
+
+                vmhd.flags = 1;
+
+                vmhd.graphicsmode = 0; // specifies a composition mode for this video track, from the following enumerated set, which may be extended by derived specifications: copy = 0 copy over the existing image
+                vmhd.opcolor = [0, 0, 0]; // is a set of 3 colour values (red, green, blue) available for use by graphics modes
+
+                return vmhd;
         }
 
-        return avcC;
-    }
+        function createSmhdBox(minf) {
 
-    function createMP4AudioSampleEntry(stsd, codec) {
-        var mp4a = undefined;
+                var smhd = ISOBoxer.createFullBox('smhd', minf);
 
-        if (contentProtection) {
-            mp4a = ISOBoxer.createBox('enca', stsd, false);
-        } else {
-            mp4a = ISOBoxer.createBox('mp4a', stsd, false);
+                smhd.flags = 1;
+
+                smhd.balance = 0; // is a fixed-point 8.8 number that places mono audio tracks in a stereo space; 0 is centre (the normal value); full left is -1.0 and full right is 1.0.
+                smhd.reserved = 0;
+
+                return smhd;
         }
 
-        // SampleEntry fields
-        mp4a.reserved1 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
-        mp4a.data_reference_index = 1;
+        function createDrefBox(dinf) {
 
-        // AudioSampleEntry fields
-        mp4a.reserved2 = [0x0, 0x0];
-        mp4a.channelcount = representation.audioChannels;
-        mp4a.samplesize = 16;
-        mp4a.pre_defined = 0;
-        mp4a.reserved_3 = 0;
-        mp4a.samplerate = representation.audioSamplingRate << 16;
+                var dref = ISOBoxer.createFullBox('dref', dinf);
 
-        mp4a.esds = createMPEG4AACESDescriptor();
+                dref.entry_count = 1;
+                dref.entries = [];
 
-        if (contentProtection) {
-            // Create and add Protection Scheme Info Box
-            var sinf = ISOBoxer.createBox('sinf', mp4a);
+                var url = ISOBoxer.createFullBox('url ', dref, false);
+                url.location = '';
+                url.flags = 1;
 
-            // Create and add Original Format Box => indicate codec type of the encrypted content
-            createOriginalFormatBox(sinf, codec);
+                dref.entries.push(url);
 
-            // Create and add Scheme Type box
-            createSchemeTypeBox(sinf);
-
-            // Create and add Scheme Information Box
-            createSchemeInformationBox(sinf);
+                return dref;
         }
 
-        return mp4a;
-    }
+        function createStsdBox(stbl) {
 
-    function createMPEG4AACESDescriptor() {
+                var stsd = ISOBoxer.createFullBox('stsd', stbl);
 
-        // AudioSpecificConfig (see ISO/IEC 14496-3, subpart 1) => corresponds to hex bytes contained in 'codecPrivateData' field
-        var audioSpecificConfig = hexStringtoBuffer(representation.codecPrivateData);
+                stsd.entries = [];
+                switch (adaptationSet.type) {
+                        case constants.VIDEO:
+                        case constants.AUDIO:
+                                stsd.entries.push(createSampleEntry(stsd));
+                                break;
+                        default:
+                                break;
+                }
 
-        // ESDS length = esds box header length (= 12) +
-        //               ES_Descriptor header length (= 5) +
-        //               DecoderConfigDescriptor header length (= 15) +
-        //               decoderSpecificInfo header length (= 2) +
-        //               AudioSpecificConfig length (= codecPrivateData length)
-        var esdsLength = 34 + audioSpecificConfig.length;
-        var esds = new Uint8Array(esdsLength);
-
-        var i = 0;
-        // esds box
-        esds[i++] = (esdsLength & 0xFF000000) >> 24; // esds box length
-        esds[i++] = (esdsLength & 0x00FF0000) >> 16; // ''
-        esds[i++] = (esdsLength & 0x0000FF00) >> 8; // ''
-        esds[i++] = esdsLength & 0x000000FF; // ''
-        esds.set([0x65, 0x73, 0x64, 0x73], i); // type = 'esds'
-        i += 4;
-        esds.set([0, 0, 0, 0], i); // version = 0, flags = 0
-        i += 4;
-        // ES_Descriptor (see ISO/IEC 14496-1 (Systems))
-        esds[i++] = 0x03; // tag = 0x03 (ES_DescrTag)
-        esds[i++] = 20 + audioSpecificConfig.length; // size
-        esds[i++] = (trackId & 0xFF00) >> 8; // ES_ID = track_id
-        esds[i++] = trackId & 0x00FF; // ''
-        esds[i++] = 0; // flags and streamPriority
-
-        // DecoderConfigDescriptor (see ISO/IEC 14496-1 (Systems))
-        esds[i++] = 0x04; // tag = 0x04 (DecoderConfigDescrTag)
-        esds[i++] = 15 + audioSpecificConfig.length; // size
-        esds[i++] = 0x40; // objectTypeIndication = 0x40 (MPEG-4 AAC)
-        esds[i] = 0x05 << 2; // streamType = 0x05 (Audiostream)
-        esds[i] |= 0 << 1; // upStream = 0
-        esds[i++] |= 1; // reserved = 1
-        esds[i++] = 0xFF; // buffersizeDB = undefined
-        esds[i++] = 0xFF; // ''
-        esds[i++] = 0xFF; // ''
-        esds[i++] = (representation.bandwidth & 0xFF000000) >> 24; // maxBitrate
-        esds[i++] = (representation.bandwidth & 0x00FF0000) >> 16; // ''
-        esds[i++] = (representation.bandwidth & 0x0000FF00) >> 8; // ''
-        esds[i++] = representation.bandwidth & 0x000000FF; // ''
-        esds[i++] = (representation.bandwidth & 0xFF000000) >> 24; // avgbitrate
-        esds[i++] = (representation.bandwidth & 0x00FF0000) >> 16; // ''
-        esds[i++] = (representation.bandwidth & 0x0000FF00) >> 8; // ''
-        esds[i++] = representation.bandwidth & 0x000000FF; // ''
-
-        // DecoderSpecificInfo (see ISO/IEC 14496-1 (Systems))
-        esds[i++] = 0x05; // tag = 0x05 (DecSpecificInfoTag)
-        esds[i++] = audioSpecificConfig.length; // size
-        esds.set(audioSpecificConfig, i); // AudioSpecificConfig bytes
-
-        return esds;
-    }
-
-    function createOriginalFormatBox(sinf, codec) {
-        var frma = ISOBoxer.createBox('frma', sinf);
-        frma.data_format = stringToCharCode(codec);
-    }
-
-    function createSchemeTypeBox(sinf) {
-        var schm = ISOBoxer.createFullBox('schm', sinf);
-
-        schm.flags = 0;
-        schm.version = 0;
-        schm.scheme_type = 0x63656E63; // 'cenc' => common encryption
-        schm.scheme_version = 0x00010000; // version set to 0x00010000 (Major version 1, Minor version 0)
-    }
-
-    function createSchemeInformationBox(sinf) {
-        var schi = ISOBoxer.createBox('schi', sinf);
-
-        // Create and add Track Encryption Box
-        createTrackEncryptionBox(schi);
-    }
-
-    function createProtectionSystemSpecificHeaderBox(moov, keySystems) {
-        var pssh_bytes = undefined;
-        var pssh = undefined;
-        var i = undefined;
-        var parsedBuffer = undefined;
-
-        for (i = 0; i < keySystems.length; i += 1) {
-            pssh_bytes = keySystems[i].initData;
-            parsedBuffer = ISOBoxer.parseBuffer(pssh_bytes);
-            pssh = parsedBuffer.fetch('pssh');
-            if (pssh) {
-                ISOBoxer.Utils.appendBox(moov, pssh);
-            }
-        }
-    }
-
-    function createTrackEncryptionBox(schi) {
-        var tenc = ISOBoxer.createFullBox('tenc', schi);
-
-        tenc.flags = 0;
-        tenc.version = 0;
-
-        tenc.default_IsEncrypted = 0x1;
-        tenc.default_IV_size = 8;
-        tenc.default_KID = contentProtection && contentProtection.length > 0 && contentProtection[0]['cenc:default_KID'] ? contentProtection[0]['cenc:default_KID'] : [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
-    }
-
-    function createTrexBox(moov) {
-
-        var trex = ISOBoxer.createFullBox('trex', moov);
-
-        trex.track_ID = trackId;
-        trex.default_sample_description_index = 1;
-        trex.default_sample_duration = 0;
-        trex.default_sample_size = 0;
-        trex.default_sample_flags = 0;
-
-        return trex;
-    }
-
-    function hexStringtoBuffer(str) {
-        var buf = new Uint8Array(str.length / 2);
-        var i = undefined;
-
-        for (i = 0; i < str.length / 2; i += 1) {
-            buf[i] = parseInt('' + str[i * 2] + str[i * 2 + 1], 16);
-        }
-        return buf;
-    }
-
-    function stringToCharCode(str) {
-        var code = 0;
-        var i = undefined;
-
-        for (i = 0; i < str.length; i += 1) {
-            code |= str.charCodeAt(i) << (str.length - i - 1) * 8;
-        }
-        return code;
-    }
-
-    function generateMoov(rep) {
-        if (!rep || !rep.adaptation) {
-            return;
+                stsd.entry_count = stsd.entries.length; // is an integer that counts the actual entries
+                return stsd;
         }
 
-        var isoFile = undefined,
-            arrayBuffer = undefined;
+        function createSampleEntry(stsd) {
+                var codec = representation.codecs.substring(0, representation.codecs.indexOf('.'));
 
-        representation = rep;
-        adaptationSet = representation.adaptation;
+                switch (codec) {
+                        case 'avc1':
+                                return createAVCVisualSampleEntry(stsd, codec);
+                        case 'mp4a':
+                                return createMP4AudioSampleEntry(stsd, codec);
+                        default:
+                                throw {
+                                        code: _errorsMssErrors2['default'].MSS_UNSUPPORTED_CODEC_CODE,
+                                        message: _errorsMssErrors2['default'].MSS_UNSUPPORTED_CODEC_MESSAGE,
+                                        data: {
+                                                codec: codec
+                                        }
+                                };
+                }
+        }
 
-        period = adaptationSet.period;
-        trackId = adaptationSet.index + 1;
-        contentProtection = period.mpd.manifest.Period_asArray[period.index].AdaptationSet_asArray[adaptationSet.index].ContentProtection;
+        function createAVCVisualSampleEntry(stsd, codec) {
+                var avc1 = undefined;
 
-        timescale = period.mpd.manifest.Period_asArray[period.index].AdaptationSet_asArray[adaptationSet.index].SegmentTemplate.timescale;
+                if (contentProtection) {
+                        avc1 = ISOBoxer.createBox('encv', stsd, false);
+                } else {
+                        avc1 = ISOBoxer.createBox('avc1', stsd, false);
+                }
 
-        isoFile = ISOBoxer.createFile();
-        createFtypBox(isoFile);
-        createMoovBox(isoFile);
+                // SampleEntry fields
+                avc1.reserved1 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+                avc1.data_reference_index = 1;
 
-        arrayBuffer = isoFile.write();
+                // VisualSampleEntry fields
+                avc1.pre_defined1 = 0;
+                avc1.reserved2 = 0;
+                avc1.pre_defined2 = [0, 0, 0];
+                avc1.height = representation.height;
+                avc1.width = representation.width;
+                avc1.horizresolution = 72; // 72 dpi
+                avc1.vertresolution = 72; // 72 dpi
+                avc1.reserved3 = 0;
+                avc1.frame_count = 1; // 1 compressed video frame per sample
+                avc1.compressorname = [0x0A, 0x41, 0x56, 0x43, 0x20, 0x43, 0x6F, 0x64, // = 'AVC Coding';
+                0x69, 0x6E, 0x67, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+                avc1.depth = 0x0018; // 0x0018 – images are in colour with no alpha.
+                avc1.pre_defined3 = 65535;
+                avc1.config = createAVC1ConfigurationRecord();
+                if (contentProtection) {
+                        // Create and add Protection Scheme Info Box
+                        var sinf = ISOBoxer.createBox('sinf', avc1);
 
-        return arrayBuffer;
-    }
+                        // Create and add Original Format Box => indicate codec type of the encrypted content
+                        createOriginalFormatBox(sinf, codec);
 
-    instance = {
-        generateMoov: generateMoov
-    };
+                        // Create and add Scheme Type box
+                        createSchemeTypeBox(sinf);
 
-    return instance;
+                        // Create and add Scheme Information Box
+                        createSchemeInformationBox(sinf);
+                }
+
+                return avc1;
+        }
+
+        function createAVC1ConfigurationRecord() {
+
+                var avcC = null;
+                var avcCLength = 15; // length = 15 by default (0 SPS and 0 PPS)
+
+                // First get all SPS and PPS from codecPrivateData
+                var sps = [];
+                var pps = [];
+                var AVCProfileIndication = 0;
+                var AVCLevelIndication = 0;
+                var profile_compatibility = 0;
+
+                var nalus = representation.codecPrivateData.split('00000001').slice(1);
+                var naluBytes = undefined,
+                    naluType = undefined;
+
+                for (var _i = 0; _i < nalus.length; _i++) {
+                        naluBytes = hexStringtoBuffer(nalus[_i]);
+
+                        naluType = naluBytes[0] & 0x1F;
+
+                        switch (naluType) {
+                                case NALUTYPE_SPS:
+                                        sps.push(naluBytes);
+                                        avcCLength += naluBytes.length + 2; // 2 = sequenceParameterSetLength field length
+                                        break;
+                                case NALUTYPE_PPS:
+                                        pps.push(naluBytes);
+                                        avcCLength += naluBytes.length + 2; // 2 = pictureParameterSetLength field length
+                                        break;
+                                default:
+                                        break;
+                        }
+                }
+
+                // Get profile and level from SPS
+                if (sps.length > 0) {
+                        AVCProfileIndication = sps[0][1];
+                        profile_compatibility = sps[0][2];
+                        AVCLevelIndication = sps[0][3];
+                }
+
+                // Generate avcC buffer
+                avcC = new Uint8Array(avcCLength);
+
+                var i = 0;
+                // length
+                avcC[i++] = (avcCLength & 0xFF000000) >> 24;
+                avcC[i++] = (avcCLength & 0x00FF0000) >> 16;
+                avcC[i++] = (avcCLength & 0x0000FF00) >> 8;
+                avcC[i++] = avcCLength & 0x000000FF;
+                avcC.set([0x61, 0x76, 0x63, 0x43], i); // type = 'avcC'
+                i += 4;
+                avcC[i++] = 1; // configurationVersion = 1
+                avcC[i++] = AVCProfileIndication;
+                avcC[i++] = profile_compatibility;
+                avcC[i++] = AVCLevelIndication;
+                avcC[i++] = 0xFF; // '11111' + lengthSizeMinusOne = 3
+                avcC[i++] = 0xE0 | sps.length; // '111' + numOfSequenceParameterSets
+                for (var n = 0; n < sps.length; n++) {
+                        avcC[i++] = (sps[n].length & 0xFF00) >> 8;
+                        avcC[i++] = sps[n].length & 0x00FF;
+                        avcC.set(sps[n], i);
+                        i += sps[n].length;
+                }
+                avcC[i++] = pps.length; // numOfPictureParameterSets
+                for (var n = 0; n < pps.length; n++) {
+                        avcC[i++] = (pps[n].length & 0xFF00) >> 8;
+                        avcC[i++] = pps[n].length & 0x00FF;
+                        avcC.set(pps[n], i);
+                        i += pps[n].length;
+                }
+
+                return avcC;
+        }
+
+        function createMP4AudioSampleEntry(stsd, codec) {
+                var mp4a = undefined;
+
+                if (contentProtection) {
+                        mp4a = ISOBoxer.createBox('enca', stsd, false);
+                } else {
+                        mp4a = ISOBoxer.createBox('mp4a', stsd, false);
+                }
+
+                // SampleEntry fields
+                mp4a.reserved1 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+                mp4a.data_reference_index = 1;
+
+                // AudioSampleEntry fields
+                mp4a.reserved2 = [0x0, 0x0];
+                mp4a.channelcount = representation.audioChannels;
+                mp4a.samplesize = 16;
+                mp4a.pre_defined = 0;
+                mp4a.reserved_3 = 0;
+                mp4a.samplerate = representation.audioSamplingRate << 16;
+
+                mp4a.esds = createMPEG4AACESDescriptor();
+
+                if (contentProtection) {
+                        // Create and add Protection Scheme Info Box
+                        var sinf = ISOBoxer.createBox('sinf', mp4a);
+
+                        // Create and add Original Format Box => indicate codec type of the encrypted content
+                        createOriginalFormatBox(sinf, codec);
+
+                        // Create and add Scheme Type box
+                        createSchemeTypeBox(sinf);
+
+                        // Create and add Scheme Information Box
+                        createSchemeInformationBox(sinf);
+                }
+
+                return mp4a;
+        }
+
+        function createMPEG4AACESDescriptor() {
+
+                // AudioSpecificConfig (see ISO/IEC 14496-3, subpart 1) => corresponds to hex bytes contained in 'codecPrivateData' field
+                var audioSpecificConfig = hexStringtoBuffer(representation.codecPrivateData);
+
+                // ESDS length = esds box header length (= 12) +
+                //               ES_Descriptor header length (= 5) +
+                //               DecoderConfigDescriptor header length (= 15) +
+                //               decoderSpecificInfo header length (= 2) +
+                //               AudioSpecificConfig length (= codecPrivateData length)
+                var esdsLength = 34 + audioSpecificConfig.length;
+                var esds = new Uint8Array(esdsLength);
+
+                var i = 0;
+                // esds box
+                esds[i++] = (esdsLength & 0xFF000000) >> 24; // esds box length
+                esds[i++] = (esdsLength & 0x00FF0000) >> 16; // ''
+                esds[i++] = (esdsLength & 0x0000FF00) >> 8; // ''
+                esds[i++] = esdsLength & 0x000000FF; // ''
+                esds.set([0x65, 0x73, 0x64, 0x73], i); // type = 'esds'
+                i += 4;
+                esds.set([0, 0, 0, 0], i); // version = 0, flags = 0
+                i += 4;
+                // ES_Descriptor (see ISO/IEC 14496-1 (Systems))
+                esds[i++] = 0x03; // tag = 0x03 (ES_DescrTag)
+                esds[i++] = 20 + audioSpecificConfig.length; // size
+                esds[i++] = (trackId & 0xFF00) >> 8; // ES_ID = track_id
+                esds[i++] = trackId & 0x00FF; // ''
+                esds[i++] = 0; // flags and streamPriority
+
+                // DecoderConfigDescriptor (see ISO/IEC 14496-1 (Systems))
+                esds[i++] = 0x04; // tag = 0x04 (DecoderConfigDescrTag)
+                esds[i++] = 15 + audioSpecificConfig.length; // size
+                esds[i++] = 0x40; // objectTypeIndication = 0x40 (MPEG-4 AAC)
+                esds[i] = 0x05 << 2; // streamType = 0x05 (Audiostream)
+                esds[i] |= 0 << 1; // upStream = 0
+                esds[i++] |= 1; // reserved = 1
+                esds[i++] = 0xFF; // buffersizeDB = undefined
+                esds[i++] = 0xFF; // ''
+                esds[i++] = 0xFF; // ''
+                esds[i++] = (representation.bandwidth & 0xFF000000) >> 24; // maxBitrate
+                esds[i++] = (representation.bandwidth & 0x00FF0000) >> 16; // ''
+                esds[i++] = (representation.bandwidth & 0x0000FF00) >> 8; // ''
+                esds[i++] = representation.bandwidth & 0x000000FF; // ''
+                esds[i++] = (representation.bandwidth & 0xFF000000) >> 24; // avgbitrate
+                esds[i++] = (representation.bandwidth & 0x00FF0000) >> 16; // ''
+                esds[i++] = (representation.bandwidth & 0x0000FF00) >> 8; // ''
+                esds[i++] = representation.bandwidth & 0x000000FF; // ''
+
+                // DecoderSpecificInfo (see ISO/IEC 14496-1 (Systems))
+                esds[i++] = 0x05; // tag = 0x05 (DecSpecificInfoTag)
+                esds[i++] = audioSpecificConfig.length; // size
+                esds.set(audioSpecificConfig, i); // AudioSpecificConfig bytes
+
+                return esds;
+        }
+
+        function createOriginalFormatBox(sinf, codec) {
+                var frma = ISOBoxer.createBox('frma', sinf);
+                frma.data_format = stringToCharCode(codec);
+        }
+
+        function createSchemeTypeBox(sinf) {
+                var schm = ISOBoxer.createFullBox('schm', sinf);
+
+                schm.flags = 0;
+                schm.version = 0;
+                schm.scheme_type = 0x63656E63; // 'cenc' => common encryption
+                schm.scheme_version = 0x00010000; // version set to 0x00010000 (Major version 1, Minor version 0)
+        }
+
+        function createSchemeInformationBox(sinf) {
+                var schi = ISOBoxer.createBox('schi', sinf);
+
+                // Create and add Track Encryption Box
+                createTrackEncryptionBox(schi);
+        }
+
+        function createProtectionSystemSpecificHeaderBox(moov, keySystems) {
+                var pssh_bytes = undefined,
+                    pssh = undefined,
+                    i = undefined,
+                    parsedBuffer = undefined;
+
+                for (i = 0; i < keySystems.length; i += 1) {
+                        pssh_bytes = keySystems[i].initData;
+                        parsedBuffer = ISOBoxer.parseBuffer(pssh_bytes);
+                        pssh = parsedBuffer.fetch('pssh');
+                        if (pssh) {
+                                ISOBoxer.Utils.appendBox(moov, pssh);
+                        }
+                }
+        }
+
+        function createTrackEncryptionBox(schi) {
+                var tenc = ISOBoxer.createFullBox('tenc', schi);
+
+                tenc.flags = 0;
+                tenc.version = 0;
+
+                tenc.default_IsEncrypted = 0x1;
+                tenc.default_IV_size = 8;
+                tenc.default_KID = contentProtection && contentProtection.length > 0 && contentProtection[0]['cenc:default_KID'] ? contentProtection[0]['cenc:default_KID'] : [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+        }
+
+        function createTrexBox(moov) {
+                var trex = ISOBoxer.createFullBox('trex', moov);
+
+                trex.track_ID = trackId;
+                trex.default_sample_description_index = 1;
+                trex.default_sample_duration = 0;
+                trex.default_sample_size = 0;
+                trex.default_sample_flags = 0;
+
+                return trex;
+        }
+
+        function hexStringtoBuffer(str) {
+                var buf = new Uint8Array(str.length / 2);
+                var i = undefined;
+
+                for (i = 0; i < str.length / 2; i += 1) {
+                        buf[i] = parseInt('' + str[i * 2] + str[i * 2 + 1], 16);
+                }
+                return buf;
+        }
+
+        function stringToCharCode(str) {
+                var code = 0;
+                var i = undefined;
+
+                for (i = 0; i < str.length; i += 1) {
+                        code |= str.charCodeAt(i) << (str.length - i - 1) * 8;
+                }
+                return code;
+        }
+
+        function generateMoov(rep) {
+                if (!rep || !rep.adaptation) {
+                        return;
+                }
+
+                var isoFile = undefined,
+                    arrayBuffer = undefined;
+
+                representation = rep;
+                adaptationSet = representation.adaptation;
+
+                period = adaptationSet.period;
+                trackId = adaptationSet.index + 1;
+                contentProtection = period.mpd.manifest.Period_asArray[period.index].AdaptationSet_asArray[adaptationSet.index].ContentProtection;
+
+                timescale = period.mpd.manifest.Period_asArray[period.index].AdaptationSet_asArray[adaptationSet.index].SegmentTemplate.timescale;
+
+                isoFile = ISOBoxer.createFile();
+                createFtypBox(isoFile);
+                createMoovBox(isoFile);
+
+                arrayBuffer = isoFile.write();
+
+                return arrayBuffer;
+        }
+
+        instance = {
+                generateMoov: generateMoov
+        };
+
+        return instance;
 }
 
 MssFragmentMoovProcessor.__dashjs_factory_name = 'MssFragmentMoovProcessor';
@@ -1392,7 +1491,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(MssFragmentMoovProcesso
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{}],6:[function(_dereq_,module,exports){
+},{"9":9}],7:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -1432,15 +1531,15 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _MssFragmentMoofProcessor = _dereq_(4);
+var _MssFragmentMoofProcessor = _dereq_(5);
 
 var _MssFragmentMoofProcessor2 = _interopRequireDefault(_MssFragmentMoofProcessor);
 
-var _MssFragmentMoovProcessor = _dereq_(5);
+var _MssFragmentMoovProcessor = _dereq_(6);
 
 var _MssFragmentMoovProcessor2 = _interopRequireDefault(_MssFragmentMoovProcessor);
 
-var _MssEvents = _dereq_(2);
+var _MssEvents = _dereq_(3);
 
 var _MssEvents2 = _interopRequireDefault(_MssEvents);
 
@@ -1531,24 +1630,36 @@ function MssFragmentProcessor(config) {
 
     config = config || {};
     var context = this.context;
-    var metricsModel = config.metricsModel;
+    var dashMetrics = config.dashMetrics;
     var playbackController = config.playbackController;
     var eventBus = config.eventBus;
     var protectionController = config.protectionController;
     var ISOBoxer = config.ISOBoxer;
     var debug = config.debug;
-    var instance = undefined;
+    var mssFragmentMoovProcessor = undefined,
+        mssFragmentMoofProcessor = undefined,
+        instance = undefined;
 
     function setup() {
         ISOBoxer.addBoxProcessor('uuid', uuidProcessor);
         ISOBoxer.addBoxProcessor('saio', saioProcessor);
         ISOBoxer.addBoxProcessor('saiz', saizProcessor);
         ISOBoxer.addBoxProcessor('senc', sencProcessor);
+
+        mssFragmentMoovProcessor = (0, _MssFragmentMoovProcessor2['default'])(context).create({ protectionController: protectionController,
+            constants: config.constants, ISOBoxer: ISOBoxer });
+
+        mssFragmentMoofProcessor = (0, _MssFragmentMoofProcessor2['default'])(context).create({
+            dashMetrics: dashMetrics,
+            playbackController: playbackController,
+            ISOBoxer: ISOBoxer,
+            eventBus: eventBus,
+            debug: debug,
+            errHandler: config.errHandler
+        });
     }
 
     function generateMoov(rep) {
-        var mssFragmentMoovProcessor = (0, _MssFragmentMoovProcessor2['default'])(context).create({ protectionController: protectionController,
-            constants: config.constants, ISOBoxer: config.ISOBoxer });
         return mssFragmentMoovProcessor.generateMoov(rep);
     }
 
@@ -1560,15 +1671,7 @@ function MssFragmentProcessor(config) {
         var request = e.request;
 
         if (request.type === 'MediaSegment') {
-
             // it's a MediaSegment, let's convert fragment
-            var mssFragmentMoofProcessor = (0, _MssFragmentMoofProcessor2['default'])(context).create({
-                metricsModel: metricsModel,
-                playbackController: playbackController,
-                ISOBoxer: ISOBoxer,
-                debug: debug,
-                errHandler: config.errHandler
-            });
             mssFragmentMoofProcessor.convertFragment(e, sp);
         } else if (request.type === 'FragmentInfoSegment') {
 
@@ -1598,7 +1701,7 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(MssFragmentProcessor);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"2":2,"4":4,"5":5}],7:[function(_dereq_,module,exports){
+},{"3":3,"5":5,"6":6}],8:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -1638,25 +1741,33 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _streamingVoDataChunk = _dereq_(10);
+var _streamingVoDataChunk = _dereq_(14);
 
 var _streamingVoDataChunk2 = _interopRequireDefault(_streamingVoDataChunk);
 
-var _streamingVoFragmentRequest = _dereq_(11);
+var _streamingVoFragmentRequest = _dereq_(15);
 
 var _streamingVoFragmentRequest2 = _interopRequireDefault(_streamingVoFragmentRequest);
 
-var _MssFragmentInfoController = _dereq_(3);
+var _MssFragmentInfoController = _dereq_(4);
 
 var _MssFragmentInfoController2 = _interopRequireDefault(_MssFragmentInfoController);
 
-var _MssFragmentProcessor = _dereq_(6);
+var _MssFragmentProcessor = _dereq_(7);
 
 var _MssFragmentProcessor2 = _interopRequireDefault(_MssFragmentProcessor);
 
-var _parserMssParser = _dereq_(9);
+var _parserMssParser = _dereq_(11);
 
 var _parserMssParser2 = _interopRequireDefault(_parserMssParser);
+
+var _errorsMssErrors = _dereq_(9);
+
+var _errorsMssErrors2 = _interopRequireDefault(_errorsMssErrors);
+
+var _streamingVoDashJSError = _dereq_(13);
+
+var _streamingVoDashJSError2 = _interopRequireDefault(_streamingVoDashJSError);
 
 function MssHandler(config) {
 
@@ -1666,11 +1777,11 @@ function MssHandler(config) {
     var events = config.events;
     var constants = config.constants;
     var initSegmentType = config.initSegmentType;
-    var metricsModel = config.metricsModel;
+    var dashMetrics = config.dashMetrics;
     var playbackController = config.playbackController;
     var protectionController = config.protectionController;
     var mssFragmentProcessor = (0, _MssFragmentProcessor2['default'])(context).create({
-        metricsModel: metricsModel,
+        dashMetrics: dashMetrics,
         playbackController: playbackController,
         protectionController: protectionController,
         eventBus: eventBus,
@@ -1679,9 +1790,8 @@ function MssHandler(config) {
         debug: config.debug,
         errHandler: config.errHandler
     });
-    var mssParser = undefined;
-
-    var instance = undefined;
+    var mssParser = undefined,
+        instance = undefined;
 
     function setup() {}
 
@@ -1690,25 +1800,22 @@ function MssHandler(config) {
         var request = new _streamingVoFragmentRequest2['default']();
         var representationController = streamProcessor.getRepresentationController();
         var representation = representationController.getCurrentRepresentation();
-        var period = undefined,
-            presentationStartTime = undefined;
-
-        period = representation.adaptation.period;
 
         request.mediaType = representation.adaptation.type;
         request.type = initSegmentType;
         request.range = representation.range;
-        presentationStartTime = period.start;
-        //request.availabilityStartTime = timelineConverter.calcAvailabilityStartTimeFromPresentationTime(presentationStartTime, representation.adaptation.period.mpd, isDynamic);
-        //request.availabilityEndTime = timelineConverter.calcAvailabilityEndTimeFromPresentationTime(presentationStartTime + period.duration, period.mpd, isDynamic);
         request.quality = representation.index;
         request.mediaInfo = streamProcessor.getMediaInfo();
         request.representationId = representation.id;
 
         var chunk = createDataChunk(request, streamProcessor.getStreamInfo().id, e.type !== events.FRAGMENT_LOADING_PROGRESS);
 
-        // Generate initialization segment (moov)
-        chunk.bytes = mssFragmentProcessor.generateMoov(representation);
+        try {
+            // Generate initialization segment (moov)
+            chunk.bytes = mssFragmentProcessor.generateMoov(representation);
+        } catch (e) {
+            config.errHandler.error(new _streamingVoDashJSError2['default'](e.code, e.message, e.data));
+        }
 
         eventBus.trigger(events.INIT_FRAGMENT_LOADED, {
             chunk: chunk,
@@ -1736,6 +1843,45 @@ function MssHandler(config) {
         return chunk;
     }
 
+    function startFragmentInfoControllers() {
+
+        var streamController = playbackController.getStreamController();
+        if (!streamController) {
+            return;
+        }
+
+        // Create MssFragmentInfoControllers for each StreamProcessor of active stream (only for audio, video or fragmentedText)
+        var processors = streamController.getActiveStreamProcessors();
+        processors.forEach(function (processor) {
+            if (processor.getType() === constants.VIDEO || processor.getType() === constants.AUDIO || processor.getType() === constants.FRAGMENTED_TEXT) {
+
+                // Check MssFragmentInfoController already registered to StreamProcessor
+                var i = undefined;
+                var alreadyRegistered = false;
+                var externalControllers = processor.getExternalControllers();
+                for (i = 0; i < externalControllers.length; i++) {
+                    if (externalControllers[i].controllerType && externalControllers[i].controllerType === 'MssFragmentInfoController') {
+                        alreadyRegistered = true;
+                    }
+                }
+
+                if (!alreadyRegistered) {
+                    var fragmentInfoController = (0, _MssFragmentInfoController2['default'])(context).create({
+                        streamProcessor: processor,
+                        eventBus: eventBus,
+                        dashMetrics: dashMetrics,
+                        playbackController: playbackController,
+                        baseURLController: config.baseURLController,
+                        ISOBoxer: config.ISOBoxer,
+                        debug: config.debug
+                    });
+                    fragmentInfoController.initialize();
+                    fragmentInfoController.start();
+                }
+            }
+        });
+    }
+
     function onSegmentMediaLoaded(e) {
         if (e.error) {
             return;
@@ -1743,43 +1889,23 @@ function MssHandler(config) {
         // Process moof to transcode it from MSS to DASH
         var streamProcessor = e.sender.getStreamProcessor();
         mssFragmentProcessor.processFragment(e, streamProcessor);
+
+        // Start MssFragmentInfoControllers in case of start-over streams
+        var streamInfo = streamProcessor.getStreamInfo();
+        if (!streamInfo.manifestInfo.isDynamic && streamInfo.manifestInfo.DVRWindowSize !== Infinity) {
+            startFragmentInfoControllers();
+        }
+    }
+
+    function onPlaybackPaused() {
+        if (playbackController.getIsDynamic() && playbackController.getTime() !== 0) {
+            startFragmentInfoControllers();
+        }
     }
 
     function onPlaybackSeekAsked() {
         if (playbackController.getIsDynamic() && playbackController.getTime() !== 0) {
-
-            //create fragment info controllers for each stream processors of active stream (only for audio, video or fragmentedText)
-            var streamController = playbackController.getStreamController();
-            if (streamController) {
-                var processors = streamController.getActiveStreamProcessors();
-                processors.forEach(function (processor) {
-                    if (processor.getType() === constants.VIDEO || processor.getType() === constants.AUDIO || processor.getType() === constants.FRAGMENTED_TEXT) {
-
-                        // check that there is no fragment info controller registered to processor
-                        var i = undefined;
-                        var alreadyRegistered = false;
-                        var externalControllers = processor.getExternalControllers();
-                        for (i = 0; i < externalControllers.length; i++) {
-                            if (externalControllers[i].controllerType && externalControllers[i].controllerType === 'MssFragmentInfoController') {
-                                alreadyRegistered = true;
-                            }
-                        }
-
-                        if (!alreadyRegistered) {
-                            var fragmentInfoController = (0, _MssFragmentInfoController2['default'])(context).create({
-                                streamProcessor: processor,
-                                eventBus: eventBus,
-                                metricsModel: metricsModel,
-                                playbackController: playbackController,
-                                ISOBoxer: config.ISOBoxer,
-                                debug: config.debug
-                            });
-                            fragmentInfoController.initialize();
-                            fragmentInfoController.start();
-                        }
-                    }
-                });
-            }
+            startFragmentInfoControllers();
         }
     }
 
@@ -1788,13 +1914,12 @@ function MssHandler(config) {
             return;
         }
 
-        while (ttmlSubtitles.data.indexOf('http://www.w3.org/2006/10/ttaf1') !== -1) {
-            ttmlSubtitles.data = ttmlSubtitles.data.replace('http://www.w3.org/2006/10/ttaf1', 'http://www.w3.org/ns/ttml');
-        }
+        ttmlSubtitles.data = ttmlSubtitles.data.replace(/http:\/\/www.w3.org\/2006\/10\/ttaf1/gi, 'http://www.w3.org/ns/ttml');
     }
 
     function registerEvents() {
         eventBus.on(events.INIT_REQUESTED, onInitializationRequested, instance, dashjs.FactoryMaker.getSingletonFactoryByName(eventBus.getClassName()).EVENT_PRIORITY_HIGH); /* jshint ignore:line */
+        eventBus.on(events.PLAYBACK_PAUSED, onPlaybackPaused, instance, dashjs.FactoryMaker.getSingletonFactoryByName(eventBus.getClassName()).EVENT_PRIORITY_HIGH); /* jshint ignore:line */
         eventBus.on(events.PLAYBACK_SEEK_ASKED, onPlaybackSeekAsked, instance, dashjs.FactoryMaker.getSingletonFactoryByName(eventBus.getClassName()).EVENT_PRIORITY_HIGH); /* jshint ignore:line */
         eventBus.on(events.FRAGMENT_LOADING_COMPLETED, onSegmentMediaLoaded, instance, dashjs.FactoryMaker.getSingletonFactoryByName(eventBus.getClassName()).EVENT_PRIORITY_HIGH); /* jshint ignore:line */
         eventBus.on(events.TTML_TO_PARSE, onTTMLPreProcess, instance);
@@ -1802,6 +1927,7 @@ function MssHandler(config) {
 
     function reset() {
         eventBus.off(events.INIT_REQUESTED, onInitializationRequested, this);
+        eventBus.off(events.PLAYBACK_PAUSED, onPlaybackPaused, this);
         eventBus.off(events.PLAYBACK_SEEK_ASKED, onPlaybackSeekAsked, this);
         eventBus.off(events.FRAGMENT_LOADING_COMPLETED, onSegmentMediaLoaded, this);
         eventBus.off(events.TTML_TO_PARSE, onTTMLPreProcess, this);
@@ -1824,11 +1950,94 @@ function MssHandler(config) {
 }
 
 MssHandler.__dashjs_factory_name = 'MssHandler';
-exports['default'] = dashjs.FactoryMaker.getClassFactory(MssHandler);
+var factory = dashjs.FactoryMaker.getClassFactory(MssHandler); /* jshint ignore:line */
+factory.errors = _errorsMssErrors2['default'];
+dashjs.FactoryMaker.updateClassFactory(MssHandler.__dashjs_factory_name, factory); /* jshint ignore:line */
+exports['default'] = factory;
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{"10":10,"11":11,"3":3,"6":6,"9":9}],8:[function(_dereq_,module,exports){
+},{"11":11,"13":13,"14":14,"15":15,"4":4,"7":7,"9":9}],9:[function(_dereq_,module,exports){
+/**
+ * The copyright in this software is being made available under the BSD License,
+ * included below. This software may be subject to other third party and contributor
+ * rights, including patent rights, and no such rights are granted under this license.
+ *
+ * Copyright (c) 2013, Dash Industry Forum.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *  * Redistributions of source code must retain the above copyright notice, this
+ *  list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *  this list of conditions and the following disclaimer in the documentation and/or
+ *  other materials provided with the distribution.
+ *  * Neither the name of Dash Industry Forum nor the names of its
+ *  contributors may be used to endorse or promote products derived from this software
+ *  without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS AND ANY
+ *  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ *  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ *  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ */
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var _coreErrorsErrorsBase = _dereq_(1);
+
+var _coreErrorsErrorsBase2 = _interopRequireDefault(_coreErrorsErrorsBase);
+
+/**
+ * @class
+ *
+ */
+
+var MssErrors = (function (_ErrorsBase) {
+  _inherits(MssErrors, _ErrorsBase);
+
+  function MssErrors() {
+    _classCallCheck(this, MssErrors);
+
+    _get(Object.getPrototypeOf(MssErrors.prototype), 'constructor', this).call(this);
+    /**
+     * Error code returned when no tfrf box is detected in MSS live stream
+     */
+    this.MSS_NO_TFRF_CODE = 200;
+    this.MSS_UNSUPPORTED_CODEC_CODE = 201;
+    /**
+     * Error message returned when no tfrf box is detected in MSS live stream
+     */
+    this.MSS_NO_TFRF_MESSAGE = 'Missing tfrf in live media segment';
+    this.MSS_UNSUPPORTED_CODEC_MESSAGE = 'Unsupported codec';
+  }
+
+  return MssErrors;
+})(_coreErrorsErrorsBase2['default']);
+
+var mssErrors = new MssErrors();
+exports['default'] = mssErrors;
+module.exports = exports['default'];
+
+},{"1":1}],10:[function(_dereq_,module,exports){
 (function (global){
 /**
  * The copyright in this software is being made available under the BSD License,
@@ -1869,7 +2078,7 @@ Object.defineProperty(exports, '__esModule', {
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _MssHandler = _dereq_(7);
+var _MssHandler = _dereq_(8);
 
 var _MssHandler2 = _interopRequireDefault(_MssHandler);
 
@@ -1888,7 +2097,7 @@ exports.MssHandler = _MssHandler2['default'];
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"7":7}],9:[function(_dereq_,module,exports){
+},{"8":8}],11:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -1934,6 +2143,7 @@ function MssParser(config) {
     var BASE64 = config.BASE64;
     var debug = config.debug;
     var constants = config.constants;
+    var manifestModel = config.manifestModel;
 
     var DEFAULT_TIME_SCALE = 10000000.0;
     var SUPPORTED_CODECS = ['AAC', 'AACL', 'AVC1', 'H264', 'TTML', 'DFXP'];
@@ -2106,7 +2316,6 @@ function MssParser(config) {
         // Check if codec is supported
         if (SUPPORTED_CODECS.indexOf(fourCCValue.toUpperCase()) === -1) {
             // Do not send warning
-            //this.errHandler.sendWarning(MediaPlayer.dependencies.ErrorHandler.prototype.MEDIA_ERR_CODEC_UNSUPPORTED, 'Codec not supported', {codec: fourCCValue});
             logger.warn('Codec not supported: ' + fourCCValue);
             return null;
         }
@@ -2227,10 +2436,10 @@ function MssParser(config) {
         var segmentTimeline = {};
         var chunks = streamIndex.getElementsByTagName('c');
         var segments = [];
-        var segment = undefined;
-        var prevSegment = undefined;
-        var tManifest = undefined;
-        var i = undefined,
+        var segment = undefined,
+            prevSegment = undefined,
+            tManifest = undefined,
+            i = undefined,
             j = undefined,
             r = undefined;
         var duration = 0;
@@ -2263,6 +2472,7 @@ function MssParser(config) {
                     } else {
                         prevSegment.d = segment.t - prevSegment.t;
                     }
+                    duration += prevSegment.d;
                 }
                 // Set segment absolute timestamp if not set in manifest
                 if (!segment.t) {
@@ -2275,7 +2485,9 @@ function MssParser(config) {
                 }
             }
 
-            duration += segment.d;
+            if (segment.d) {
+                duration += segment.d;
+            }
 
             // Create new segment
             segments.push(segment);
@@ -2474,17 +2686,34 @@ function MssParser(config) {
         manifest.type = smoothStreamingMedia.getAttribute('IsLive') === 'TRUE' ? 'dynamic' : 'static';
         timescale = smoothStreamingMedia.getAttribute('TimeScale');
         manifest.timescale = timescale ? parseFloat(timescale) : DEFAULT_TIME_SCALE;
-        manifest.timeShiftBufferDepth = parseFloat(smoothStreamingMedia.getAttribute('DVRWindowLength')) / manifest.timescale;
-        manifest.mediaPresentationDuration = parseFloat(smoothStreamingMedia.getAttribute('Duration')) === 0 ? Infinity : parseFloat(smoothStreamingMedia.getAttribute('Duration')) / manifest.timescale;
-        manifest.minBufferTime = mediaPlayerModel.getStableBufferTime();
+        var dvrWindowLength = parseFloat(smoothStreamingMedia.getAttribute('DVRWindowLength'));
+        if (dvrWindowLength === 0 && smoothStreamingMedia.getAttribute('CanSeek') === 'TRUE') {
+            dvrWindowLength = Infinity;
+        }
+        if (dvrWindowLength > 0) {
+            manifest.timeShiftBufferDepth = dvrWindowLength / manifest.timescale;
+        }
+
+        var duration = parseFloat(smoothStreamingMedia.getAttribute('Duration'));
+        manifest.mediaPresentationDuration = duration === 0 ? Infinity : duration / manifest.timescale;
+        // By default, set minBufferTime to 2 sec. (but set below according to video segment duration)
+        manifest.minBufferTime = 2;
         manifest.ttmlTimeIsRelative = true;
 
+        // Live manifest with Duration = start-over
+        if (manifest.type === 'dynamic' && duration > 0) {
+            manifest.type = 'static';
+            // We set timeShiftBufferDepth to initial duration, to be used by MssFragmentController to update segment timeline
+            manifest.timeShiftBufferDepth = duration / manifest.timescale;
+            // Duration will be set according to current segment timeline duration (see below)
+        }
+
         // In case of live streams, set availabilityStartTime property according to DVRWindowLength
-        if (manifest.type === 'dynamic') {
+        if (manifest.type === 'dynamic' && manifest.timeShiftBufferDepth < Infinity) {
             manifest.availabilityStartTime = new Date(manifestLoadedTime.getTime() - manifest.timeShiftBufferDepth * 1000);
             manifest.refreshManifestOnSwitchTrack = true;
-            manifest.doNotUpdateDVRWindowOnBufferUpdated = true; // done by Mss fragment processor
-            manifest.ignorePostponeTimePeriod = true; // in Mss, manifest is never updated
+            manifest.doNotUpdateDVRWindowOnBufferUpdated = true; // DVRWindow is update by MssFragmentMoofPocessor based on tfrf boxes
+            manifest.ignorePostponeTimePeriod = true; // Never update manifest
         }
 
         // Map period node to manifest root node
@@ -2494,6 +2723,13 @@ function MssParser(config) {
         // Initialize period start time
         period = manifest.Period;
         period.start = 0;
+
+        // Uncomment to test live to static manifests
+        // if (manifest.type !== 'static') {
+        //     manifest.type = 'static';
+        //     manifest.mediaPresentationDuration = manifest.timeShiftBufferDepth;
+        //     manifest.timeShiftBufferDepth = null;
+        // }
 
         // ContentProtection node
         if (protection !== undefined) {
@@ -2530,9 +2766,18 @@ function MssParser(config) {
                 adaptations[i].ContentProtection_asArray = manifest.ContentProtection_asArray;
             }
 
+            // Set minBufferTime
+            if (adaptations[i].contentType === 'video') {
+                manifest.minBufferTime = adaptations[i].SegmentTemplate.SegmentTimeline.S_asArray[0].d / adaptations[i].SegmentTemplate.timescale * 2;
+            }
+
             if (manifest.type === 'dynamic') {
+                // Set availabilityStartTime for infinite DVR Window from segment timeline duration
+                if (manifest.timeShiftBufferDepth === Infinity) {
+                    manifest.availabilityStartTime = new Date(manifestLoadedTime.getTime() - adaptations[i].SegmentTemplate.SegmentTimeline.duration * 1000);
+                }
                 // Match timeShiftBufferDepth to video segment timeline duration
-                if (manifest.timeShiftBufferDepth > 0 && adaptations[i].contentType === 'video' && manifest.timeShiftBufferDepth > adaptations[i].SegmentTemplate.SegmentTimeline.duration) {
+                if (manifest.timeShiftBufferDepth > 0 && manifest.timeShiftBufferDepth !== Infinity && adaptations[i].contentType === 'video' && manifest.timeShiftBufferDepth > adaptations[i].SegmentTemplate.SegmentTimeline.duration) {
                     manifest.timeShiftBufferDepth = adaptations[i].SegmentTemplate.SegmentTimeline.duration;
                 }
             }
@@ -2550,22 +2795,29 @@ function MssParser(config) {
         // Then determine timestamp offset according to higher audio/video start time
         // (use case = live stream delinearization)
         if (manifest.type === 'static') {
-            for (i = 0; i < adaptations.length; i++) {
-                if (adaptations[i].contentType === 'audio' || adaptations[i].contentType === 'video') {
-                    segments = adaptations[i].SegmentTemplate.SegmentTimeline.S_asArray;
-                    startTime = segments[0].t / adaptations[i].SegmentTemplate.timescale;
-                    if (timestampOffset === undefined) {
-                        timestampOffset = startTime;
+            // In case of start-over stream and manifest reloading (due to track switch)
+            // we consider previous timestampOffset to keep timelines synchronized
+            var prevManifest = manifestModel.getValue();
+            if (prevManifest && prevManifest.timestampOffset) {
+                timestampOffset = prevManifest.timestampOffset;
+            } else {
+                for (i = 0; i < adaptations.length; i++) {
+                    if (adaptations[i].contentType === 'audio' || adaptations[i].contentType === 'video') {
+                        segments = adaptations[i].SegmentTemplate.SegmentTimeline.S_asArray;
+                        startTime = segments[0].t / adaptations[i].SegmentTemplate.timescale;
+                        if (timestampOffset === undefined) {
+                            timestampOffset = startTime;
+                        }
+                        timestampOffset = Math.min(timestampOffset, startTime);
+                        // Correct content duration according to minimum adaptation's segment timeline duration
+                        // in order to force <video> element sending 'ended' event
+                        manifest.mediaPresentationDuration = Math.min(manifest.mediaPresentationDuration, adaptations[i].SegmentTemplate.SegmentTimeline.duration);
                     }
-                    timestampOffset = Math.min(timestampOffset, startTime);
-                    // Correct content duration according to minimum adaptation's segments duration
-                    // in order to force <video> element sending 'ended' event
-                    manifest.mediaPresentationDuration = Math.min(manifest.mediaPresentationDuration, adaptations[i].SegmentTemplate.SegmentTimeline.duration);
                 }
             }
-
             // Patch segment templates timestamps and determine period start time (since audio/video should not be aligned to 0)
             if (timestampOffset > 0) {
+                manifest.timestampOffset = timestampOffset;
                 for (i = 0; i < adaptations.length; i++) {
                     segments = adaptations[i].SegmentTemplate.SegmentTimeline.S_asArray;
                     for (j = 0; j < segments.length; j++) {
@@ -2583,6 +2835,8 @@ function MssParser(config) {
             }
         }
 
+        // Floor the duration to get around precision differences between segments timestamps and MSE buffer timestamps
+        // and the avoid 'ended' event not being raised
         manifest.mediaPresentationDuration = Math.floor(manifest.mediaPresentationDuration * 1000) / 1000;
         period.duration = manifest.mediaPresentationDuration;
 
@@ -2653,7 +2907,454 @@ exports['default'] = dashjs.FactoryMaker.getClassFactory(MssParser);
 /* jshint ignore:line */
 module.exports = exports['default'];
 
-},{}],10:[function(_dereq_,module,exports){
+},{}],12:[function(_dereq_,module,exports){
+/**
+ * The copyright in this software is being made available under the BSD License,
+ * included below. This software may be subject to other third party and contributor
+ * rights, including patent rights, and no such rights are granted under this license.
+ *
+ * Copyright (c) 2013, Dash Industry Forum.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *  * Redistributions of source code must retain the above copyright notice, this
+ *  list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *  this list of conditions and the following disclaimer in the documentation and/or
+ *  other materials provided with the distribution.
+ *  * Neither the name of Dash Industry Forum nor the names of its
+ *  contributors may be used to endorse or promote products derived from this software
+ *  without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS AND ANY
+ *  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ *  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ *  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ */
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var _coreEventsEventsBase = _dereq_(2);
+
+var _coreEventsEventsBase2 = _interopRequireDefault(_coreEventsEventsBase);
+
+/**
+ * @class
+ *
+ */
+
+var MediaPlayerEvents = (function (_EventsBase) {
+  _inherits(MediaPlayerEvents, _EventsBase);
+
+  /**
+   * @description Public facing external events to be used when developing a player that implements dash.js.
+   */
+
+  function MediaPlayerEvents() {
+    _classCallCheck(this, MediaPlayerEvents);
+
+    _get(Object.getPrototypeOf(MediaPlayerEvents.prototype), 'constructor', this).call(this);
+
+    /**
+     * Triggered when all mediaInfo has been loaded on OfflineStream
+     * Return a list of available bitrateInfo needed to download stream.
+     */
+    this.DOWNLOADABLE_REPRESENTATIONS_LOADED = 'downloadableRepresentationsInfoLoaded';
+
+    /**
+     * Triggered when all mediaInfo has been loaded on OfflineStream
+     * Return a list of available bitrateInfo needed to download stream.
+     */
+    this.AVAILABLE_BITRATES_LOADED = 'availableBitratesLoaded';
+
+    /**
+     * Triggered when playback will not start yet
+     * as the MPD's availabilityStartTime is in the future.
+     * Check delay property in payload to determine time before playback will start.
+     */
+    this.AST_IN_FUTURE = 'astInFuture';
+
+    /**
+     * Triggered when the video element's buffer state changes to stalled.
+     * Check mediaType in payload to determine type (Video, Audio, FragmentedText).
+     * @event MediaPlayerEvents#BUFFER_EMPTY
+     */
+    this.BUFFER_EMPTY = 'bufferStalled';
+
+    /**
+     * Triggered when the video element's buffer state changes to loaded.
+     * Check mediaType in payload to determine type (Video, Audio, FragmentedText).
+     * @event MediaPlayerEvents#BUFFER_LOADED
+     */
+    this.BUFFER_LOADED = 'bufferLoaded';
+
+    /**
+     * Triggered when the video element's buffer state changes, either stalled or loaded. Check payload for state.
+     * @event MediaPlayerEvents#BUFFER_LEVEL_STATE_CHANGED
+     */
+    this.BUFFER_LEVEL_STATE_CHANGED = 'bufferStateChanged';
+
+    /**
+     * Triggered when there is an error from the element or MSE source buffer.
+     * @event MediaPlayerEvents#ERROR
+     */
+    this.ERROR = 'error';
+
+    /* Triggered when the downloading is initialize and started
+    * @event MediaPlayerEvents#DOWNLOADING_STOPPED
+    */
+    this.DOWNLOADING_STARTED = 'downloadingStarted';
+
+    /**
+     * Triggered when the user stop current downloading
+     * @event MediaPlayerEvents#DOWNLOADING_STOPPED
+     */
+    this.DOWNLOADING_STOPPED = 'downloadingStopped';
+
+    /**
+     * Triggered when all fragments has been downloaded
+     * @event MediaPlayerEvents#DOWNLOADING_FINISHED
+     */
+    this.DOWNLOADING_FINISHED = 'downloadingFinished';
+
+    /**
+     * Triggered when a fragment download has completed.
+     * @event MediaPlayerEvents#FRAGMENT_LOADING_COMPLETED
+     */
+    this.FRAGMENT_LOADING_COMPLETED = 'fragmentLoadingCompleted';
+
+    /**
+     * Triggered when a partial fragment download has completed.
+     * @event MediaPlayerEvents#FRAGMENT_LOADING_PROGRESS
+     */
+    this.FRAGMENT_LOADING_PROGRESS = 'fragmentLoadingProgress';
+    /**
+     * Triggered when a fragment download has started.
+     * @event MediaPlayerEvents#FRAGMENT_LOADING_STARTED
+     */
+    this.FRAGMENT_LOADING_STARTED = 'fragmentLoadingStarted';
+
+    /**
+     * Triggered when a fragment download is abandoned due to detection of slow download base on the ABR abandon rule..
+     * @event MediaPlayerEvents#FRAGMENT_LOADING_ABANDONED
+     */
+    this.FRAGMENT_LOADING_ABANDONED = 'fragmentLoadingAbandoned';
+
+    /**
+     * Triggered when {@link module:Debug} logger methods are called.
+     * @event MediaPlayerEvents#LOG
+     */
+    this.LOG = 'log';
+
+    //TODO refactor with internal event
+    /**
+     * Triggered when the manifest load is complete
+     * @event MediaPlayerEvents#MANIFEST_LOADED
+     */
+    this.MANIFEST_LOADED = 'manifestLoaded';
+
+    /**
+     * Triggered anytime there is a change to the overall metrics.
+     * @event MediaPlayerEvents#METRICS_CHANGED
+     */
+    this.METRICS_CHANGED = 'metricsChanged';
+
+    /**
+     * Triggered when an individual metric is added, updated or cleared.
+     * @event MediaPlayerEvents#METRIC_CHANGED
+     */
+    this.METRIC_CHANGED = 'metricChanged';
+
+    /**
+     * Triggered every time a new metric is added.
+     * @event MediaPlayerEvents#METRIC_ADDED
+     */
+    this.METRIC_ADDED = 'metricAdded';
+
+    /**
+     * Triggered every time a metric is updated.
+     * @event MediaPlayerEvents#METRIC_UPDATED
+     */
+    this.METRIC_UPDATED = 'metricUpdated';
+
+    /**
+     * Triggered at the stream end of a period.
+     * @event MediaPlayerEvents#PERIOD_SWITCH_COMPLETED
+     */
+    this.PERIOD_SWITCH_COMPLETED = 'periodSwitchCompleted';
+
+    /**
+     * Triggered when a new period starts.
+     * @event MediaPlayerEvents#PERIOD_SWITCH_STARTED
+     */
+    this.PERIOD_SWITCH_STARTED = 'periodSwitchStarted';
+
+    /**
+     * Triggered when an ABR up /down switch is initiated; either by user in manual mode or auto mode via ABR rules.
+     * @event MediaPlayerEvents#QUALITY_CHANGE_REQUESTED
+     */
+    this.QUALITY_CHANGE_REQUESTED = 'qualityChangeRequested';
+
+    /**
+     * Triggered when the new ABR quality is being rendered on-screen.
+     * @event MediaPlayerEvents#QUALITY_CHANGE_RENDERED
+     */
+    this.QUALITY_CHANGE_RENDERED = 'qualityChangeRendered';
+
+    /**
+     * Triggered when the new track is being rendered.
+     * @event MediaPlayerEvents#TRACK_CHANGE_RENDERED
+     */
+    this.TRACK_CHANGE_RENDERED = 'trackChangeRendered';
+
+    /**
+     * Triggered when the source is setup and ready.
+     * @event MediaPlayerEvents#SOURCE_INITIALIZED
+     */
+    this.SOURCE_INITIALIZED = 'sourceInitialized';
+
+    /**
+     * Triggered when a stream (period) is loaded
+     * @event MediaPlayerEvents#STREAM_INITIALIZED
+     */
+    this.STREAM_INITIALIZED = 'streamInitialized';
+
+    /**
+     * Triggered when the player has been reset.
+     * @event MediaPlayerEvents#STREAM_TEARDOWN_COMPLETE
+     */
+    this.STREAM_TEARDOWN_COMPLETE = 'streamTeardownComplete';
+
+    /**
+     * Triggered once all text tracks detected in the MPD are added to the video element.
+     * @event MediaPlayerEvents#TEXT_TRACKS_ADDED
+     */
+    this.TEXT_TRACKS_ADDED = 'allTextTracksAdded';
+
+    /**
+     * Triggered when a text track is added to the video element's TextTrackList
+     * @event MediaPlayerEvents#TEXT_TRACK_ADDED
+     */
+    this.TEXT_TRACK_ADDED = 'textTrackAdded';
+
+    /**
+     * Triggered when a ttml chunk is parsed.
+     * @event MediaPlayerEvents#TTML_PARSED
+     */
+    this.TTML_PARSED = 'ttmlParsed';
+
+    /**
+     * Triggered when a ttml chunk has to be parsed.
+     * @event MediaPlayerEvents#TTML_TO_PARSE
+     */
+    this.TTML_TO_PARSE = 'ttmlToParse';
+
+    /**
+     * Triggered when a caption is rendered.
+     * @event MediaPlayerEvents#CAPTION_RENDERED
+     */
+    this.CAPTION_RENDERED = 'captionRendered';
+
+    /**
+     * Triggered when the caption container is resized.
+     * @event MediaPlayerEvents#CAPTION_CONTAINER_RESIZE
+     */
+    this.CAPTION_CONTAINER_RESIZE = 'captionContainerResize';
+
+    /**
+     * Sent when enough data is available that the media can be played,
+     * at least for a couple of frames.  This corresponds to the
+     * HAVE_ENOUGH_DATA readyState.
+     * @event MediaPlayerEvents#CAN_PLAY
+     */
+    this.CAN_PLAY = 'canPlay';
+
+    /**
+     * Sent when playback completes.
+     * @event MediaPlayerEvents#PLAYBACK_ENDED
+     */
+    this.PLAYBACK_ENDED = 'playbackEnded';
+
+    /**
+     * Sent when an error occurs.  The element's error
+     * attribute contains more information.
+     * @event MediaPlayerEvents#PLAYBACK_ERROR
+     */
+    this.PLAYBACK_ERROR = 'playbackError';
+
+    /**
+     * Sent when playback is not allowed (for example if user gesture is needed).
+     * @event MediaPlayerEvents#PLAYBACK_NOT_ALLOWED
+     */
+    this.PLAYBACK_NOT_ALLOWED = 'playbackNotAllowed';
+
+    /**
+     * The media's metadata has finished loading; all attributes now
+     * contain as much useful information as they're going to.
+     * @event MediaPlayerEvents#PLAYBACK_METADATA_LOADED
+     */
+    this.PLAYBACK_METADATA_LOADED = 'playbackMetaDataLoaded';
+
+    /**
+     * Sent when playback is paused.
+     * @event MediaPlayerEvents#PLAYBACK_PAUSED
+     */
+    this.PLAYBACK_PAUSED = 'playbackPaused';
+
+    /**
+     * Sent when the media begins to play (either for the first time, after having been paused,
+     * or after ending and then restarting).
+     *
+     * @event MediaPlayerEvents#PLAYBACK_PLAYING
+     */
+    this.PLAYBACK_PLAYING = 'playbackPlaying';
+
+    /**
+     * Sent periodically to inform interested parties of progress downloading
+     * the media. Information about the current amount of the media that has
+     * been downloaded is available in the media element's buffered attribute.
+     * @event MediaPlayerEvents#PLAYBACK_PROGRESS
+     */
+    this.PLAYBACK_PROGRESS = 'playbackProgress';
+
+    /**
+     * Sent when the playback speed changes.
+     * @event MediaPlayerEvents#PLAYBACK_RATE_CHANGED
+     */
+    this.PLAYBACK_RATE_CHANGED = 'playbackRateChanged';
+
+    /**
+     * Sent when a seek operation completes.
+     * @event MediaPlayerEvents#PLAYBACK_SEEKED
+     */
+    this.PLAYBACK_SEEKED = 'playbackSeeked';
+
+    /**
+     * Sent when a seek operation begins.
+     * @event MediaPlayerEvents#PLAYBACK_SEEKING
+     */
+    this.PLAYBACK_SEEKING = 'playbackSeeking';
+
+    /**
+     * Sent when a seek operation has been asked.
+     * @event MediaPlayerEvents#PLAYBACK_SEEK_ASKED
+     */
+    this.PLAYBACK_SEEK_ASKED = 'playbackSeekAsked';
+
+    /**
+     * Sent when the video element reports stalled
+     * @event MediaPlayerEvents#PLAYBACK_STALLED
+     */
+    this.PLAYBACK_STALLED = 'playbackStalled';
+
+    /**
+     * Sent when playback of the media starts after having been paused;
+     * that is, when playback is resumed after a prior pause event.
+     *
+     * @event MediaPlayerEvents#PLAYBACK_STARTED
+     */
+    this.PLAYBACK_STARTED = 'playbackStarted';
+
+    /**
+     * The time indicated by the element's currentTime attribute has changed.
+     * @event MediaPlayerEvents#PLAYBACK_TIME_UPDATED
+     */
+    this.PLAYBACK_TIME_UPDATED = 'playbackTimeUpdated';
+
+    /**
+     * Sent when the media playback has stopped because of a temporary lack of data.
+     *
+     * @event MediaPlayerEvents#PLAYBACK_WAITING
+     */
+    this.PLAYBACK_WAITING = 'playbackWaiting';
+
+    /**
+     * Manifest validity changed - As a result of an MPD validity expiration event.
+     * @event MediaPlayerEvents#MANIFEST_VALIDITY_CHANGED
+     */
+    this.MANIFEST_VALIDITY_CHANGED = 'manifestValidityChanged';
+  }
+
+  return MediaPlayerEvents;
+})(_coreEventsEventsBase2['default']);
+
+var mediaPlayerEvents = new MediaPlayerEvents();
+exports['default'] = mediaPlayerEvents;
+module.exports = exports['default'];
+
+},{"2":2}],13:[function(_dereq_,module,exports){
+/**
+ * The copyright in this software is being made available under the BSD License,
+ * included below. This software may be subject to other third party and contributor
+ * rights, including patent rights, and no such rights are granted under this license.
+ *
+ * Copyright (c) 2013, Dash Industry Forum.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *  * Redistributions of source code must retain the above copyright notice, this
+ *  list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *  this list of conditions and the following disclaimer in the documentation and/or
+ *  other materials provided with the distribution.
+ *  * Neither the name of Dash Industry Forum nor the names of its
+ *  contributors may be used to endorse or promote products derived from this software
+ *  without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS AND ANY
+ *  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ *  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ *  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * @class
+ * @ignore
+ */
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var DashJSError = function DashJSError(code, message, data) {
+  _classCallCheck(this, DashJSError);
+
+  this.code = code || null;
+  this.message = message || null;
+  this.data = data || null;
+};
+
+exports["default"] = DashJSError;
+module.exports = exports["default"];
+
+},{}],14:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -2718,7 +3419,7 @@ function DataChunk() {
 exports["default"] = DataChunk;
 module.exports = exports["default"];
 
-},{}],11:[function(_dereq_,module,exports){
+},{}],15:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -2795,5 +3496,5 @@ FragmentRequest.ACTION_COMPLETE = 'complete';
 exports['default'] = FragmentRequest;
 module.exports = exports['default'];
 
-},{}]},{},[8])
+},{}]},{},[10])
 //# sourceMappingURL=dash.mss.debug.js.map
