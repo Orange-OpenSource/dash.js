@@ -1,14 +1,14 @@
 'use strict';
 
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js').then(function (registration) {
-        console.log('registered service work : ', registration);
-    }).catch(function (err) {
-        console.log('Registration failed : ', err);
-    });
-} else {
-    alert('serviceWorker is not supported for this browser !');
-}
+// if ('serviceWorker' in navigator) {
+//     navigator.serviceWorker.register('./service-worker.js').then(function (registration) {
+//         console.log('registered service work : ', registration);
+//     }).catch(function (err) {
+//         console.log('Registration failed : ', err);
+//     });
+// } else {
+//     alert('serviceWorker is not supported for this browser !');
+// }
 var app = angular.module('DashPlayer', ['DashSourcesService', 'DashContributorsService', 'DashIFTestVectorsService', 'angular-flot']); /* jshint ignore:line */
 
 $(document).ready(function () {
