@@ -242,6 +242,8 @@ declare namespace dashjs {
         removeAllABRCustomRule(): void;
         getLowLatencyEnabled(): boolean;
         setLowLatencyEnabled(value: boolean): void;
+        setFragmentRequestTimeout(value: number): void;
+        getFragmentRequestTimeout(): number;
         enableLowLatencyCatchUp(value: boolean): void;
         getLowLatencyMinDrift(): number;
         setLowLatencyMinDrift(value: number): void;

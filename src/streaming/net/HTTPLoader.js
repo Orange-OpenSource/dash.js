@@ -52,6 +52,7 @@ function HTTPLoader(cfg) {
     const requestModifier = cfg.requestModifier;
     const boxParser = cfg.boxParser;
     const useFetch = cfg.useFetch || false;
+    const requestTimeout = cfg.requestTimeout || 0;
 
     let logger,
         instance,
@@ -242,6 +243,17 @@ function HTTPLoader(cfg) {
             }
         };
 
+        const ontimeout = function (event) {
+            let timeoutMessage;
+            if (event.lengthComputable) {
+                let percentageComplete = (event.loaded / event.total) * 100;
+                timeoutMessage = 'Request timeout: loaded: ' + event.loaded + ', out of: ' + event.total + ' : ' + percentageComplete.toFixed(3) + '% Completed';
+            } else {
+                timeoutMessage = 'Request timeout: non-computable download size';
+            }
+            logger.warn(timeoutMessage);
+        };
+
         let loader;
         if (useFetch && window.fetch && request.responseType === 'arraybuffer' && request.type === HTTPRequest.MEDIA_SEGMENT_TYPE) {
             loader = FetchLoader(context).create({
@@ -269,7 +281,9 @@ function HTTPLoader(cfg) {
             onerror: onloadend,
             progress: progress,
             onabort: onabort,
-            loader: loader
+            ontimeout: ontimeout,
+            loader: loader,
+            timeout: requestTimeout
         };
 
         // Adds the ability to delay single fragment loading time to control buffer.

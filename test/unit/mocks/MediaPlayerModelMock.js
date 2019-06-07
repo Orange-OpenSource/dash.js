@@ -205,6 +205,7 @@ class MediaPlayerModelMock {
         this.xhrWithCredentials = {
             default: DEFAULT_XHR_WITH_CREDENTIALS
         };
+        this.fragmentRequestTimeout = 0;
         this.customABRRule = [];
 
         this.retryAttempts = {
@@ -552,6 +553,14 @@ class MediaPlayerModelMock {
 
     getCatchUpPlaybackRate() {
         return this.lowLatencyCatchUpPlaybackRate;
+    }
+
+    setFragmentRequestTimeout(value) {
+        this.fragmentRequestTimeout = value;
+    }
+
+    getFragmentRequestTimeout() {
+        return this.fragmentRequestTimeout;
     }
 
     reset() {

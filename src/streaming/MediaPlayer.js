@@ -1529,6 +1529,26 @@ function MediaPlayer() {
     }
 
     /**
+     * Sets the request timeout (in miliseconds) for requests sent via the HTTPLoader
+     * @param {number} value
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function setFragmentRequestTimeout(value) {
+        mediaPlayerModel.setFragmentRequestTimeout(value);
+    }
+
+    /**
+     * Gets the request timeout (in miliseconds) for requests sent via the HTTPLoader
+     * @return {number} The active request timeout in miliseconds
+     * @memberof module:MediaPlayer
+     * @instance
+     */
+    function getFragmentRequestTimeout() {
+        return mediaPlayerModel.getFragmentRequestTimeout();
+    }
+
+    /**
      * <p>Allows you to set a scheme and server source for UTC live edge detection for dynamic streams.
      * If UTCTiming is defined in the manifest, it will take precedence over any time source manually added.</p>
      * <p>If you have exposed the Date header, use the method {@link module:MediaPlayer#clearDefaultUTCTimingSources clearDefaultUTCTimingSources()}.
@@ -3223,6 +3243,8 @@ function MediaPlayer() {
         getSmallGapLimit: getSmallGapLimit,
         setLowLatencyEnabled: setLowLatencyEnabled,
         getLowLatencyEnabled: getLowLatencyEnabled,
+        setFragmentRequestTimeout: setFragmentRequestTimeout,
+        getFragmentRequestTimeout: getFragmentRequestTimeout,
         setCatchUpPlaybackRate: setCatchUpPlaybackRate,
         getCatchUpPlaybackRate: getCatchUpPlaybackRate,
         setLowLatencyMinDrift: setLowLatencyMinDrift,
