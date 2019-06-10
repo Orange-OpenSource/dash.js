@@ -156,7 +156,7 @@ function HTTPLoader(cfg) {
                 requests.splice(requests.indexOf(httpRequest), 1);
             }
 
-            if (httpRequest.response.status >= 200 && httpRequest.response.status <= 299) {
+            if (httpRequest.response.status >= 200 && httpRequest.response.status <= 299 && httpRequest.response.response) {
                 if (hasContentLengthMismatch(httpRequest.response)) {
                     handleLoaded(false);
                     if (remainingAttempts > 0) {
