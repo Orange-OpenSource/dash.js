@@ -156,7 +156,7 @@ function HTTPLoader(cfg) {
                 requests.splice(requests.indexOf(httpRequest), 1);
             }
 
-            if (httpRequest.response.status >= 200 && httpRequest.response.status <= 299 && httpRequest.response.response) {
+            if (httpRequest.response.status >= 200 && httpRequest.response.status <= 299) {
                 if (hasContentLengthMismatch(httpRequest.response)) {
                     handleLoaded(false);
                     if (remainingAttempts > 0) {
@@ -315,7 +315,7 @@ function HTTPLoader(cfg) {
     }
 
     function hasContentLengthMismatch(response) {
-        if (response && response.responseType === 'arraybuffer' && response.getResponseHeader) {
+        if (response && response.response && response.responseType === 'arraybuffer' && response.getResponseHeader) {
             const headerLength = response.getResponseHeader('content-length');
             const dataLength = response.response.byteLength;
 
