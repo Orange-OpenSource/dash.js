@@ -36,10 +36,13 @@ function BlackListController(config) {
 
     config = config || {};
     let blacklist = [];
+    let blacklistExpiryTime = 0;
+    let blacklistExpiryTimers = [];
 
     const eventBus = EventBus(this.context).getInstance();
     const updateEventName = config.updateEventName;
     const addBlacklistEventName = config.addBlacklistEventName;
+    const unblacklistEventName = config.unblacklistEventName;
 
     function contains(query) {
         if (!blacklist.length || !query || !query.length) {
@@ -55,6 +58,7 @@ function BlackListController(config) {
         }
 
         blacklist.push(entry);
+        setupBlacklistExpiry(entry);
 
         eventBus.trigger(
             updateEventName,
@@ -62,6 +66,35 @@ function BlackListController(config) {
                 entry: entry
             }
         );
+    }
+
+    function remove(entry) {
+        const index = blacklist.indexOf(entry);
+        if (index >= 0) {
+            blacklist.splice(index, 1);
+
+            eventBus.trigger(
+                unblacklistEventName, {
+                    entry: entry
+                }
+            );
+
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    function setupBlacklistExpiry(entry) {
+        if (blacklistExpiryTime > 0) {
+            blacklistExpiryTimers.push(setTimeout(function () {
+                remove(entry);
+            }, blacklistExpiryTime));
+        }
+    }
+
+    function setBlacklistExpiryTime(time) {
+        blacklistExpiryTime = time;
     }
 
     function onAddBlackList(e) {
@@ -76,12 +109,18 @@ function BlackListController(config) {
 
     function reset() {
         blacklist = [];
+        blacklistExpiryTime = 0;
+        for (var i = 0; i < blacklistExpiryTimers.length; i++) {
+            clearTimeout(blacklistExpiryTimers[i]);
+        }
+        blacklistExpiryTimers = [];
     }
 
     setup();
 
     return {
         add: add,
+        setBlacklistExpiryTime: setBlacklistExpiryTime,
         contains: contains,
         reset: reset
     };

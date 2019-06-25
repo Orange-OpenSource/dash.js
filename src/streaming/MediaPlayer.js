@@ -1,4 +1,5 @@
 /**
+ * setBlacklistExpiryTime: setBlacklistExpiryTime,
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
  * rights, including patent rights, and no such rights are granted under this license.
@@ -3110,6 +3111,10 @@ function MediaPlayer() {
         }
     }
 
+    function setBlacklistExpiryTime(time) {
+        streamController.setBlacklistExpiryTime(time);
+    }
+
     instance = {
         initialize: initialize,
         setConfig: setConfig,
@@ -3273,6 +3278,7 @@ function MediaPlayer() {
         setPortalLimitMinimum: setPortalLimitMinimum,
         getThumbnail: getThumbnail,
         keepProtectionMediaKeys: keepProtectionMediaKeys,
+        setBlacklistExpiryTime: setBlacklistExpiryTime,
         reset: reset
     };
 

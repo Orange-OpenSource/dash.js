@@ -106,6 +106,10 @@ function BaseURLController() {
         }
     }
 
+    function setBlacklistExpiryTime(time) {
+        baseURLSelector.setBlacklistExpiryTime(time);
+    }
+
     function reset() {
         baseURLTreeModel.reset();
         baseURLSelector.reset();
@@ -128,6 +132,7 @@ function BaseURLController() {
         reset: reset,
         initialize: initialize,
         resolve: resolve,
+        setBlacklistExpiryTime: setBlacklistExpiryTime,
         setConfig: setConfig
     };
 

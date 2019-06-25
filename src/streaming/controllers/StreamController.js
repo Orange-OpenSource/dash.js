@@ -1036,6 +1036,10 @@ function StreamController() {
         }
     }
 
+    function setBlacklistExpiryTime(time) {
+        baseURLController.setBlacklistExpiryTime(time);
+    }
+
     function refreshManifest() {
         manifestUpdater.refreshManifest();
     }
@@ -1056,6 +1060,7 @@ function StreamController() {
         setConfig: setConfig,
         refreshManifest: refreshManifest,
         setProtectionData: setProtectionData,
+        setBlacklistExpiryTime: setBlacklistExpiryTime,
         reset: reset
     };
 

@@ -340,6 +340,11 @@ class MediaPlayerEvents extends EventsBase {
          */
         this.SERVICE_LOCATION_BLACKLIST_CHANGED = 'serviceLocationBlacklistChanged';
         /**
+         * A service location has been removed from the blacklist and is available for failover again.
+         * @event MediaPlayerEvents#SERVICE_LOCATION_UNBLACKLISTED
+         */
+        this.SERVICE_LOCATION_UNBLACKLISTED = 'serviceLocationUnblacklisted';
+        /**
          * URL resolution failed
          * @event MediaPlayerEvents#URL_RESOLUTION_FAILED
          */
