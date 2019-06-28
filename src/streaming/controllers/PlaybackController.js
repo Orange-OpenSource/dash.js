@@ -663,7 +663,7 @@ function PlaybackController() {
                     ranges = bufferedRange[streamInfo.id].video;
                 }
                 if (checkTimeInRanges(earliestTime, ranges)) {
-                    if (!isSeeking() && !compatibleWithPreviousStream && earliestTime !== 0) {
+                    if (!isSeeking() && !compatibleWithPreviousStream) {
                         seek(earliestTime, true, true);
                     }
                     commonEarliestTime[streamInfo.id].started = true;

@@ -95,7 +95,6 @@ function StreamController() {
         audioTrackDetected,
         isStreamBufferingCompleted,
         playbackEndedTimerId,
-        preloadTimerId,
         wallclockTicked,
         buffers,
         compatible,
@@ -237,10 +236,6 @@ function StreamController() {
             isStreamBufferingCompleted = false;
         }
 
-        if (preloadTimerId) {
-            stopPreloadTimer();
-        }
-
         if ( seekingStream === activeStream && preloading ) {
             // Seeking to the current period was requested while preloading the next one, deactivate preloading one
             preloading.deactivate(true);
@@ -286,12 +281,6 @@ function StreamController() {
         playbackEndedTimerId = undefined;
     }
 
-    function stopPreloadTimer() {
-        logger.debug('[PreloadTimer] stop period preload timer.');
-        clearTimeout(preloadTimerId);
-        preloadTimerId = undefined;
-    }
-
     function toggleEndPeriodTimer() {
         //stream buffering completed has not been detected, nothing to do....
         if (isStreamBufferingCompleted) {
@@ -305,7 +294,7 @@ function StreamController() {
                 playbackEndedTimerId = setTimeout(function () {eventBus.trigger(Events.PLAYBACK_ENDED, {'isLast': getActiveStreamInfo().isLast});}, delayPlaybackEnded);
                 const preloadDelay = delayPlaybackEnded < 2000 ? delayPlaybackEnded / 4 : delayPlaybackEnded - 2000;
                 logger.info('[StreamController][toggleEndPeriodTimer] Going to fire preload in ' + preloadDelay);
-                preloadTimerId = setTimeout(onStreamCanLoadNext,  preloadDelay);
+                setTimeout(onStreamCanLoadNext,  preloadDelay);
             }
         }
     }
@@ -546,8 +535,8 @@ function StreamController() {
         });
     }
 
-    function setMediaDuration(duration) {
-        const manifestDuration = duration ? duration : activeStream.getStreamInfo().manifestInfo.duration;
+    function setMediaDuration() {
+        const manifestDuration = activeStream.getStreamInfo().manifestInfo.duration;
         const mediaDuration = mediaSourceController.setDuration(mediaSource, manifestDuration);
         logger.debug('Duration successfully set to: ' + mediaDuration);
     }

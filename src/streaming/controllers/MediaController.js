@@ -175,9 +175,6 @@ function MediaController() {
      * @memberof MediaController#
      */
     function isCurrentTrack(track) {
-        if (!track) {
-            return false;
-        }
         const type = track.type;
         const id = track.streamInfo.id;
 
@@ -196,11 +193,11 @@ function MediaController() {
         const id = streamInfo.id;
         const current = getCurrentTrackFor(type, streamInfo);
 
-        if (!tracks[id] || !tracks[id][type] || isTracksEqual(track, current)) return;
+        if (!tracks[id] || !tracks[id][type] || (current && isTracksEqual(track, current))) return;
 
         tracks[id][type].current = track;
 
-        if (tracks[id][type].current) {
+        if (current) {
             eventBus.trigger(Events.CURRENT_TRACK_CHANGED, {oldMediaInfo: current, newMediaInfo: track, switchMode: switchMode[type]});
         }
 
@@ -310,14 +307,6 @@ function MediaController() {
      * @memberof MediaController#
      */
     function isTracksEqual(t1, t2) {
-        if (!t1 && !t2) {
-            return true;
-        }
-
-        if (!t1 || !t2) {
-            return false;
-        }
-
         const sameId = t1.id === t2.id;
         const sameViewpoint = t1.viewpoint === t2.viewpoint;
         const sameLang = t1.lang === t2.lang;

@@ -33,9 +33,6 @@ import CommonEncryption from '../CommonEncryption';
 import MediaCapability from '../vo/MediaCapability';
 import KeySystemConfiguration from '../vo/KeySystemConfiguration';
 
-const NEEDKEY_BEFORE_INITIALIZE_RETRIES = 5;
-const NEEDKEY_BEFORE_INITIALIZE_TIMEOUT = 500;
-
 /**
  * @module ProtectionController
  * @description Provides access to media protection information and functionality.  Each
@@ -60,7 +57,6 @@ function ProtectionController(config) {
     const debug = config.debug;
     const BASE64 = config.BASE64;
     const constants = config.constants;
-    let needkeyRetries = [];
 
     let instance,
         logger,
@@ -330,9 +326,6 @@ function ProtectionController(config) {
             protectionModel = null;
         }
 
-        needkeyRetries.forEach( retryTimeout => clearTimeout(retryTimeout));
-        needkeyRetries = [];
-
         mediaInfoArr = [];
     }
 
@@ -359,8 +352,6 @@ function ProtectionController(config) {
         const audioRobustness = (protData && protData.audioRobustness && protData.audioRobustness.length > 0) ? protData.audioRobustness : robustnessLevel;
         const videoRobustness = (protData && protData.videoRobustness && protData.videoRobustness.length > 0) ? protData.videoRobustness : robustnessLevel;
         const ksSessionType = getSessionType(keySystem);
-        const distinctiveIdentifier = (protData && protData.distinctiveIdentifier) ? protData.distinctiveIdentifier : 'optional';
-        const persistentState = (protData && protData.persistentState) ? protData.persistentState : (ksSessionType === 'temporary') ? 'optional' : 'required';
 
         mediaInfoArr.forEach((media) => {
             if (media.type === constants.AUDIO) {
@@ -371,8 +362,8 @@ function ProtectionController(config) {
         });
 
         return new KeySystemConfiguration(
-            audioCapabilities, videoCapabilities, distinctiveIdentifier,
-            persistentState,
+            audioCapabilities, videoCapabilities, 'optional',
+            (ksSessionType === 'temporary') ? 'optional' : 'required',
             [ksSessionType]);
     }
 
@@ -633,24 +624,12 @@ function ProtectionController(config) {
         xhr.send(keySystem.getLicenseRequestFromMessage(message));
     }
 
-    function onNeedKey(event, retry) {
+    function onNeedKey(event) {
         logger.debug('DRM: onNeedKey');
         // Ignore non-cenc initData
         if (event.key.initDataType !== 'cenc') {
             logger.warn('DRM:  Only \'cenc\' initData is supported!  Ignoring initData of type: ' + event.key.initDataType);
             return;
-        }
-
-        if (mediaInfoArr.length === 0) {
-            logger.warn('DRM: onNeedKey called before initializeForMedia, wait until initialized');
-            retry = typeof retry === 'undefined' ? 1 : retry + 1;
-            if (retry < NEEDKEY_BEFORE_INITIALIZE_RETRIES) {
-                needkeyRetries.push(setTimeout(() => {
-                    onNeedKey(event, retry);
-                }, NEEDKEY_BEFORE_INITIALIZE_TIMEOUT));
-                return;
-            }
-
         }
 
         // Some browsers return initData as Uint8Array (IE), some as ArrayBuffer (Chrome).

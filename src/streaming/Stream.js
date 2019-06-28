@@ -124,11 +124,12 @@ function Stream(config) {
             let result;
             if (!getPreloaded()) {
                 result = initializeMedia(mediaSource, previousBuffers);
+                eventBus.on(Events.CURRENT_TRACK_CHANGED, onCurrentTrackChanged, instance);
             } else {
                 initializeAfterPreload();
                 result = previousBuffers;
+                eventBus.on(Events.CURRENT_TRACK_CHANGED, onCurrentTrackChanged, instance);
             }
-            eventBus.on(Events.CURRENT_TRACK_CHANGED, onCurrentTrackChanged, instance);
             isStreamActivated = true;
             return result;
         }
@@ -318,7 +319,7 @@ function Stream(config) {
     function onCurrentTrackChanged(e) {
         if (e.newMediaInfo.streamInfo.id !== streamInfo.id) return;
 
-        let processor = getProcessorForMediaInfo(e.newMediaInfo);
+        let processor = getProcessorForMediaInfo(e.oldMediaInfo);
         if (!processor) return;
 
         let currentTime = playbackController.getTime();
@@ -337,10 +338,6 @@ function Stream(config) {
                 abrController.updateTopQualityIndex(mediaInfo);
                 processor.switchTrackAsked();
                 processor.getFragmentModel().abortRequests();
-            } else {
-                processor.getScheduleController().setSeekTarget(NaN);
-                adapter.setIndexHandlerTime(processor, currentTime);
-                adapter.resetIndexHandler(processor);
             }
         }
     }
@@ -432,14 +429,8 @@ function Stream(config) {
             return;
         }
 
-        if (type !== Constants.FRAGMENTED_TEXT || (type === Constants.FRAGMENTED_TEXT && textController.getTextDefaultEnabled())) {
-            mediaController.checkInitialMediaSettingsForType(type, streamInfo);
-            initialMediaInfo = mediaController.getCurrentTrackFor(type, streamInfo);
-        }
-
-        if (type === Constants.FRAGMENTED_TEXT && !textController.getTextDefaultEnabled()) {
-            initialMediaInfo = mediaController.getTracksFor(type, streamInfo)[0];
-        }
+        mediaController.checkInitialMediaSettingsForType(type, streamInfo);
+        initialMediaInfo = mediaController.getCurrentTrackFor(type, streamInfo);
 
         // TODO : How to tell index handler live/duration?
         // TODO : Pass to controller and then pass to each method on handler?
@@ -700,9 +691,6 @@ function Stream(config) {
     }
 
     function compareCodecs( stream, type ) {
-        if (!stream) {
-            return false;
-        }
         const newStreamInfo = stream.getStreamInfo();
         const currentStreamInfo = getStreamInfo();
 

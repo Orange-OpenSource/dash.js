@@ -77,7 +77,6 @@ declare namespace dashjs {
         on(type: AstInFutureEvent['type'], listener: (e: AstInFutureEvent) => void, scope?: object): void;
         on(type: BufferEvent['type'], listener: (e: BufferEvent) => void, scope?: object): void;
         on(type: CaptionRenderedEvent['type'], listener: (e: CaptionRenderedEvent) => void, scope?: object): void;
-        on(type: CaptionContainerResizeEvent['type'], listener: (e: CaptionContainerResizeEvent) => void, scope?: object): void;
         on(type: ErrorEvent['type'], listener: (e: ErrorEvent) => void, scope?: object): void;
         on(type: FragmentLoadingCompletedEvent['type'], listener: (e: FragmentLoadingCompletedEvent) => void, scope?: object): void;
         on(type: FragmentLoadingAbandonedEvent['type'], listener: (e: FragmentLoadingAbandonedEvent) => void, scope?: object): void;
@@ -276,7 +275,6 @@ declare namespace dashjs {
         BUFFER_LOADED: 'bufferLoaded';
         CAN_PLAY: 'canPlay';
         CAPTION_RENDERED: 'captionRendered';
-        CAPTION_CONTAINER_RESIZE: 'captionContainerResize';
         ERROR: 'error';
         FRAGMENT_LOADING_ABANDONED: 'fragmentLoadingAbandoned';
         FRAGMENT_LOADING_COMPLETED: 'fragmentLoadingCompleted';
@@ -390,9 +388,6 @@ declare namespace dashjs {
         type: MediaPlayerEvents['CAPTION_RENDERED'];
         captionDiv: HTMLDivElement;
         currentTrackIdx: number;
-
-    export interface CaptionContainerResizeEvent extends Event {
-        type: MediaPlayerEvents['CAPTION_CONTAINER_RESIZE'];
     }
 
     export interface FragmentLoadingCompletedEvent extends Event {

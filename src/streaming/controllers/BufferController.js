@@ -430,7 +430,7 @@ function BufferController(config) {
     }
 
     function onPlaybackProgression() {
-        if (!bufferResetInProgress || (type === Constants.FRAGMENTED_TEXT && textController.isTextEnabled())) {
+        if (!bufferResetInProgress) {
             updateBufferLevel();
             addBufferMetrics();
         }

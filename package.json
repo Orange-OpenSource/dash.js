@@ -65,5 +65,8 @@
     "url": "https://github.com/Dash-Industry-Forum/dash.js.git"
   },
   "author": "Dash Industry Forum",
-  "license": "BSD-3-Clause"
+  "license": "BSD-3-Clause",
+  "_resolved": "",
+  "_integrity": "",
+  "_from": "dashjs@git+https://github.com/Orange-OpenSource/dash.js.git#development"
 }

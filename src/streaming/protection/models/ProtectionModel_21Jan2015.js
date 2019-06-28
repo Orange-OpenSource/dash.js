@@ -192,9 +192,14 @@ function ProtectionModel_21Jan2015(config) {
         });
     }
 
-    function createKeySession(initData, protData, sessionType) {
+    function createKeySession(initData, protData, sessionType, cdmData) {
         if (!keySystem || !mediaKeys) {
             throw new Error('Can not create sessions until you have selected a key system');
+        }
+
+        // Patch for StickTV: provide CustomData to PlayReady CDM using setServerCertificate API
+        if (cdmData && keySystem.systemString === 'com.microsoft.playready') {
+            mediaKeys.setServerCertificate(new Uint8Array(cdmData));
         }
 
         const session = mediaKeys.createSession(sessionType);
