@@ -74,7 +74,8 @@ function NextFragmentRequestRule(config) {
             if ((range !== null || playingRange !== null) && !hasSeekTarget) {
                 if (!range || (playingRange && playingRange.start != range.start && playingRange.end != range.end)) {
                     if (hasDiscontinuities && mediaType !== Constants.FRAGMENTED_TEXT) {
-                        streamProcessor.getFragmentModel().removeExecutedRequestsAfterTime(playingRange.end);
+                        //rb: comment this for now; it's causing problems when buffer to the end and then becomes fragmented after seek.
+                        //streamProcessor.getFragmentModel().removeExecutedRequestsAfterTime(playingRange.end);
                         bufferIsDivided = true;
                     }
                     range = playingRange;
