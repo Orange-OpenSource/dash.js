@@ -50,12 +50,13 @@ function FragmentLoader(config) {
         const boxParser = BoxParser(context).getInstance();
         httpLoader = HTTPLoader(context).create({
             errHandler: config.errHandler,
-            metricsModel: config.metricsModel,
+            dashMetrics: config.dashMetrics,
             mediaPlayerModel: config.mediaPlayerModel,
             requestModifier: config.requestModifier,
             boxParser: boxParser,
-            useFetch: config.mediaPlayerModel.getLowLatencyEnabled(),
-            requestTimeout: config.mediaPlayerModel.getFragmentRequestTimeout()
+            //TODO: fragment requets timeout
+            //requestTimeout: config.mediaPlayerModel.getFragmentRequestTimeout(),
+            useFetch: config.settings.get().streaming.lowLatencyEnabled
         });
     }
 

@@ -37,13 +37,12 @@ import DVBSelector from './baseUrlResolution/DVBSelector';
 import BasicSelector from './baseUrlResolution/BasicSelector';
 import FactoryMaker from '../../core/FactoryMaker';
 import DashJSError from '../vo/DashJSError';
-import Constants from '../constants/Constants';
+import { checkParameterType } from '../utils/SupervisorTools';
 
 function BaseURLSelector() {
 
     const context = this.context;
     const eventBus = EventBus(context).getInstance();
-    let dashManifestModel;
 
     let instance,
         serviceLocationBlacklistController,
@@ -73,24 +72,11 @@ function BaseURLSelector() {
         if (config.selector) {
             selector = config.selector;
         }
-        if (config.dashManifestModel) {
-            dashManifestModel = config.dashManifestModel;
-        }
     }
 
-    function checkConfig() {
-        if (!dashManifestModel || !dashManifestModel.hasOwnProperty('getIsDVB')) {
-            throw new Error(Constants.MISSING_CONFIG_ERROR);
-        }
-    }
-
-    function chooseSelectorFromManifest(manifest) {
-        checkConfig();
-        if (dashManifestModel.getIsDVB(manifest)) {
-            selector = dvbSelector;
-        } else {
-            selector = basicSelector;
-        }
+    function chooseSelector(isDVB) {
+        checkParameterType(isDVB, 'boolean');
+        selector = isDVB ? dvbSelector : basicSelector;
     }
 
     function select(data) {
@@ -143,7 +129,7 @@ function BaseURLSelector() {
     }
 
     instance = {
-        chooseSelectorFromManifest: chooseSelectorFromManifest,
+        chooseSelector: chooseSelector,
         select: select,
         setBlacklistExpiryTime: setBlacklistExpiryTime,
         reset: reset,

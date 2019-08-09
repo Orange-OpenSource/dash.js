@@ -28,13 +28,14 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-import Constants from '../../constants/Constants';
 import BufferController from '../../controllers/BufferController';
 import EventBus from '../../../core/EventBus';
 import Events from '../../../core/events/Events';
 import FactoryMaker from '../../../core/FactoryMaker';
 import Debug from '../../../core/Debug';
 import SwitchRequest from '../SwitchRequest';
+import Constants from '../../constants/Constants';
+import MetricsConstants from '../../constants/MetricsConstants';
 
 function InsufficientBufferRule(config) {
 
@@ -44,7 +45,6 @@ function InsufficientBufferRule(config) {
     const context = this.context;
 
     const eventBus = EventBus(context).getInstance();
-    const metricsModel = config.metricsModel;
     const dashMetrics = config.dashMetrics;
 
     let instance,
@@ -59,7 +59,7 @@ function InsufficientBufferRule(config) {
     }
 
     function checkConfig() {
-        if (!metricsModel || !metricsModel.hasOwnProperty('getReadOnlyMetricsFor') || !dashMetrics || !dashMetrics.hasOwnProperty('getCurrentBufferLevel')) {
+        if (!dashMetrics || !dashMetrics.hasOwnProperty('getCurrentBufferLevel') || !dashMetrics.hasOwnProperty('getLatestBufferInfoVO')) {
             throw new Error(Constants.MISSING_CONFIG_ERROR);
         }
     }
@@ -83,8 +83,7 @@ function InsufficientBufferRule(config) {
         checkConfig();
 
         const mediaType = rulesContext.getMediaType();
-        const metrics = metricsModel.getReadOnlyMetricsFor(mediaType);
-        const lastBufferStateVO = (metrics.BufferState.length > 0) ? metrics.BufferState[metrics.BufferState.length - 1] : null;
+        const lastBufferStateVO = dashMetrics.getLatestBufferInfoVO(mediaType, true, MetricsConstants.BUFFER_STATE);
         const representationInfo = rulesContext.getRepresentationInfo();
         const fragmentDuration = representationInfo.fragmentDuration;
 
@@ -102,7 +101,7 @@ function InsufficientBufferRule(config) {
             const abrController = rulesContext.getAbrController();
             const throughputHistory = abrController.getThroughputHistory();
 
-            const bufferLevel = dashMetrics.getCurrentBufferLevel(metrics);
+            const bufferLevel = dashMetrics.getCurrentBufferLevel(mediaType, true);
             const throughput = throughputHistory.getAverageThroughput(mediaType);
             const latency = throughputHistory.getAverageLatency(mediaType);
             const bitrate = throughput * (bufferLevel / fragmentDuration) * INSUFFICIENT_BUFFER_SAFETY_FACTOR;

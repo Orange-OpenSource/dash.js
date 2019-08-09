@@ -38,6 +38,7 @@ import Debug from '../../core/Debug';
 
 /**
  * @module HTTPLoader
+ * @ignore
  * @description Manages download of resources via HTTP.
  * @param {Object} cfg - dependancies from parent
  */
@@ -47,7 +48,7 @@ function HTTPLoader(cfg) {
 
     const context = this.context;
     const errHandler = cfg.errHandler;
-    const metricsModel = cfg.metricsModel;
+    const dashMetrics = cfg.dashMetrics;
     const mediaPlayerModel = cfg.mediaPlayerModel;
     const requestModifier = cfg.requestModifier;
     const boxParser = cfg.boxParser;
@@ -59,8 +60,7 @@ function HTTPLoader(cfg) {
         requests,
         delayedRequests,
         retryRequests,
-        downloadErrorToRequestTypeMap,
-        newDownloadErrorToRequestTypeMap;
+        downloadErrorToRequestTypeMap;
 
     function setup() {
         logger = Debug(context).getInstance().getLogger(instance);
@@ -69,16 +69,6 @@ function HTTPLoader(cfg) {
         retryRequests = [];
 
         downloadErrorToRequestTypeMap = {
-            [HTTPRequest.MPD_TYPE]: Errors.DOWNLOAD_ERROR_ID_MANIFEST,
-            [HTTPRequest.XLINK_EXPANSION_TYPE]: Errors.DOWNLOAD_ERROR_ID_XLINK,
-            [HTTPRequest.INIT_SEGMENT_TYPE]: Errors.DOWNLOAD_ERROR_ID_INITIALIZATION,
-            [HTTPRequest.MEDIA_SEGMENT_TYPE]: Errors.DOWNLOAD_ERROR_ID_CONTENT,
-            [HTTPRequest.INDEX_SEGMENT_TYPE]: Errors.DOWNLOAD_ERROR_ID_CONTENT,
-            [HTTPRequest.BITSTREAM_SWITCHING_SEGMENT_TYPE]: Errors.DOWNLOAD_ERROR_ID_CONTENT,
-            [HTTPRequest.OTHER_TYPE]: Errors.DOWNLOAD_ERROR_ID_CONTENT
-        };
-
-        newDownloadErrorToRequestTypeMap = {
             [HTTPRequest.MPD_TYPE]: Errors.DOWNLOAD_ERROR_ID_MANIFEST_CODE,
             [HTTPRequest.XLINK_EXPANSION_TYPE]: Errors.DOWNLOAD_ERROR_ID_XLINK_CODE,
             [HTTPRequest.INIT_SEGMENT_TYPE]: Errors.DOWNLOAD_ERROR_ID_INITIALIZATION_CODE,
@@ -99,7 +89,7 @@ function HTTPLoader(cfg) {
                 retryRequests.splice(retryRequests.indexOf(retryRequest), 1);
             }
             internalLoad(config, remainingAttempts);
-        }, mediaPlayerModel.getRetryIntervalForType(request.type));
+        }, mediaPlayerModel.getRetryIntervalsForType(request.type));
     }
 
     function internalLoad(config, remainingAttempts) {
@@ -112,7 +102,7 @@ function HTTPLoader(cfg) {
         let lastTraceReceivedCount = 0;
         let httpRequest;
 
-        if (!requestModifier || !metricsModel || !errHandler) {
+        if (!requestModifier || !dashMetrics || !errHandler) {
             throw new Error('config object is not correct or missing');
         }
 
@@ -124,27 +114,14 @@ function HTTPLoader(cfg) {
             request.firstByteDate = request.firstByteDate || requestStartTime;
 
             if (!request.checkExistenceOnly) {
-                metricsModel.addHttpRequest(
-                    request.mediaType,
-                    null,
-                    request.type,
-                    request.url,
-                    httpRequest.response ? httpRequest.response.responseURL : null,
-                    request.serviceLocation || null,
-                    request.range || null,
-                    request.requestStartDate,
-                    request.firstByteDate,
-                    request.requestEndDate,
-                    httpRequest.response ? httpRequest.response.status : null,
-                    request.duration,
-                    httpRequest.response && httpRequest.response.getAllResponseHeaders ? httpRequest.response.getAllResponseHeaders() :
-                        httpRequest.response ? httpRequest.response.responseHeaders : [],
-                    success ? traces : null,
-                    request.quality
-                );
+                dashMetrics.addHttpRequest(request, httpRequest.response ? httpRequest.response.responseURL : null,
+                                           httpRequest.response ? httpRequest.response.status : null,
+                                           httpRequest.response && httpRequest.response.getAllResponseHeaders ? httpRequest.response.getAllResponseHeaders() :
+                                           httpRequest.response ? httpRequest.response.responseHeaders : [],
+                                           success ? traces : null, request.quality);
 
                 if (request.type === HTTPRequest.MPD_TYPE) {
-                    metricsModel.addManifestUpdate('stream', request.type, request.requestStartDate, request.requestEndDate);
+                    dashMetrics.addManifestUpdate(request.type, request.requestStartDate, request.requestEndDate);
                 }
             }
         };
@@ -183,13 +160,7 @@ function HTTPLoader(cfg) {
                     remainingAttempts--;
                     scheduleRetry(config, remainingAttempts, request);
                 } else {
-                    errHandler.downloadError(
-                        downloadErrorToRequestTypeMap[request.type],
-                        request.url,
-                        request
-                    );
-
-                    errHandler.error(new DashJSError(newDownloadErrorToRequestTypeMap[request.type], request.url + ' is not available', {request: request, response: httpRequest.response}));
+                    errHandler.error(new DashJSError(downloadErrorToRequestTypeMap[request.type], request.url + ' is not available', {request: request, response: httpRequest.response}));
 
                     if (config.error) {
                         config.error(request, 'error', httpRequest.response.statusText);
@@ -262,8 +233,7 @@ function HTTPLoader(cfg) {
             });
         } else {
             loader = XHRLoader(context).create({
-                requestModifier: requestModifier,
-                boxParser: boxParser
+                requestModifier: requestModifier
             });
         }
 
@@ -342,6 +312,10 @@ function HTTPLoader(cfg) {
                     config.request.type
                 )
             );
+        } else {
+            if (config.error) {
+                config.error(config.request, 'error');
+            }
         }
     }
 
