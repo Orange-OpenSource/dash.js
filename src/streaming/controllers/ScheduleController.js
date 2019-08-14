@@ -405,8 +405,7 @@ function ScheduleController(config) {
         const liveEdgeFinder = streamProcessor.getLiveEdgeFinder();
         if (liveEdgeFinder) {
             const liveEdge = liveEdgeFinder.getLiveEdge();
-            const dvrWindowSize = currentRepresentationInfo.mediaInfo.streamInfo.manifestInfo.DVRWindowSize / 2;
-            const startTime = liveEdge - playbackController.computeLiveDelay(currentRepresentationInfo.fragmentDuration, dvrWindowSize);
+            const startTime = liveEdge - playbackController.computeLiveDelay(currentRepresentationInfo.fragmentDuration, currentRepresentationInfo.mediaInfo.streamInfo.manifestInfo.DVRWindowSize);
             const request = adapter.getFragmentRequest(streamProcessor, currentRepresentationInfo, startTime, {
                 ignoreIsFinished: true
             });
