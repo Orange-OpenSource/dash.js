@@ -133,7 +133,7 @@ describe('RepresentationController', function () {
 
             expect(firstRepresentation.segmentAvailabilityRange.start).to.equal(undefined); // jshint ignore:line
             expect(firstRepresentation.segmentAvailabilityRange.end).to.equal(undefined); // jshint ignore:line
-            
+
             dashMetricsMock.currentDVRInfo = null;
             dashMetricsMock.bufferState = null;
         });
