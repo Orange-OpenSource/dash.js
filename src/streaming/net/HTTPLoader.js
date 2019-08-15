@@ -35,6 +35,7 @@ import FactoryMaker from '../../core/FactoryMaker';
 import Errors from '../../core/errors/Errors';
 import DashJSError from '../vo/DashJSError';
 import Debug from '../../core/Debug';
+import Settings from '../../core/Settings';
 
 /**
  * @module HTTPLoader
@@ -53,7 +54,7 @@ function HTTPLoader(cfg) {
     const requestModifier = cfg.requestModifier;
     const boxParser = cfg.boxParser;
     const useFetch = cfg.useFetch || false;
-    const requestTimeout = cfg.requestTimeout || 0;
+    const settings = Settings(context).getInstance();
 
     let logger,
         instance,
@@ -253,7 +254,7 @@ function HTTPLoader(cfg) {
             onabort: onabort,
             ontimeout: ontimeout,
             loader: loader,
-            timeout: requestTimeout
+            timeout: settings.get().streaming.fragmentRequestTimeout
         };
 
         // Adds the ability to delay single fragment loading time to control buffer.

@@ -383,6 +383,7 @@ function Settings() {
             lastBitrateCachingInfo: { enabled: true, ttl: 360000 },
             lastMediaSettingsCachingInfo: { enabled: true, ttl: 360000 },
             cacheLoadThresholds: { video: 50, audio: 5 },
+            fragmentRequestTimeout: null,
             retryIntervals: {
                 [HTTPRequest.MPD_TYPE]: 500,
                 [HTTPRequest.XLINK_EXPANSION_TYPE]: 500,

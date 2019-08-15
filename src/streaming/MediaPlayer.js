@@ -2163,10 +2163,6 @@ function MediaPlayer() {
         restoreDefaultUTCTimingSources: restoreDefaultUTCTimingSources,
         setXHRWithCredentialsForType: setXHRWithCredentialsForType,
         getXHRWithCredentialsForType: getXHRWithCredentialsForType,
-        //TODO: Fragment request timeout
-        //setFragmentRequestTimeout: setFragmentRequestTimeout,
-        //getFragmentRequestTimeout: getFragmentRequestTimeout,
-        //
         getProtectionController: getProtectionController,
         attachProtectionController: attachProtectionController,
         setProtectionData: setProtectionData,

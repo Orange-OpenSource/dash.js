@@ -54,8 +54,6 @@ function FragmentLoader(config) {
             mediaPlayerModel: config.mediaPlayerModel,
             requestModifier: config.requestModifier,
             boxParser: boxParser,
-            //TODO: fragment requets timeout
-            //requestTimeout: config.mediaPlayerModel.getFragmentRequestTimeout(),
             useFetch: config.settings.get().streaming.lowLatencyEnabled
         });
     }
