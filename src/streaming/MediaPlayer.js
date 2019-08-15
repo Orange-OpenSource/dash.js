@@ -1552,28 +1552,6 @@ function MediaPlayer() {
         return mediaController.getSelectionModeForInitialTrack();
     }
 
-    /**
-     * Get the portal limit minimum (in kbps). Below this bitrate, the portal size will not restrict the representation chosen.
-     *
-     * @returns {number} bitrate
-     * @memberof module:MediaPlayer
-     * @instance
-     */
-    function getPortalLimitMinimum() {
-        return abrController.getPortalLimitMinimum();
-    }
-
-    /**
-     * Set the portal limit minimum (in kbps). Below this bitrate, the portal size will not restrict the representation chosen.
-     *
-     * @param {number} bitrate
-     * @memberof module:MediaPlayer
-     * @instance
-     */
-    function setPortalLimitMinimum(bitrate) {
-        abrController.setPortalLimitMinimum(bitrate);
-    }
-
     /*
     ---------------------------------------------------------------------------
 
@@ -2196,10 +2174,6 @@ function MediaPlayer() {
         attachTTMLRenderingDiv: attachTTMLRenderingDiv,
         getCurrentTextTrackIndex: getCurrentTextTrackIndex,
         refreshManifest: refreshManifest,
-        //setPortalScale: setPortalScale,
-        //getPortalScale: getPortalScale,
-        getPortalLimitMinimum: getPortalLimitMinimum,
-        setPortalLimitMinimum: setPortalLimitMinimum,
         getThumbnail: getThumbnail,
         setBlacklistExpiryTime: setBlacklistExpiryTime,
         getDashAdapter: getDashAdapter,

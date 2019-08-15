@@ -410,6 +410,8 @@ function Settings() {
                 useDeadTimeLatency: true,
                 limitBitrateByPortal: false,
                 usePixelRatioInLimitBitrateByPortal: false,
+                portalScale: 1,
+                portalMinimum: null,
                 maxBitrate: { audio: -1, video: -1 },
                 minBitrate: { audio: -1, video: -1 },
                 maxRepresentationRatio: { audio: 1, video: 1 },

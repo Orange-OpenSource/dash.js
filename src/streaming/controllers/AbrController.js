@@ -67,7 +67,6 @@ function AbrController() {
         streamProcessorDict,
         abandonmentStateDict,
         abandonmentTimeout,
-        portalLimitMinimum,
         windowResizeEventCalled,
         elementWidth,
         elementHeight,
@@ -81,7 +80,6 @@ function AbrController() {
         throughputHistory,
         isUsingBufferOccupancyABRDict,
         dashMetrics,
-        portalScale,
         settings;
 
     function setup() {
@@ -130,8 +128,6 @@ function AbrController() {
         streamProcessorDict = {};
         switchHistoryDict = {};
         isUsingBufferOccupancyABRDict = {};
-        portalScale = 1;
-        portalLimitMinimum = 0;
         if (windowResizeEventCalled === undefined) {
             windowResizeEventCalled = false;
         }
@@ -309,22 +305,6 @@ function AbrController() {
 
     function getAutoSwitchBitrateFor(type) {
         return !!settings.get().streaming.abr.autoSwitchBitrate[type];
-    }
-
-    function setPortalScale(value) {
-        portalScale = value;
-    }
-
-    function getPortalScale() {
-        return portalScale;
-    }
-
-    function getPortalLimitMinimum() {
-        return portalLimitMinimum;
-    }
-
-    function setPortalLimitMinimum(bitrate) {
-        portalLimitMinimum = bitrate;
     }
 
     function checkPlaybackQuality(type) {
@@ -608,6 +588,8 @@ function AbrController() {
             setElementSize();
         }
 
+        const portalScale = settings.get().streaming.abr.portalScale || 1;
+        const portalLimitMinimum = settings.get().streaming.abr.portalMinimum || 0;
         const representation = adapter.getAdaptationForType(0, type).Representation;
         let newIdx = idx;
         const scaledWidth = elementWidth * Math.sqrt(portalScale);
@@ -682,10 +664,6 @@ function AbrController() {
         getMaxAllowedIndexFor: getMaxAllowedIndexFor,
         getMinAllowedIndexFor: getMinAllowedIndexFor,
         getInitialBitrateFor: getInitialBitrateFor,
-        setPortalScale: setPortalScale,
-        getPortalScale: getPortalScale,
-        getPortalLimitMinimum: getPortalLimitMinimum,
-        setPortalLimitMinimum: setPortalLimitMinimum,
         getQualityFor: getQualityFor,
         getAbandonmentStateFor: getAbandonmentStateFor,
         setPlaybackQuality: setPlaybackQuality,
