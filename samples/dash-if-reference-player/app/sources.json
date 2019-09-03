@@ -13,7 +13,7 @@
           "name": "SegmentBase, ondemand profile"
         },
         {
-          "url": "http://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.mpd",
+          "url": "//demo.unified-streaming.com/video/ateam/ateam.ism/ateam.mpd",
           "name": "SegmentTimeline/Time"
         },
         {
@@ -166,23 +166,23 @@
       "submenu": [
         {
           "name": "Single adaption set, 7 tiles at 10x1, each thumb 320x180",
-          "url": "http://dash.edgesuite.net/akamai/bbb_30fps/bbb_with_tiled_thumbnails.mpd"
+          "url": "//dash.akamaized.net/akamai/bbb_30fps/bbb_with_tiled_thumbnails.mpd"
         },
         {
           "name": "Single adaption set, 4 tiles at 10x1, each thumb 205x115",
-          "url": "http://dash.edgesuite.net/akamai/bbb_30fps/bbb_with_4_tiles_thumbnails.mpd"
+          "url": "//dash.akamaized.net/akamai/bbb_30fps/bbb_with_4_tiles_thumbnails.mpd"
         },
         {
           "name": "Single adaption set, 1 tile at 10x20, each thumb 102x58",
-          "url": "http://dash.edgesuite.net/akamai/bbb_30fps/bbb_with_tiled_thumbnails_2.mpd"
+          "url": "//dash.akamaized.net/akamai/bbb_30fps/bbb_with_tiled_thumbnails_2.mpd"
         },
         {
           "name": "Two adaption sets with different thumb resolutions",
-          "url": "http://dash.edgesuite.net/akamai/bbb_30fps/bbb_with_multiple_tiled_thumbnails.mpd"
+          "url": "//dash.akamaized.net/akamai/bbb_30fps/bbb_with_multiple_tiled_thumbnails.mpd"
         },
         {
           "name": "Live stream, Single adaptation set, 1x1 tiles (livesim)",
-          "url": "http://livesim.dashif.org/livesim/testpic_2s/Manifest_thumbs.mpd"
+          "url": "//livesim.dashif.org/livesim/testpic_2s/Manifest_thumbs.mpd"
         },
         {
           "name": "SegmentBase, Single adaption set, 3x4 tiles",
@@ -482,11 +482,13 @@
           "protData": {
             "org.w3.clearkey": {
               "clearkeys": {
-                "gDmb9YohQBSAU-J-dI6YwA": "3aHppzZ2g3Y3wK1uNnUXmg",
-                "kJU-CWyySaOiYHpf7-rUmQ": "zsmKW7Mq9Unz5R7oUGeF8w",
-                "Dk2pK9DoSmaMP8Jal-tlMg": "UmYYfGb7znuoFAQM79ayHw",
-                "WF8jPzByRvGfpG3CLGagFA": "jayKpC3tmPq4YKXkapa8FA",
-                "QiK9eLxFQb-2Pm-BTcOR3w": "GAMi9v92b9ca5yBwaptN-Q"
+                "CHJ4bvnnRl-jok5bDvj6RQ": "wyYRebq2Hu7JedLUBpURzw",
+                "wU8HCfK5RCeRa2G1JYZQag": "7fsXeXJHs8enQ0SEfkhTBQ",
+                "LW6Th2DKQUWuwsQIN7SwJg": "QtC_8bYPe-SfF9YDSE0MuQ",
+                "3gLwf6CYTuC1VpB8DRf7vA": "GQnGyyKBez4x8aNTD6cNzw",
+                "kU5p9AqzRTSen5hTYV4m9g": "0DBllUYESc5WdSJMebqlBA",
+                "KfBej6GuRuSA6SLc1EzXoQ": "BxGxfISpDLtBCXJkyQG3Mg",
+                "af5wd9rdS1WWzcPts5kYUw": "7TqCUJKmSlCbdIeJ0xbAgQ"
               }
             }
           },
@@ -524,11 +526,13 @@
           "protData": {
             "org.w3.clearkey": {
               "clearkeys": {
-                "gDmb9YohQBSAU-J-dI6YwA": "3aHppzZ2g3Y3wK1uNnUXmg",
-                "kJU-CWyySaOiYHpf7-rUmQ": "zsmKW7Mq9Unz5R7oUGeF8w",
-                "Dk2pK9DoSmaMP8Jal-tlMg": "UmYYfGb7znuoFAQM79ayHw",
-                "WF8jPzByRvGfpG3CLGagFA": "jayKpC3tmPq4YKXkapa8FA",
-                "QiK9eLxFQb-2Pm-BTcOR3w": "GAMi9v92b9ca5yBwaptN-Q"
+                "CHJ4bvnnRl-jok5bDvj6RQ": "wyYRebq2Hu7JedLUBpURzw",
+                "wU8HCfK5RCeRa2G1JYZQag": "7fsXeXJHs8enQ0SEfkhTBQ",
+                "LW6Th2DKQUWuwsQIN7SwJg": "QtC_8bYPe-SfF9YDSE0MuQ",
+                "3gLwf6CYTuC1VpB8DRf7vA": "GQnGyyKBez4x8aNTD6cNzw",
+                "kU5p9AqzRTSen5hTYV4m9g": "0DBllUYESc5WdSJMebqlBA",
+                "KfBej6GuRuSA6SLc1EzXoQ": "BxGxfISpDLtBCXJkyQG3Mg",
+                "af5wd9rdS1WWzcPts5kYUw": "7TqCUJKmSlCbdIeJ0xbAgQ"
               }
             }
           },
@@ -563,6 +567,19 @@
         {
           "name": "Multi-period audio with W3C Clear Key, multiple keys",
           "url": "https://media.axprod.net/TestVectors/v7-MultiDRM-MultiKey-MultiPeriod/Manifest_AudioOnly_ClearKey.mpd",
+          "protData": {
+            "org.w3.clearkey": {
+              "clearkeys": {
+                "CHJ4bvnnRl-jok5bDvj6RQ": "wyYRebq2Hu7JedLUBpURzw",
+                "wU8HCfK5RCeRa2G1JYZQag": "7fsXeXJHs8enQ0SEfkhTBQ",
+                "LW6Th2DKQUWuwsQIN7SwJg": "QtC_8bYPe-SfF9YDSE0MuQ",
+                "3gLwf6CYTuC1VpB8DRf7vA": "GQnGyyKBez4x8aNTD6cNzw",
+                "kU5p9AqzRTSen5hTYV4m9g": "0DBllUYESc5WdSJMebqlBA",
+                "KfBej6GuRuSA6SLc1EzXoQ": "BxGxfISpDLtBCXJkyQG3Mg",
+                "af5wd9rdS1WWzcPts5kYUw": "7TqCUJKmSlCbdIeJ0xbAgQ"
+              }
+            }
+          },
           "moreInfo": "https://github.com/Axinom/dash-test-vectors"
         },
         {
@@ -812,27 +829,27 @@
       "submenu": [
         {
           "name": "Clear Dynamic SegmentTimeline",
-          "url": "http://wowzaec2demo.streamlock.net/live/bigbuckbunny/manifest_mvtime.mpd"
+          "url": "//wowzaec2demo.streamlock.net/live/bigbuckbunny/manifest_mvtime.mpd"
         },
         {
           "name": "Clear Dynamic SegmentTemplate",
-          "url": "http://wowzaec2demo.streamlock.net/live/bigbuckbunny/manifest_mvnumber.mpd"
+          "url": "//wowzaec2demo.streamlock.net/live/bigbuckbunny/manifest_mvnumber.mpd"
         },
         {
           "name": "Clear Dynamic SegmentList",
-          "url": "http://wowzaec2demo.streamlock.net/live/bigbuckbunny/manifest_mvlist.mpd"
+          "url": "//wowzaec2demo.streamlock.net/live/bigbuckbunny/manifest_mvlist.mpd"
         },
         {
           "name": "Clear Static SegmentTimeline",
-          "url": "http://wowzaec2demo.streamlock.net/vod/_definst_/ElephantsDream/smil:ElephantsDream.smil/manifest_mvtime.mpd"
+          "url": "//wowzaec2demo.streamlock.net/vod/_definst_/ElephantsDream/smil:ElephantsDream.smil/manifest_mvtime.mpd"
         },
         {
           "name": "Clear Static SegmentTemplate",
-          "url": "http://wowzaec2demo.streamlock.net/vod/_definst_/ElephantsDream/smil:ElephantsDream.smil/manifest_mvnumber.mpd"
+          "url": "//wowzaec2demo.streamlock.net/vod/_definst_/ElephantsDream/smil:ElephantsDream.smil/manifest_mvnumber.mpd"
         },
         {
           "name": "Clear Static SegmentList",
-          "url": "http://wowzaec2demo.streamlock.net/vod/_definst_/ElephantsDream/smil:ElephantsDream.smil/manifest_mvlist.mpd"
+          "url": "//wowzaec2demo.streamlock.net/vod/_definst_/ElephantsDream/smil:ElephantsDream.smil/manifest_mvlist.mpd"
         },
         {
           "name": "Widevine Dynamic SegmentTimeline",
@@ -899,11 +916,11 @@
         },
         {
           "name": "Unified Streaming - Timeline",
-          "url": "http://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.mpd"
+          "url": "//demo.unified-streaming.com/video/ateam/ateam.ism/ateam.mpd"
         },
         {
           "name": "Unified Streaming (Widevine, persistent)",
-          "url": "http://demo.unified-streaming.com/video/tears-of-steel/tears-of-steel-dash-widevine.ism/.mpd",
+          "url": "//demo.unified-streaming.com/video/tears-of-steel/tears-of-steel-dash-widevine.ism/.mpd",
           "protData": {
               "com.widevine.alpha": {
                   "serverURL": "https://cwip-shaka-proxy.appspot.com/no_auth",
@@ -941,7 +958,7 @@
           "name": "Super Speedway + PlayReady DRM (persistent)",
           "protData": {
             "com.microsoft.playready": {
-                "serverURL": "http://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:true,sl:150)",                
+                "serverURL": "http://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:true,sl:150)",
                 "sessionType": "persistent-license"
               }
           }

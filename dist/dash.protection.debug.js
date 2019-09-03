@@ -244,6 +244,10 @@ module.exports = exports['default'];
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
+/**
+ * @class
+ * @ignore
+ */
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -318,7 +322,7 @@ var CommonEncryption = (function () {
         key: 'getPSSHForKeySystem',
         value: function getPSSHForKeySystem(keySystem, initData) {
             var psshList = CommonEncryption.parsePSSHList(initData);
-            if (psshList.hasOwnProperty(keySystem.uuid.toLowerCase())) {
+            if (keySystem && psshList.hasOwnProperty(keySystem.uuid.toLowerCase())) {
                 return psshList[keySystem.uuid.toLowerCase()];
             }
             return null;
@@ -354,7 +358,7 @@ var CommonEncryption = (function () {
         key: 'parsePSSHList',
         value: function parsePSSHList(data) {
 
-            if (data === null) return [];
+            if (data === null || data === undefined) return [];
 
             var dv = new DataView(data.buffer || data); // data.buffer first for Uint8Array support
             var done = false;
@@ -719,8 +723,7 @@ var _coreEventsEventsBase2 = _interopRequireDefault(_coreEventsEventsBase);
 
 /**
  * @class
- *
- */
+  */
 
 var ProtectionEvents = (function (_EventsBase) {
   _inherits(ProtectionEvents, _EventsBase);
@@ -940,9 +943,9 @@ var _voDashJSError2 = _interopRequireDefault(_voDashJSError);
 var NEEDKEY_BEFORE_INITIALIZE_RETRIES = 5;
 var NEEDKEY_BEFORE_INITIALIZE_TIMEOUT = 500;
 
-var LICENSE_SERVER_REQUEST_RETRIES = 0;
+var LICENSE_SERVER_REQUEST_RETRIES = 3;
 var LICENSE_SERVER_REQUEST_RETRY_INTERVAL = 1000;
-var LICENSE_SERVER_REQUEST_DEFAULT_TIMEOUT = 0;
+var LICENSE_SERVER_REQUEST_DEFAULT_TIMEOUT = 8000;
 
 /**
  * @module ProtectionController
@@ -1003,6 +1006,7 @@ function ProtectionController(config) {
      * @todo This API will change when we have better support for allowing applications
      * to select different adaptation sets for playback.  Right now it is clunky for
      * applications to create {@link StreamInfo} with the right information,
+     * @ignore
      */
     function initializeForMedia(mediaInfo) {
         // Not checking here if a session for similar KS/KID combination is already created
@@ -1041,8 +1045,10 @@ function ProtectionController(config) {
      * supported key systems were found
      * @memberof module:ProtectionKeyController
      * @instance
+     * @ignore
      */
     function getSupportedKeySystemsFromContentProtection(cps) {
+        checkConfig();
         return protectionKeyController.getSupportedKeySystemsFromContentProtection(cps);
     }
 
@@ -1059,6 +1065,7 @@ function ProtectionController(config) {
      * initialization data and key sessions.  That is no longer true in the latest APIs.  This
      * API will need to modified (and a new "generateRequest(keySession, initData)" API created)
      * to come up to speed with the latest EME standard
+     * @ignore
      */
     function createKeySession(initData, cdmData) {
         var initDataForKS = _CommonEncryption2['default'].getPSSHForKeySystem(keySystem, initData);
@@ -1081,7 +1088,7 @@ function ProtectionController(config) {
         } else if (initData) {
             protectionModel.createKeySession(initData, protData, getSessionType(keySystem), cdmData);
         } else {
-            eventBus.trigger(events.KEY_SESSION_CREATED, { data: null, error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_MESSAGE + 'Selected key system is ' + keySystem.systemString + '.  needkey/encrypted event contains no initData corresponding to that key system!') });
+            eventBus.trigger(events.KEY_SESSION_CREATED, { data: null, error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_MESSAGE + 'Selected key system is ' + (keySystem ? keySystem.systemString : null) + '.  needkey/encrypted event contains no initData corresponding to that key system!') });
         }
     }
 
@@ -1094,8 +1101,10 @@ function ProtectionController(config) {
      * @memberof module:ProtectionController
      * @instance
      * @fires ProtectionController#KeySessionCreated
+     * @ignore
      */
     function loadKeySession(sessionID, initData) {
+        checkConfig();
         protectionModel.loadKeySession(sessionID, initData, getSessionType(keySystem));
     }
 
@@ -1110,8 +1119,10 @@ function ProtectionController(config) {
      * @instance
      * @fires ProtectionController#KeySessionRemoved
      * @fires ProtectionController#KeySessionClosed
+     * @ignore
      */
     function removeKeySession(sessionToken) {
+        checkConfig();
         protectionModel.removeKeySession(sessionToken);
     }
 
@@ -1124,8 +1135,10 @@ function ProtectionController(config) {
      * @memberof module:ProtectionController
      * @instance
      * @fires ProtectionController#KeySessionClosed
+     * @ignore
      */
     function closeKeySession(sessionToken) {
+        checkConfig();
         protectionModel.closeKeySession(sessionToken);
     }
 
@@ -1141,6 +1154,7 @@ function ProtectionController(config) {
      * @fires ProtectionController#ServerCertificateUpdated
      */
     function setServerCertificate(serverCertificate) {
+        checkConfig();
         protectionModel.setServerCertificate(serverCertificate);
     }
 
@@ -1155,6 +1169,7 @@ function ProtectionController(config) {
      * @instance
      */
     function setMediaElement(element) {
+        checkConfig();
         if (element) {
             protectionModel.setMediaElement(element);
             eventBus.on(events.NEED_KEY, onNeedKey, this);
@@ -1196,6 +1211,7 @@ function ProtectionController(config) {
      * being instances of {@link ProtectionData}
      * @memberof module:ProtectionController
      * @instance
+     * @ignore
      */
     function setProtectionData(data) {
         protDataSet = data;
@@ -1222,8 +1238,10 @@ function ProtectionController(config) {
      *
      * @memberof module:ProtectionController
      * @instance
+     * @ignore
      */
     function reset() {
+        checkConfig();
 
         eventBus.off(events.INTERNAL_KEY_MESSAGE, onKeyMessage, this);
         eventBus.off(events.INTERNAL_KEY_STATUS_CHANGED, onKeyStatusChanged, this);
@@ -1654,6 +1672,12 @@ function ProtectionController(config) {
         return protectionKeyController ? protectionKeyController.getKeySystems() : [];
     }
 
+    function setKeySystems(keySystems) {
+        if (protectionKeyController) {
+            protectionKeyController.setKeySystems(keySystems);
+        }
+    }
+
     instance = {
         initializeForMedia: initializeForMedia,
         createKeySession: createKeySession,
@@ -1667,6 +1691,7 @@ function ProtectionController(config) {
         setProtectionData: setProtectionData,
         getSupportedKeySystemsFromContentProtection: getSupportedKeySystemsFromContentProtection,
         getKeySystems: getKeySystems,
+        setKeySystems: setKeySystems,
         stop: stop,
         reset: reset
     };
@@ -1761,6 +1786,7 @@ var _constantsProtectionConstants2 = _interopRequireDefault(_constantsProtection
 
 /**
  * @module ProtectionKeyController
+ * @ignore
  * @description Media protection key system functionality that can be modified/overridden by applications
  */
 function ProtectionKeyController() {
@@ -1824,6 +1850,19 @@ function ProtectionKeyController() {
      */
     function getKeySystems() {
         return keySystems;
+    }
+
+    /**
+     * Sets the prioritized list of key systems to be supported
+     * by this player.
+     *
+     * @param {Array.<KeySystem>} newKeySystems the new prioritized
+     * list of key systems
+     * @memberof module:ProtectionKeyController
+     * @instance
+     */
+    function setKeySystems(newKeySystems) {
+        keySystems = newKeySystems;
     }
 
     /**
@@ -2055,6 +2094,7 @@ function ProtectionKeyController() {
         isClearKey: isClearKey,
         initDataEquals: initDataEquals,
         getKeySystems: getKeySystems,
+        setKeySystems: setKeySystems,
         getKeySystemBySystemString: getKeySystemBySystemString,
         getSupportedKeySystemsFromContentProtection: getSupportedKeySystemsFromContentProtection,
         getSupportedKeySystems: getSupportedKeySystems,
@@ -2277,7 +2317,7 @@ function KeySystemPlayReady(config) {
 
     config = config || {};
     var instance = undefined;
-    var messageFormat = 'utf16';
+    var messageFormat = 'utf-16';
     var BASE64 = config.BASE64;
 
     function checkConfig() {
@@ -2291,7 +2331,7 @@ function KeySystemPlayReady(config) {
             xmlDoc = undefined;
         var headers = {};
         var parser = new DOMParser();
-        var dataview = messageFormat === 'utf16' ? new Uint16Array(message) : new Uint8Array(message);
+        var dataview = messageFormat === 'utf-16' ? new Uint16Array(message) : new Uint8Array(message);
 
         msg = String.fromCharCode.apply(null, dataview);
         xmlDoc = parser.parseFromString(msg, 'application/xml');
@@ -2318,21 +2358,18 @@ function KeySystemPlayReady(config) {
     function getLicenseRequestFromMessage(message) {
         var licenseRequest = null;
         var parser = new DOMParser();
-        var dataview = messageFormat === 'utf16' ? new Uint16Array(message) : new Uint8Array(message);
+        var dataview = messageFormat === 'utf-16' ? new Uint16Array(message) : new Uint8Array(message);
 
         checkConfig();
         var msg = String.fromCharCode.apply(null, dataview);
         var xmlDoc = parser.parseFromString(msg, 'application/xml');
 
-        if (xmlDoc.getElementsByTagName('Challenge')[0]) {
+        if (xmlDoc.getElementsByTagName('PlayReadyKeyMessage')[0]) {
             var Challenge = xmlDoc.getElementsByTagName('Challenge')[0].childNodes[0].nodeValue;
             if (Challenge) {
                 licenseRequest = BASE64.decode(Challenge);
             }
-        } else if (xmlDoc.getElementsByTagName('parsererror').length) {
-            // In case it is not an XML doc, return the message itself
-            // There are CDM implementations of some devices (example: some smartTVs) that
-            // return directly the challenge without wrapping it in an xml doc
+        } else {
             return message;
         }
 
@@ -2404,6 +2441,9 @@ function KeySystemPlayReady(config) {
             PSSHData = undefined;
 
         checkConfig();
+        if (!cpData) {
+            return null;
+        }
         // Handle common encryption PSSH
         if ('pssh' in cpData) {
             return _CommonEncryption2['default'].parseInitDataFromContentProtection(cpData, BASE64);
@@ -2448,12 +2488,12 @@ function KeySystemPlayReady(config) {
      * messages using UTF16, while others return them as UTF8.  Use this function
      * to modify the message format to expect when parsing CDM messages.
      *
-     * @param {string} format the expected message format.  Either "utf8" or "utf16".
+     * @param {string} format the expected message format.  Either "utf-8" or "utf-16".
      * @throws {Error} Specified message format is not one of "utf8" or "utf16"
      */
     function setPlayReadyMessageFormat(format) {
-        if (format !== 'utf8' && format !== 'utf16') {
-            throw new Error('Illegal PlayReady message format! -- ' + format);
+        if (format !== 'utf-8' && format !== 'utf-16') {
+            throw new Error('Specified message format is not one of "utf-8" or "utf-16"');
         }
         messageFormat = format;
     }
@@ -2855,7 +2895,6 @@ var _coreErrorsErrorsBase2 = _interopRequireDefault(_coreErrorsErrorsBase);
 
 /**
  * @class
- *
  */
 
 var ProtectionErrors = (function (_ErrorsBase) {
@@ -3335,7 +3374,6 @@ function ProtectionModel_01b(config) {
                             sessions.push(sessionToken);
 
                             if (pendingSessions.length !== 0) {
-                                errHandler.mediaKeyMessageError(_errorsProtectionErrors2['default'].MEDIA_KEY_MESSAGE_ERROR_MESSAGE);
                                 errHandler.error(new _voDashJSError2['default'](_errorsProtectionErrors2['default'].MEDIA_KEY_MESSAGE_ERROR_CODE, _errorsProtectionErrors2['default'].MEDIA_KEY_MESSAGE_ERROR_MESSAGE));
                             }
                         }
@@ -3636,14 +3674,9 @@ function ProtectionModel_21Jan2015(config) {
         });
     }
 
-    function createKeySession(initData, protData, sessionType, cdmData) {
+    function createKeySession(initData, protData, sessionType) {
         if (!keySystem || !mediaKeys) {
             throw new Error('Can not create sessions until you have selected a key system');
-        }
-
-        // Patch for StickTV: provide CustomData to PlayReady CDM using setServerCertificate API
-        if (cdmData && keySystem.systemString === 'com.microsoft.playready') {
-            mediaKeys.setServerCertificate(new Uint8Array(cdmData));
         }
 
         var session = mediaKeys.createSession(sessionType);
@@ -4617,6 +4650,7 @@ module.exports = exports['default'];
  *
  * @implements LicenseServer
  * @class
+ * @ignore
  */
 
 'use strict';
@@ -4764,6 +4798,9 @@ module.exports = exports['default'];
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
+/**
+ * @ignore
+ */
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
