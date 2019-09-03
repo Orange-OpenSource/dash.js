@@ -13,7 +13,7 @@
           "name": "SegmentBase, ondemand profile"
         },
         {
-          "url": "//demo.unified-streaming.com/video/ateam/ateam.ism/ateam.mpd",
+          "url": "http://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.mpd",
           "name": "SegmentTimeline/Time"
         },
         {
@@ -166,23 +166,23 @@
       "submenu": [
         {
           "name": "Single adaption set, 7 tiles at 10x1, each thumb 320x180",
-          "url": "//dash.edgesuite.net/akamai/bbb_30fps/bbb_with_tiled_thumbnails.mpd"
+          "url": "http://dash.edgesuite.net/akamai/bbb_30fps/bbb_with_tiled_thumbnails.mpd"
         },
         {
           "name": "Single adaption set, 4 tiles at 10x1, each thumb 205x115",
-          "url": "//dash.edgesuite.net/akamai/bbb_30fps/bbb_with_4_tiles_thumbnails.mpd"
+          "url": "http://dash.edgesuite.net/akamai/bbb_30fps/bbb_with_4_tiles_thumbnails.mpd"
         },
         {
           "name": "Single adaption set, 1 tile at 10x20, each thumb 102x58",
-          "url": "//dash.edgesuite.net/akamai/bbb_30fps/bbb_with_tiled_thumbnails_2.mpd"
+          "url": "http://dash.edgesuite.net/akamai/bbb_30fps/bbb_with_tiled_thumbnails_2.mpd"
         },
         {
           "name": "Two adaption sets with different thumb resolutions",
-          "url": "//dash.edgesuite.net/akamai/bbb_30fps/bbb_with_multiple_tiled_thumbnails.mpd"
+          "url": "http://dash.edgesuite.net/akamai/bbb_30fps/bbb_with_multiple_tiled_thumbnails.mpd"
         },
         {
           "name": "Live stream, Single adaptation set, 1x1 tiles (livesim)",
-          "url": "//livesim.dashif.org/livesim/testpic_2s/Manifest_thumbs.mpd"
+          "url": "http://livesim.dashif.org/livesim/testpic_2s/Manifest_thumbs.mpd"
         },
         {
           "name": "SegmentBase, Single adaption set, 3x4 tiles",
@@ -812,27 +812,27 @@
       "submenu": [
         {
           "name": "Clear Dynamic SegmentTimeline",
-          "url": "//wowzaec2demo.streamlock.net/live/bigbuckbunny/manifest_mvtime.mpd"
+          "url": "http://wowzaec2demo.streamlock.net/live/bigbuckbunny/manifest_mvtime.mpd"
         },
         {
           "name": "Clear Dynamic SegmentTemplate",
-          "url": "//wowzaec2demo.streamlock.net/live/bigbuckbunny/manifest_mvnumber.mpd"
+          "url": "http://wowzaec2demo.streamlock.net/live/bigbuckbunny/manifest_mvnumber.mpd"
         },
         {
           "name": "Clear Dynamic SegmentList",
-          "url": "//wowzaec2demo.streamlock.net/live/bigbuckbunny/manifest_mvlist.mpd"
+          "url": "http://wowzaec2demo.streamlock.net/live/bigbuckbunny/manifest_mvlist.mpd"
         },
         {
           "name": "Clear Static SegmentTimeline",
-          "url": "//wowzaec2demo.streamlock.net/vod/_definst_/ElephantsDream/smil:ElephantsDream.smil/manifest_mvtime.mpd"
+          "url": "http://wowzaec2demo.streamlock.net/vod/_definst_/ElephantsDream/smil:ElephantsDream.smil/manifest_mvtime.mpd"
         },
         {
           "name": "Clear Static SegmentTemplate",
-          "url": "//wowzaec2demo.streamlock.net/vod/_definst_/ElephantsDream/smil:ElephantsDream.smil/manifest_mvnumber.mpd"
+          "url": "http://wowzaec2demo.streamlock.net/vod/_definst_/ElephantsDream/smil:ElephantsDream.smil/manifest_mvnumber.mpd"
         },
         {
           "name": "Clear Static SegmentList",
-          "url": "//wowzaec2demo.streamlock.net/vod/_definst_/ElephantsDream/smil:ElephantsDream.smil/manifest_mvlist.mpd"
+          "url": "http://wowzaec2demo.streamlock.net/vod/_definst_/ElephantsDream/smil:ElephantsDream.smil/manifest_mvlist.mpd"
         },
         {
           "name": "Widevine Dynamic SegmentTimeline",
@@ -899,11 +899,11 @@
         },
         {
           "name": "Unified Streaming - Timeline",
-          "url": "//demo.unified-streaming.com/video/ateam/ateam.ism/ateam.mpd"
+          "url": "http://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.mpd"
         },
         {
           "name": "Unified Streaming (Widevine, persistent)",
-          "url": "//demo.unified-streaming.com/video/tears-of-steel/tears-of-steel-dash-widevine.ism/.mpd",
+          "url": "http://demo.unified-streaming.com/video/tears-of-steel/tears-of-steel-dash-widevine.ism/.mpd",
           "protData": {
               "com.widevine.alpha": {
                   "serverURL": "https://cwip-shaka-proxy.appspot.com/no_auth",
@@ -922,23 +922,7 @@
         },
         {
           "url": "http://2is7server2.rd.francetelecom.com/hasplayer/LIVE_1.isml/manifest",
-          "name": "Prince Of Persia - Live",
-          "bufferConfig" : {
-            "liveDelay": 16,
-            "stableBufferTime": 16,
-            "bufferTimeAtTopQuality": 16,
-            "bufferTimeAtTopQualityLongForm": 16
-          }
-        },
-        {
-          "url": "http://2is7server1.rd.francetelecom.com/C4/C4-50_TVApp2.isml/Manifest",
-          "name": "Arte (subtitles)",
-          "bufferConfig" : {
-            "liveDelay": 16,
-            "stableBufferTime": 16,
-            "bufferTimeAtTopQuality": 16,
-            "bufferTimeAtTopQualityLongForm": 16
-          }
+          "name": "Prince Of Persia - Live"
         },
         {
           "url": "http://2is7server1.rd.francetelecom.com/VOD/BBB-SD/big_buck_bunny_1080p_stereo.ism/Manifest",

@@ -59,13 +59,15 @@ function DownloadRatioRuleClass() {
 
         let mediaType = rulesContext.getMediaInfo().type;
 
+        let metricsModel = MetricsModel(context).getInstance();
         let dashMetrics = DashMetrics(context).getInstance();
         let dashManifest = DashManifestModel(context).getInstance();
+        let metrics = metricsModel.getReadOnlyMetricsFor(mediaType);
         let streamController = StreamController(context).getInstance();
         let abrController = rulesContext.getAbrController();
         let current = abrController.getQualityFor(mediaType, streamController.getActiveStreamInfo());
 
-        let requests = dashMetrics.getHttpRequests(mediaType),
+        let requests = dashMetrics.getHttpRequests(metrics),
             lastRequest = null,
             currentRequest = null,
             downloadTime,
@@ -86,11 +88,10 @@ function DownloadRatioRuleClass() {
         switchUpRatioSafetyFactor = 1.5;
         logger.debug("[CustomRules][" + mediaType + "][DownloadRatioRule] Checking download ratio rule... (current = " + current + ")");
 
-        if (!requests) {
+        if (!metrics) {
             logger.debug("[CustomRules][" + mediaType + "][DownloadRatioRule] No metrics, bailing.");
             return SwitchRequest(context).create();
         }
-
 
         // Get last valid request
         i = requests.length - 1;

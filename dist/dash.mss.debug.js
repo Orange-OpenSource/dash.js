@@ -278,7 +278,7 @@ function MssFragmentInfoController(config) {
 
     var streamProcessor = config.streamProcessor;
     var eventBus = config.eventBus;
-    var dashMetrics = config.dashMetrics;
+    var metricsModel = config.metricsModel;
     var playbackController = config.playbackController;
     var ISOBoxer = config.ISOBoxer;
     var baseURLController = config.baseURLController;
@@ -436,7 +436,7 @@ function MssFragmentInfoController(config) {
         try {
             // Process FramgentInfo in order to update segment timeline (DVR window)
             var mssFragmentMoofProcessor = (0, _MssFragmentMoofProcessor2['default'])(context).create({
-                dashMetrics: dashMetrics,
+                metricsModel: metricsModel,
                 playbackController: playbackController,
                 ISOBoxer: ISOBoxer,
                 eventBus: eventBus,
@@ -535,7 +535,7 @@ function MssFragmentMoofProcessor(config) {
     var instance = undefined,
         type = undefined,
         logger = undefined;
-    var dashMetrics = config.dashMetrics;
+    var metricsModel = config.metricsModel;
     var playbackController = config.playbackController;
     var errorHandler = config.errHandler;
     var eventBus = config.eventBus;
@@ -665,10 +665,12 @@ function MssFragmentMoofProcessor(config) {
     }
 
     function updateDVR(type, range, manifestInfo) {
-        var dvrInfos = dashMetrics.getCurrentDVRInfo(type);
-        if (!dvrInfos || range.end > dvrInfos.range.end) {
-            logger.debug('Update DVR Infos [' + range.start + ' - ' + range.end + ']');
-            dashMetrics.addDVRInfo(type, playbackController.getTime(), manifestInfo, range);
+        var dvrInfos = metricsModel.getMetricsFor(type).DVRInfo;
+        if (dvrInfos) {
+            if (dvrInfos.length === 0 || dvrInfos.length > 0 && range.end > dvrInfos[dvrInfos.length - 1].range.end) {
+                logger.debug('Update DVR Infos [' + range.start + ' - ' + range.end + ']');
+                metricsModel.addDVRInfo(type, playbackController.getTime(), manifestInfo, range);
+            }
         }
     }
 
@@ -1630,7 +1632,7 @@ function MssFragmentProcessor(config) {
 
     config = config || {};
     var context = this.context;
-    var dashMetrics = config.dashMetrics;
+    var metricsModel = config.metricsModel;
     var playbackController = config.playbackController;
     var eventBus = config.eventBus;
     var protectionController = config.protectionController;
@@ -1650,7 +1652,7 @@ function MssFragmentProcessor(config) {
             constants: config.constants, ISOBoxer: ISOBoxer });
 
         mssFragmentMoofProcessor = (0, _MssFragmentMoofProcessor2['default'])(context).create({
-            dashMetrics: dashMetrics,
+            metricsModel: metricsModel,
             playbackController: playbackController,
             ISOBoxer: ISOBoxer,
             eventBus: eventBus,
@@ -1777,11 +1779,11 @@ function MssHandler(config) {
     var events = config.events;
     var constants = config.constants;
     var initSegmentType = config.initSegmentType;
-    var dashMetrics = config.dashMetrics;
+    var metricsModel = config.metricsModel;
     var playbackController = config.playbackController;
     var protectionController = config.protectionController;
     var mssFragmentProcessor = (0, _MssFragmentProcessor2['default'])(context).create({
-        dashMetrics: dashMetrics,
+        metricsModel: metricsModel,
         playbackController: playbackController,
         protectionController: protectionController,
         eventBus: eventBus,
@@ -1869,7 +1871,7 @@ function MssHandler(config) {
                     var fragmentInfoController = (0, _MssFragmentInfoController2['default'])(context).create({
                         streamProcessor: processor,
                         eventBus: eventBus,
-                        dashMetrics: dashMetrics,
+                        metricsModel: metricsModel,
                         playbackController: playbackController,
                         baseURLController: config.baseURLController,
                         ISOBoxer: config.ISOBoxer,
@@ -2144,6 +2146,7 @@ function MssParser(config) {
     var debug = config.debug;
     var constants = config.constants;
     var manifestModel = config.manifestModel;
+    var mediaPlayerModel = config.mediaPlayerModel;
 
     var DEFAULT_TIME_SCALE = 10000000.0;
     var SUPPORTED_CODECS = ['AAC', 'AACL', 'AVC1', 'H264', 'TTML', 'DFXP'];
@@ -2178,12 +2181,10 @@ function MssParser(config) {
     };
 
     var instance = undefined,
-        logger = undefined,
-        mediaPlayerModel = undefined;
+        logger = undefined;
 
     function setup() {
         logger = debug.getLogger(instance);
-        mediaPlayerModel = config.mediaPlayerModel;
     }
 
     function mapPeriod(smoothStreamingMedia, timescale) {
@@ -2677,6 +2678,7 @@ function MssParser(config) {
             startTime = undefined,
             segments = undefined,
             timescale = undefined,
+            segmentDuration = undefined,
             i = undefined,
             j = undefined;
 
@@ -2766,9 +2768,11 @@ function MssParser(config) {
                 adaptations[i].ContentProtection_asArray = manifest.ContentProtection_asArray;
             }
 
-            // Set minBufferTime
             if (adaptations[i].contentType === 'video') {
-                manifest.minBufferTime = adaptations[i].SegmentTemplate.SegmentTimeline.S_asArray[0].d / adaptations[i].SegmentTemplate.timescale * 2;
+                // Get video segment duration
+                segmentDuration = adaptations[i].SegmentTemplate.SegmentTimeline.S_asArray[0].d / adaptations[i].SegmentTemplate.timescale;
+                // Set minBufferTime
+                manifest.minBufferTime = segmentDuration * 2;
             }
 
             if (manifest.type === 'dynamic') {
@@ -2783,8 +2787,25 @@ function MssParser(config) {
             }
         }
 
-        if (manifest.timeShiftBufferDepth < manifest.minBufferTime) {
-            manifest.minBufferTime = manifest.timeShiftBufferDepth;
+        // Cap minBufferTime to timeShiftBufferDepth
+        manifest.minBufferTime = Math.min(manifest.minBufferTime, manifest.timeShiftBufferDepth ? manifest.timeShiftBufferDepth : Infinity);
+
+        // In case of live streams:
+        // 1- configure player buffering properties according to target live delay
+        // 2- adapt live delay and then buffers length in case timeShiftBufferDepth is too small compared to target live delay (see PlaybackController.computeLiveDelay())
+        if (manifest.type === 'dynamic') {
+            var targetLiveDelay = mediaPlayerModel.getLiveDelay();
+            if (!targetLiveDelay) {
+                targetLiveDelay = segmentDuration * mediaPlayerModel.getLiveDelayFragmentCount();
+            }
+            var targetDelayCapping = Math.max(manifest.timeShiftBufferDepth - 10, /*END_OF_PLAYLIST_PADDING*/manifest.timeShiftBufferDepth / 2);
+            var liveDelay = Math.min(targetDelayCapping, targetLiveDelay);
+            mediaPlayerModel.setLiveDelay(liveDelay);
+            // Consider a margin of one segment in order to avoid Precondition Failed errors (412), for example if audio and video are not correctly synchronized
+            var bufferTime = liveDelay - segmentDuration;
+            mediaPlayerModel.setStableBufferTime(bufferTime);
+            mediaPlayerModel.setBufferTimeAtTopQuality(bufferTime);
+            mediaPlayerModel.setBufferTimeAtTopQualityLongForm(bufferTime);
         }
 
         // Delete Content Protection under root manifest node
@@ -2972,19 +2993,6 @@ var MediaPlayerEvents = (function (_EventsBase) {
     _classCallCheck(this, MediaPlayerEvents);
 
     _get(Object.getPrototypeOf(MediaPlayerEvents.prototype), 'constructor', this).call(this);
-
-    /**
-     * Triggered when all mediaInfo has been loaded on OfflineStream
-     * Return a list of available bitrateInfo needed to download stream.
-     */
-    this.DOWNLOADABLE_REPRESENTATIONS_LOADED = 'downloadableRepresentationsInfoLoaded';
-
-    /**
-     * Triggered when all mediaInfo has been loaded on OfflineStream
-     * Return a list of available bitrateInfo needed to download stream.
-     */
-    this.AVAILABLE_BITRATES_LOADED = 'availableBitratesLoaded';
-
     /**
      * Triggered when playback will not start yet
      * as the MPD's availabilityStartTime is in the future.
@@ -3017,23 +3025,6 @@ var MediaPlayerEvents = (function (_EventsBase) {
      * @event MediaPlayerEvents#ERROR
      */
     this.ERROR = 'error';
-
-    /* Triggered when the downloading is initialize and started
-    * @event MediaPlayerEvents#DOWNLOADING_STOPPED
-    */
-    this.DOWNLOADING_STARTED = 'downloadingStarted';
-
-    /**
-     * Triggered when the user stop current downloading
-     * @event MediaPlayerEvents#DOWNLOADING_STOPPED
-     */
-    this.DOWNLOADING_STOPPED = 'downloadingStopped';
-
-    /**
-     * Triggered when all fragments has been downloaded
-     * @event MediaPlayerEvents#DOWNLOADING_FINISHED
-     */
-    this.DOWNLOADING_FINISHED = 'downloadingFinished';
 
     /**
      * Triggered when a fragment download has completed.

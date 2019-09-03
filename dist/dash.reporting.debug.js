@@ -383,7 +383,6 @@ var Constants = (function () {
     key: 'init',
     value: function init() {
       this.STREAM = 'stream';
-      this.MPD = 'MPD';
       this.VIDEO = 'video';
       this.AUDIO = 'audio';
       this.TEXT = 'text';
@@ -402,6 +401,7 @@ var Constants = (function () {
       this.VTT = 'vtt';
       this.WVTT = 'wvtt';
       this.UTF8 = 'utf-8';
+      this.SUGGESTED_PRESENTATION_DELAY = 'suggestedPresentationDelay';
       this.SCHEME_ID_URI = 'schemeIdUri';
       this.START_TIME = 'starttime';
       this.ABR_STRATEGY_DYNAMIC = 'abrDynamic';
@@ -416,8 +416,6 @@ var Constants = (function () {
        */
       this.BAD_ARGUMENT_ERROR = 'Invalid Arguments';
       this.MISSING_CONFIG_ERROR = 'Missing config parameter(s)';
-      this.XML = 'XML';
-      this.ARRAY_BUFFER = 'ArrayBuffer';
     }
 
     /**
@@ -512,7 +510,7 @@ function MetricsReporting() {
     function createMetricsReporting(config) {
         dvbErrorsTranslator = (0, _utilsDVBErrorsTranslator2['default'])(context).getInstance({
             eventBus: config.eventBus,
-            dashMetrics: config.dashMetrics,
+            metricsModel: config.metricsModel,
             metricsConstants: config.metricsConstants,
             events: config.events
         });
@@ -690,7 +688,7 @@ function MetricsCollectionController(config) {
         var controllersToRemove = Object.keys(metricsControllers);
 
         var metrics = (0, _utilsManifestParsing2['default'])(context).getInstance({
-            adapter: config.adapter,
+            dashManifestModel: config.dashManifestModel,
             constants: config.constants
         }).getMetrics(e.manifest);
 
@@ -2098,7 +2096,7 @@ function DVBErrorsTranslator(config) {
     var instance = undefined,
         mpd = undefined;
     var eventBus = config.eventBus;
-    var dashMetrics = config.dashMetrics;
+    var metricModel = config.metricsModel;
     var metricsConstants = config.metricsConstants;
     //MediaPlayerEvents have been added to Events in MediaPlayer class
     var Events = config.events;
@@ -2124,7 +2122,7 @@ function DVBErrorsTranslator(config) {
             o.terror = new Date();
         }
 
-        dashMetrics.addDVBErrors(o);
+        metricModel.addDVBErrors(o);
     }
 
     function onManifestUpdate(e) {
@@ -2330,26 +2328,26 @@ var _voReporting2 = _interopRequireDefault(_voReporting);
 function ManifestParsing(config) {
     config = config || {};
     var instance = undefined;
-    var adapter = config.adapter;
+    var dashManifestModel = config.dashManifestModel;
     var constants = config.constants;
 
     function getMetricsRangeStartTime(manifest, dynamic, range) {
-        var mpd = adapter.getMpd(manifest);
-        var voPeriods = undefined,
-            reportingStartTime = undefined;
+        var mpd = dashManifestModel.getMpd(manifest);
+        var voPeriods;
         var presentationStartTime = 0;
+        var reportingStartTime;
 
         if (dynamic) {
             // For services with MPD@type='dynamic', the start time is
             // indicated in wall clock time by adding the value of this
             // attribute to the value of the MPD@availabilityStartTime
             // attribute.
-            presentationStartTime = adapter.getAvailabilityStartTime(mpd) / 1000;
+            presentationStartTime = mpd.availabilityStartTime.getTime() / 1000;
         } else {
             // For services with MPD@type='static', the start time is indicated
             // in Media Presentation time and is relative to the PeriodStart
             // time of the first Period in this MPD.
-            voPeriods = adapter.getRegularPeriods(mpd);
+            voPeriods = this.getRegularPeriods(mpd);
 
             if (voPeriods.length) {
                 presentationStartTime = voPeriods[0].start;
@@ -2371,10 +2369,10 @@ function ManifestParsing(config) {
     function getMetrics(manifest) {
         var metrics = [];
 
-        if (manifest && manifest.Metrics_asArray) {
+        if (manifest.Metrics_asArray) {
             manifest.Metrics_asArray.forEach(function (metric) {
                 var metricEntry = new _voMetrics2['default']();
-                var isDynamic = adapter.getIsDynamic(manifest);
+                var isDynamic = dashManifestModel.getIsDynamic(manifest);
 
                 if (metric.hasOwnProperty('metrics')) {
                     metricEntry.metrics = metric.metrics;
@@ -2393,7 +2391,7 @@ function ManifestParsing(config) {
                         } else {
                             // if not present, the value is identical to the
                             // Media Presentation duration.
-                            rangeEntry.duration = adapter.getDuration(manifest);
+                            rangeEntry.duration = dashManifestModel.getDuration(manifest);
                         }
 
                         rangeEntry._useWallClockTime = isDynamic;
