@@ -377,8 +377,8 @@ function PlaybackController() {
                 presentationStartTime = startTimeOffset - (streamInfo.manifestInfo.availableFrom.getTime() / 1000);
 
                 if (presentationStartTime > liveStartTime ||
-                    presentationStartTime < (!isNaN(liveEdge) ? (liveEdge - streamInfo.manifestInfo.DVRWindowSize) : NaN)) {
-                    presentationStartTime = Math.min(Math.max(presentationStartTime, liveEdge - streamInfo.manifestInfo.DVRWindowSize), liveEdge);
+                    presentationStartTime < (!isNaN(liveEdge) ? ((liveEdge - streamInfo.manifestInfo.DVRWindowSize) + 20) : NaN)) {
+                    presentationStartTime = Math.min(Math.max(presentationStartTime, (liveEdge - streamInfo.manifestInfo.DVRWindowSize) + 20), liveEdge);
                 }
             }
             presentationStartTime = presentationStartTime || liveStartTime;
@@ -438,7 +438,7 @@ function PlaybackController() {
 
     function updateCurrentTime() {
         if (isPaused() || !isDynamic || videoModel.getReadyState() === 0) return;
-        const currentTime = getNormalizedTime();
+        const currentTime = getTime(); //rb: was getNormalizedTime()?;
         const actualTime = getActualPresentationTime(currentTime);
 
         const timeChanged = (!isNaN(actualTime) && actualTime !== currentTime);
