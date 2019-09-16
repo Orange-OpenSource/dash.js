@@ -372,7 +372,7 @@ function PlaybackController() {
 
                 if (presentationStartTime > liveStartTime ||
                     presentationStartTime < (!isNaN(liveEdge) ? (liveEdge - streamInfo.manifestInfo.DVRWindowSize) : NaN)) {
-                    presentationStartTime = null;
+                    presentationStartTime = Math.min(Math.max(presentationStartTime, liveEdge - streamInfo.manifestInfo.DVRWindowSize), liveEdge);
                 }
             }
             presentationStartTime = presentationStartTime || liveStartTime;
