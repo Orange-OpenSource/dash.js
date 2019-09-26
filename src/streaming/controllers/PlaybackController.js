@@ -671,8 +671,8 @@ function PlaybackController() {
     }
 
     function onBytesAppended(e) {
-        let earliestTime,
-            initialStartTime;
+        let earliestTime = -1;
+        let initialStartTime;
         let ranges = e.bufferedRanges;
         if (!ranges || !ranges.length) return;
         if (commonEarliestTime[streamInfo.id] && commonEarliestTime[streamInfo.id].started === true) {
@@ -702,35 +702,27 @@ function PlaybackController() {
 
         initialStartTime = getStreamStartTime(false);
         if (hasAudioTrack && hasVideoTrack) {
-            //current stream has audio and video contents
+            // current stream has audio and video contents
             if (!isNaN(commonEarliestTime[streamInfo.id].audio) && !isNaN(commonEarliestTime[streamInfo.id].video)) {
-
-                if (commonEarliestTime[streamInfo.id].audio < commonEarliestTime[streamInfo.id].video) {
-                    // common earliest is video time
-                    // check buffered audio range has video time, if ok, we seek, otherwise, we wait some other data
-                    earliestTime = commonEarliestTime[streamInfo.id].video > initialStartTime ? commonEarliestTime[streamInfo.id].video : initialStartTime;
-                    ranges = bufferedRange[streamInfo.id].audio;
-                } else {
-                    // common earliest is audio time
-                    // check buffered video range has audio time, if ok, we seek, otherwise, we wait some other data
-                    earliestTime = commonEarliestTime[streamInfo.id].audio > initialStartTime ? commonEarliestTime[streamInfo.id].audio : initialStartTime;
-                    ranges = bufferedRange[streamInfo.id].video;
-                }
-                if (checkTimeInRanges(earliestTime, ranges)) {
-                    if (!isSeeking() && !compatibleWithPreviousStream && earliestTime !== 0) {
-                        // PATCH: seek to earliest time + 0.1 to avoid playback freeze on CleTV
-                        seek(earliestTime + 0.1, true, true);
-                    }
-                    commonEarliestTime[streamInfo.id].started = true;
-                }
+                earliestTime = Math.max(commonEarliestTime[streamInfo.id].audio, commonEarliestTime[streamInfo.id].video);
+                ranges = (commonEarliestTime[streamInfo.id].audio < commonEarliestTime[streamInfo.id].video) ? bufferedRange[streamInfo.id].audio : bufferedRange[streamInfo.id].video;
             }
         } else {
-            //current stream has only audio or only video content
+            // current stream has only audio or only video content
             if (commonEarliestTime[streamInfo.id][type]) {
-                earliestTime = commonEarliestTime[streamInfo.id][type] > initialStartTime ? commonEarliestTime[streamInfo.id][type] : initialStartTime;
-                if (!isSeeking() && !compatibleWithPreviousStream) {
+                earliestTime = commonEarliestTime[streamInfo.id][type];
+                ranges = bufferedRange[streamInfo.id][type];
+            }
+        }
+
+        if (earliestTime !== -1) {
+            // Consider initial start time for on-demand contents
+            earliestTime = isDynamic ? earliestTime : Math.max(earliestTime, initialStartTime);
+            // Seek if buffered range contains start time, otherwise wait for some data
+            if (checkTimeInRanges(earliestTime, ranges)) {
+                if (!isSeeking() && !compatibleWithPreviousStream && earliestTime !== 0) {
                     // PATCH: seek to earliest time + 0.1 to avoid playback freeze on CleTV
-                    seek(earliestTime + 0.1, false, true);
+                    seek(earliestTime + 0.1, true, true);
                 }
                 commonEarliestTime[streamInfo.id].started = true;
             }
