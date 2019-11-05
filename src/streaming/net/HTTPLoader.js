@@ -112,6 +112,7 @@ function HTTPLoader(cfg) {
                     null,
                     request.type,
                     request.url,
+                    request.quality,
                     httpRequest.response ? httpRequest.response.responseURL : null,
                     request.serviceLocation || null,
                     request.range || null,
