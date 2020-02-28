@@ -31,6 +31,7 @@
 import EventBus from '../../core/EventBus';
 import Events from '../../core/events/Events';
 import FactoryMaker from '../../core/FactoryMaker';
+import DashConstants from '../constants/DashConstants';
 
 function TimelineConverter() {
 
@@ -38,6 +39,7 @@ function TimelineConverter() {
     let eventBus = EventBus(context).getInstance();
 
     let instance,
+        dashManifestModel,
         clientServerTimeShift,
         isClientServerTimeSyncCompleted,
         expectedLiveEdge;
@@ -45,6 +47,14 @@ function TimelineConverter() {
     function initialize() {
         resetInitialSettings();
         eventBus.on(Events.TIME_SYNCHRONIZATION_COMPLETED, onTimeSyncComplete, this);
+    }
+
+    function setConfig(config) {
+        if (!config) return;
+
+        if (config.dashManifestModel) {
+            dashManifestModel = config.dashManifestModel;
+        }
     }
 
     function isTimeSyncCompleted() {
@@ -147,13 +157,49 @@ function TimelineConverter() {
 
         // Dynamic Range Finder
         const d = voRepresentation.segmentDuration || (voRepresentation.segments && voRepresentation.segments.length ? voRepresentation.segments[voRepresentation.segments.length - 1].duration : 0);
-        const now = calcPresentationTimeFromWallTime(new Date(), voPeriod);
-        const periodEnd = voPeriod.start + voPeriod.duration;
-        range.start = Math.max((now - voPeriod.mpd.timeShiftBufferDepth), voPeriod.start);
 
-        const endOffset = voRepresentation.availabilityTimeOffset !== undefined &&
-            voRepresentation.availabilityTimeOffset < d ? d - voRepresentation.availabilityTimeOffset : d;
-        range.end = now >= periodEnd && now - endOffset < periodEnd ? periodEnd : now - endOffset;
+        // Specific use case of SegmentTimeline without timeShiftBufferDepth
+        if (voRepresentation.segmentInfoType === DashConstants.SEGMENT_TIMELINE && voPeriod.mpd.timeShiftBufferDepth === Number.POSITIVE_INFINITY) {
+            return calcSegmentAvailabilityRangeFromTimeline(voRepresentation);
+        } else {
+            const now = calcPresentationTimeFromWallTime(new Date(), voPeriod);
+            const periodEnd = voPeriod.start + voPeriod.duration;
+            range.start = Math.max((now - voPeriod.mpd.timeShiftBufferDepth), voPeriod.start);
+
+            const endOffset = voRepresentation.availabilityTimeOffset !== undefined &&
+                voRepresentation.availabilityTimeOffset < d ? d - voRepresentation.availabilityTimeOffset : d;
+            range.end = now >= periodEnd && now - endOffset < periodEnd ? periodEnd : now - endOffset;
+        }
+
+        return range;
+    }
+
+    function calcSegmentAvailabilityRangeFromTimeline(voRepresentation) {
+        const adaptation = voRepresentation.adaptation.period.mpd.manifest.Period_asArray[voRepresentation.adaptation.period.index].AdaptationSet_asArray[voRepresentation.adaptation.index];
+        const representation = dashManifestModel.getRepresentationFor(voRepresentation.index, adaptation);
+
+        const timeline = representation.SegmentTemplate.SegmentTimeline;
+        const timescale = representation.SegmentTemplate.timescale;
+        const segments = timeline.S_asArray;
+        const range = { start: 0, end: 0 };
+        let d = 0;
+        let segment,
+            repeat,
+            i,
+            len;
+
+        range.start = segments[0].t / timescale;
+
+        for (i = 0, len = segments.length; i < len; i++) {
+            segment = segments[i];
+            repeat = 0;
+            if (segment.hasOwnProperty('r')) {
+                repeat = segment.r;
+            }
+            d += (segment.d / timescale)  * (1 + repeat);
+        }
+
+        range.end = range.start + d;
 
         return range;
     }
@@ -199,6 +245,7 @@ function TimelineConverter() {
 
     instance = {
         initialize: initialize,
+        setConfig: setConfig,
         isTimeSyncCompleted: isTimeSyncCompleted,
         setTimeSyncCompleted: setTimeSyncCompleted,
         getClientTimeOffset: getClientTimeOffset,

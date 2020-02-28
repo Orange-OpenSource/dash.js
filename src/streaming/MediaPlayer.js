@@ -268,6 +268,10 @@ function MediaPlayer() {
             dashManifestModel: dashManifestModel
         });
 
+        timelineConverter.setConfig({
+            dashManifestModel: dashManifestModel
+        });
+
         restoreDefaultUTCTimingSources();
         setAutoPlay(AutoPlay !== undefined ? AutoPlay : true);
 
