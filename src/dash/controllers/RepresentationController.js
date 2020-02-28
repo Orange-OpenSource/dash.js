@@ -204,9 +204,7 @@ function RepresentationController() {
         const streamInfo = streamProcessor.getStreamInfo();
         const manifestInfo = streamInfo ? streamInfo.manifestInfo : null;
         const isDynamic = manifestInfo ? manifestInfo.isDynamic : null;
-        const realAdaptation = currentVoRepresentation.adaptation.period.mpd.manifest.Period_asArray[currentVoRepresentation.adaptation.period.index].AdaptationSet_asArray[currentVoRepresentation.adaptation.index];
-        const realRepresentation = dashManifestModel.getRepresentationFor(currentVoRepresentation.index, realAdaptation);
-        const range = timelineConverter.calcSegmentAvailabilityRange(currentVoRepresentation, realRepresentation, isDynamic);
+        const range = timelineConverter.calcSegmentAvailabilityRange(currentVoRepresentation, isDynamic);
         metricsModel.addDVRInfo(streamProcessor.getType(), playbackController.getTime(), manifestInfo, range);
     }
 

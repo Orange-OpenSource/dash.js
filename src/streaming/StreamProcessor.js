@@ -87,7 +87,6 @@ function StreamProcessor(config) {
             mimeType: mimeType,
             timelineConverter: timelineConverter,
             dashMetrics: dashMetrics,
-            dashManifestModel: dashManifestModel,
             metricsModel: metricsModel,
             mediaPlayerModel: mediaPlayerModel,
             baseURLController: config.baseURLController,
