@@ -62,6 +62,7 @@ function DashHandler(config) {
     let segmentBaseLoader;
     const timelineConverter = config.timelineConverter;
     const dashMetrics = config.dashMetrics;
+    const dashManifestModel = config.dashManifestModel;
     const metricsModel = config.metricsModel;
     const mediaPlayerModel = config.mediaPlayerModel;
     const errHandler = config.errHandler;
@@ -259,13 +260,15 @@ function DashHandler(config) {
     function updateRepresentation(voRepresentation, keepIdx) {
         const hasInitialization = Representation.hasInitialization(voRepresentation);
         const hasSegments = Representation.hasSegments(voRepresentation);
+        const realAdaptation = voRepresentation.adaptation.period.mpd.manifest.Period_asArray[voRepresentation.adaptation.period.index].AdaptationSet_asArray[voRepresentation.adaptation.index];
+        const realRepresentation = dashManifestModel.getRepresentationFor(voRepresentation.index, realAdaptation);
         let error;
 
         if (!voRepresentation.segmentDuration && !voRepresentation.segments) {
             updateSegmentList(voRepresentation);
         }
 
-        voRepresentation.segmentAvailabilityRange = timelineConverter.calcSegmentAvailabilityRange(voRepresentation, isDynamic());
+        voRepresentation.segmentAvailabilityRange = timelineConverter.calcSegmentAvailabilityRange(voRepresentation, realRepresentation, isDynamic());
 
         if ((voRepresentation.segmentAvailabilityRange.end < voRepresentation.segmentAvailabilityRange.start) && !voRepresentation.useCalculatedLiveEdgeTime) {
             error = new DashJSError(Errors.SEGMENTS_UNAVAILABLE_ERROR_CODE, Errors.SEGMENTS_UNAVAILABLE_ERROR_MESSAGE, {availabilityDelay: voRepresentation.segmentAvailabilityRange.start - voRepresentation.segmentAvailabilityRange.end});
