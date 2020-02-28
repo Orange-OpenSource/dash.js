@@ -103,11 +103,13 @@ function Stream(config) {
     function registerEvents() {
         eventBus.on(Events.BUFFERING_COMPLETED, onBufferingCompleted, instance);
         eventBus.on(Events.DATA_UPDATE_COMPLETED, onDataUpdateCompleted, instance);
+        eventBus.on(Events.LIVE_STREAM_COMPLETED, onLiveStreamCompleted, instance);
     }
 
     function unRegisterEvents() {
         eventBus.off(Events.DATA_UPDATE_COMPLETED, onDataUpdateCompleted, instance);
         eventBus.off(Events.BUFFERING_COMPLETED, onBufferingCompleted, instance);
+        eventBus.off(Events.LIVE_STREAM_COMPLETED, onLiveStreamCompleted, instance);
     }
 
     function registerProtectionEvents() {
@@ -664,6 +666,10 @@ function Stream(config) {
 
         updateError[sp.getType()] = e.error;
         checkIfInitializationCompleted();
+    }
+
+    function onLiveStreamCompleted(/*e*/) {
+        streamInfo.liveStreamCompleted = true;
     }
 
     function getProcessorForMediaInfo(mediaInfo) {

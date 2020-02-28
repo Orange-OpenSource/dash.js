@@ -113,6 +113,11 @@ function DashHandler(config) {
         return streamInfo ? streamInfo.manifestInfo.isDynamic : null;
     }
 
+    function isDynamicCompleted() {
+        const streamInfo = streamProcessor ? streamProcessor.getStreamInfo() : null;
+        return streamInfo ? streamInfo.liveStreamCompleted === true : false;
+    }
+
     function getMediaInfo() {
         return streamProcessor ? streamProcessor.getMediaInfo() : null;
     }
@@ -203,6 +208,7 @@ function DashHandler(config) {
     function isMediaFinished(representation) {
         let isFinished = false;
         const isDynamicStream = isDynamic();
+        const isDynamicStreamCompleted = isDynamicCompleted();
 
         if (!isDynamicStream && index === representation.availableSegmentsNumber) {
             isFinished = true;
@@ -214,6 +220,7 @@ function DashHandler(config) {
                 logger.debug(representation.segmentInfoType + ': ' + time + ' / ' + duration);
                 isFinished = representation.segmentInfoType === DashConstants.SEGMENT_TIMELINE && isDynamicStream ? false : time >= duration;
             } else {
+                isFinished = isDynamicStreamCompleted;
                 logger.debug('isMediaFinished - no segment found');
             }
         }
@@ -421,6 +428,7 @@ function DashHandler(config) {
 
         const type = getType();
         const isDynamicStream = isDynamic();
+        const isDynamicStreamCompleted = isDynamicCompleted();
 
         requestedTime = null;
         index++;
@@ -429,7 +437,7 @@ function DashHandler(config) {
 
         // check that there is a segment in this index. If none, update segments and wait for next time loop is called
         const seg = getSegmentByIndex(index, representation);
-        if (!seg && isDynamicStream) {
+        if (!seg && isDynamicStream && !isDynamicStreamCompleted) {
             logger.debug('No segment found at index: ' + index + '. Wait for next loop');
             updateSegments(representation);
             index--;

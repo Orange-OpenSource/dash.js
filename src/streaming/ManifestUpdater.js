@@ -138,6 +138,12 @@ function ManifestUpdater() {
 
     function update(manifest) {
 
+        // NPVR PATCH: do not update manifest if type has changed (from dynamic to static)
+        if (manifestModel.getValue() && manifest.type !== manifestModel.getValue().type) {
+            eventBus.trigger(Events.LIVE_STREAM_COMPLETED);
+            return;
+        }
+
         manifestModel.setValue(manifest);
 
         const date = new Date();
