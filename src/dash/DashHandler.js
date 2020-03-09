@@ -437,11 +437,13 @@ function DashHandler(config) {
 
         // check that there is a segment in this index. If none, update segments and wait for next time loop is called
         const seg = getSegmentByIndex(index, representation);
-        if (!seg && isDynamicStream && !isDynamicStreamCompleted) {
+        if (!seg && isDynamicStream) {
             logger.debug('No segment found at index: ' + index + '. Wait for next loop');
             updateSegments(representation);
-            index--;
-            return null;
+            if (!isDynamicStreamCompleted) {
+                index--;
+                return null;
+            }
         }
 
         finished = isMediaFinished(representation);
