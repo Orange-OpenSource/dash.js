@@ -224,6 +224,8 @@ function ProtectionModel_21Jan2015(config) {
     function updateKeySession(sessionToken, message) {
         const session = sessionToken.session;
 
+        logger.debug('DRM: license: ' + btoa(String.fromCharCode.apply(null, new Uint8Array(message))));
+
         // Send our request to the key session
         if (protectionKeyController.isClearKey(keySystem)) {
             message = message.toJWK();

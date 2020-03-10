@@ -639,6 +639,9 @@ function ProtectionController(config) {
                 xhr.statusText + '" (' + xhr.status + '), readyState is ' + xhr.readyState));
         };
 
+        // Debug license message (=challenge)
+        logger.debug('DRM: challenge: ' + btoa(String.fromCharCode.apply(null, new Uint8Array(message))));
+
         const reqPayload = keySystem.getLicenseRequestFromMessage(message);
         const reqMethod = licenseServerData.getHTTPMethod(messageType);
         const responseType = licenseServerData.getResponseType(keySystemString, messageType);
