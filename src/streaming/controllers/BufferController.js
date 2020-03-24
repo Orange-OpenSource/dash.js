@@ -86,6 +86,7 @@ function BufferController(config) {
         appendedBytesInfo,
         wallclockTicked,
         isPruningInProgress,
+        isQuotaExceeded,
         initCache,
         seekStartTime,
         seekClearedBufferingCompleted,
@@ -264,6 +265,7 @@ function BufferController(config) {
     function onAppended(e) {
         if (e.error) {
             if (e.error.code === QUOTA_EXCEEDED_ERROR_CODE) {
+                isQuotaExceeded = true;
                 criticalBufferLevel = getTotalBufferedTime() * 0.8;
                 logger.warn('Quota exceeded for type: ' + type + ', Critical Buffer: ' + criticalBufferLevel);
 
@@ -282,6 +284,7 @@ function BufferController(config) {
             }
             return;
         }
+        isQuotaExceeded = false;
 
         appendedBytesInfo = e.chunk;
         if (appendedBytesInfo && !isNaN(appendedBytesInfo.index)) {
@@ -750,7 +753,7 @@ function BufferController(config) {
                     appendToBuffer(mediaChunk);
                 }
             }
-            eventBus.trigger(Events.BUFFER_CLEARED, { sender: instance, from: e.from, to: e.to, unintended: e.unintended,  hasEnoughSpaceToAppend: hasEnoughSpaceToAppend() });
+            eventBus.trigger(Events.BUFFER_CLEARED, { sender: instance, from: e.from, to: e.to, unintended: e.unintended,  hasEnoughSpaceToAppend: hasEnoughSpaceToAppend(), quotaExceeded: isQuotaExceeded });
         }
         //TODO - REMEMBER removed a timerout hack calling clearBuffer after manifestInfo.minBufferTime * 1000 if !hasEnoughSpaceToAppend() Aug 04 2016
     }
@@ -875,6 +878,7 @@ function BufferController(config) {
         appendedBytesInfo = null;
         isBufferingCompleted = false;
         isPruningInProgress = false;
+        isQuotaExceeded = false;
         seekClearedBufferingCompleted = false;
         bufferLevel = 0;
         wallclockTicked = 0;
