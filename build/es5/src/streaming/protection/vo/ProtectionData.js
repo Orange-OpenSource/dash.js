@@ -42,8 +42,9 @@
      * @param {Object} clearkeys defines a set of clear keys that are available to
      * the key system.  Object properties are base64-encoded keyIDs (with no padding).
      * Corresponding property values are keys, base64-encoded (no padding).
+     * @param {number|undefined} priority priority order of the current ProtectionData
      * @class
-     */function ProtectionData(serverURL,httpRequestHeaders,clearkeys){_classCallCheck(this,ProtectionData);this.serverURL=serverURL;this.httpRequestHeaders=httpRequestHeaders;this.clearkeys=clearkeys;};/**
+     */function ProtectionData(serverURL,httpRequestHeaders,clearkeys,priority){_classCallCheck(this,ProtectionData);this.serverURL=serverURL;this.httpRequestHeaders=httpRequestHeaders;this.clearkeys=clearkeys;this.priority=priority===undefined?-1:priority;};/**
  * License server URL
  *
  * @instance
@@ -67,6 +68,14 @@
  * @instance
  * @type Object
  * @name ProtectionData.clearkeys
+ * @readonly
+ * @memberof ProtectionData
+ *//**
+ * priority
+ *
+ * @instance
+ * @type Object
+ * @name ProtectionData.priority
  * @readonly
  * @memberof ProtectionData
  */exports.default=ProtectionData;

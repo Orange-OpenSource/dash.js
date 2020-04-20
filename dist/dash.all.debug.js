@@ -16129,7 +16129,7 @@ Object.defineProperty(exports, '__esModule', {
     value: true
 });
 exports.getVersionString = getVersionString;
-var VERSION = '2.9.3-o.15';
+var VERSION = '2.9.3-o.16';
 
 function getVersionString() {
     return VERSION;
@@ -24366,7 +24366,7 @@ module.exports = exports['default'];
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
-        value: true
+    value: true
 });
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
@@ -24380,610 +24380,610 @@ var _errorsMssErrors2 = _interopRequireDefault(_errorsMssErrors);
  * @param {Object} config object
  */
 function MssFragmentMoovProcessor(config) {
-        config = config || {};
-        var NALUTYPE_SPS = 7;
-        var NALUTYPE_PPS = 8;
-        var constants = config.constants;
-        var ISOBoxer = config.ISOBoxer;
+    config = config || {};
+    var NALUTYPE_SPS = 7;
+    var NALUTYPE_PPS = 8;
+    var constants = config.constants;
+    var ISOBoxer = config.ISOBoxer;
 
-        var protectionController = config.protectionController;
-        var instance = undefined,
-            period = undefined,
-            adaptationSet = undefined,
-            representation = undefined,
-            contentProtection = undefined,
-            timescale = undefined,
-            trackId = undefined;
+    var protectionController = config.protectionController;
+    var instance = undefined,
+        period = undefined,
+        adaptationSet = undefined,
+        representation = undefined,
+        contentProtection = undefined,
+        timescale = undefined,
+        trackId = undefined;
 
-        function createFtypBox(isoFile) {
-                var ftyp = ISOBoxer.createBox('ftyp', isoFile);
-                ftyp.major_brand = 'iso6';
-                ftyp.minor_version = 1; // is an informative integer for the minor version of the major brand
-                ftyp.compatible_brands = []; //is a list, to the end of the box, of brands isom, iso6 and msdh
-                ftyp.compatible_brands[0] = 'isom'; // => decimal ASCII value for isom
-                ftyp.compatible_brands[1] = 'iso6'; // => decimal ASCII value for iso6
-                ftyp.compatible_brands[2] = 'msdh'; // => decimal ASCII value for msdh
+    function createFtypBox(isoFile) {
+        var ftyp = ISOBoxer.createBox('ftyp', isoFile);
+        ftyp.major_brand = 'iso6';
+        ftyp.minor_version = 1; // is an informative integer for the minor version of the major brand
+        ftyp.compatible_brands = []; //is a list, to the end of the box, of brands isom, iso6 and msdh
+        ftyp.compatible_brands[0] = 'isom'; // => decimal ASCII value for isom
+        ftyp.compatible_brands[1] = 'iso6'; // => decimal ASCII value for iso6
+        ftyp.compatible_brands[2] = 'msdh'; // => decimal ASCII value for msdh
 
-                return ftyp;
+        return ftyp;
+    }
+
+    function createMoovBox(isoFile) {
+
+        // moov box
+        var moov = ISOBoxer.createBox('moov', isoFile);
+
+        // moov/mvhd
+        createMvhdBox(moov);
+
+        // moov/trak
+        var trak = ISOBoxer.createBox('trak', moov);
+
+        // moov/trak/tkhd
+        createTkhdBox(trak);
+
+        // moov/trak/mdia
+        var mdia = ISOBoxer.createBox('mdia', trak);
+
+        // moov/trak/mdia/mdhd
+        createMdhdBox(mdia);
+
+        // moov/trak/mdia/hdlr
+        createHdlrBox(mdia);
+
+        // moov/trak/mdia/minf
+        var minf = ISOBoxer.createBox('minf', mdia);
+
+        switch (adaptationSet.type) {
+            case constants.VIDEO:
+                // moov/trak/mdia/minf/vmhd
+                createVmhdBox(minf);
+                break;
+            case constants.AUDIO:
+                // moov/trak/mdia/minf/smhd
+                createSmhdBox(minf);
+                break;
+            default:
+                break;
         }
 
-        function createMoovBox(isoFile) {
+        // moov/trak/mdia/minf/dinf
+        var dinf = ISOBoxer.createBox('dinf', minf);
 
-                // moov box
-                var moov = ISOBoxer.createBox('moov', isoFile);
+        // moov/trak/mdia/minf/dinf/dref
+        createDrefBox(dinf);
 
-                // moov/mvhd
-                createMvhdBox(moov);
+        // moov/trak/mdia/minf/stbl
+        var stbl = ISOBoxer.createBox('stbl', minf);
 
-                // moov/trak
-                var trak = ISOBoxer.createBox('trak', moov);
+        // Create empty stts, stsc, stco and stsz boxes
+        // Use data field as for codem-isoboxer unknown boxes for setting fields value
 
-                // moov/trak/tkhd
-                createTkhdBox(trak);
+        // moov/trak/mdia/minf/stbl/stts
+        var stts = ISOBoxer.createFullBox('stts', stbl);
+        stts._data = [0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, entry_count = 0
 
-                // moov/trak/mdia
-                var mdia = ISOBoxer.createBox('mdia', trak);
+        // moov/trak/mdia/minf/stbl/stsc
+        var stsc = ISOBoxer.createFullBox('stsc', stbl);
+        stsc._data = [0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, entry_count = 0
 
-                // moov/trak/mdia/mdhd
-                createMdhdBox(mdia);
+        // moov/trak/mdia/minf/stbl/stco
+        var stco = ISOBoxer.createFullBox('stco', stbl);
+        stco._data = [0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, entry_count = 0
 
-                // moov/trak/mdia/hdlr
-                createHdlrBox(mdia);
+        // moov/trak/mdia/minf/stbl/stsz
+        var stsz = ISOBoxer.createFullBox('stsz', stbl);
+        stsz._data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, sample_size = 0, sample_count = 0
 
-                // moov/trak/mdia/minf
-                var minf = ISOBoxer.createBox('minf', mdia);
+        // moov/trak/mdia/minf/stbl/stsd
+        createStsdBox(stbl);
 
-                switch (adaptationSet.type) {
-                        case constants.VIDEO:
-                                // moov/trak/mdia/minf/vmhd
-                                createVmhdBox(minf);
-                                break;
-                        case constants.AUDIO:
-                                // moov/trak/mdia/minf/smhd
-                                createSmhdBox(minf);
-                                break;
-                        default:
-                                break;
-                }
+        // moov/mvex
+        var mvex = ISOBoxer.createBox('mvex', moov);
 
-                // moov/trak/mdia/minf/dinf
-                var dinf = ISOBoxer.createBox('dinf', minf);
+        // moov/mvex/trex
+        createTrexBox(mvex);
 
-                // moov/trak/mdia/minf/dinf/dref
-                createDrefBox(dinf);
+        if (contentProtection && protectionController) {
+            var supportedKS = protectionController.getSupportedKeySystemsFromContentProtection(contentProtection);
+            createProtectionSystemSpecificHeaderBox(moov, supportedKS);
+        }
+    }
 
-                // moov/trak/mdia/minf/stbl
-                var stbl = ISOBoxer.createBox('stbl', minf);
+    function createMvhdBox(moov) {
 
-                // Create empty stts, stsc, stco and stsz boxes
-                // Use data field as for codem-isoboxer unknown boxes for setting fields value
+        var mvhd = ISOBoxer.createFullBox('mvhd', moov);
 
-                // moov/trak/mdia/minf/stbl/stts
-                var stts = ISOBoxer.createFullBox('stts', stbl);
-                stts._data = [0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, entry_count = 0
+        mvhd.version = 1; // version = 1  in order to have 64bits duration value
 
-                // moov/trak/mdia/minf/stbl/stsc
-                var stsc = ISOBoxer.createFullBox('stsc', stbl);
-                stsc._data = [0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, entry_count = 0
+        mvhd.creation_time = 0; // the creation time of the presentation => ignore (set to 0)
+        mvhd.modification_time = 0; // the most recent time the presentation was modified => ignore (set to 0)
+        mvhd.timescale = timescale; // the time-scale for the entire presentation => 10000000 for MSS
+        mvhd.duration = Math.round(period.duration * timescale); // the length of the presentation (in the indicated timescale) =>  take duration of period
+        mvhd.rate = 1.0; // 16.16 number, '1.0' = normal playback
+        mvhd.volume = 1.0; // 8.8 number, '1.0' = full volume
+        mvhd.reserved1 = 0;
+        mvhd.reserved2 = [0x0, 0x0];
+        mvhd.matrix = [1, 0, 0, // provides a transformation matrix for the video;
+        0, 1, 0, // (u,v,w) are restricted here to (0,0,1)
+        0, 0, 16384];
+        mvhd.pre_defined = [0, 0, 0, 0, 0, 0];
+        mvhd.next_track_ID = trackId + 1; // indicates a value to use for the track ID of the next track to be added to this presentation
 
-                // moov/trak/mdia/minf/stbl/stco
-                var stco = ISOBoxer.createFullBox('stco', stbl);
-                stco._data = [0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, entry_count = 0
+        return mvhd;
+    }
 
-                // moov/trak/mdia/minf/stbl/stsz
-                var stsz = ISOBoxer.createFullBox('stsz', stbl);
-                stsz._data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // version = 0, flags = 0, sample_size = 0, sample_count = 0
+    function createTkhdBox(trak) {
 
-                // moov/trak/mdia/minf/stbl/stsd
-                createStsdBox(stbl);
+        var tkhd = ISOBoxer.createFullBox('tkhd', trak);
 
-                // moov/mvex
-                var mvex = ISOBoxer.createBox('mvex', moov);
+        tkhd.version = 1; // version = 1  in order to have 64bits duration value
+        tkhd.flags = 0x1 | // Track_enabled (0x000001): Indicates that the track is enabled
+        0x2 | // Track_in_movie (0x000002):  Indicates that the track is used in the presentation
+        0x4; // Track_in_preview (0x000004):  Indicates that the track is used when previewing the presentation
 
-                // moov/mvex/trex
-                createTrexBox(mvex);
+        tkhd.creation_time = 0; // the creation time of the presentation => ignore (set to 0)
+        tkhd.modification_time = 0; // the most recent time the presentation was modified => ignore (set to 0)
+        tkhd.track_ID = trackId; // uniquely identifies this track over the entire life-time of this presentation
+        tkhd.reserved1 = 0;
+        tkhd.duration = Math.round(period.duration * timescale); // the duration of this track (in the timescale indicated in the Movie Header Box) =>  take duration of period
+        tkhd.reserved2 = [0x0, 0x0];
+        tkhd.layer = 0; // specifies the front-to-back ordering of video tracks; tracks with lower numbers are closer to the viewer => 0 since only one video track
+        tkhd.alternate_group = 0; // specifies a group or collection of tracks => ignore
+        tkhd.volume = 1.0; // '1.0' = full volume
+        tkhd.reserved3 = 0;
+        tkhd.matrix = [1, 0, 0, // provides a transformation matrix for the video;
+        0, 1, 0, // (u,v,w) are restricted here to (0,0,1)
+        0, 0, 16384];
+        tkhd.width = representation.width; // visual presentation width
+        tkhd.height = representation.height; // visual presentation height
 
-                if (contentProtection && protectionController) {
-                        var supportedKS = protectionController.getSupportedKeySystemsFromContentProtection(contentProtection);
-                        createProtectionSystemSpecificHeaderBox(moov, supportedKS);
-                }
+        return tkhd;
+    }
+
+    function createMdhdBox(mdia) {
+
+        var mdhd = ISOBoxer.createFullBox('mdhd', mdia);
+
+        mdhd.version = 1; // version = 1  in order to have 64bits duration value
+
+        mdhd.creation_time = 0; // the creation time of the presentation => ignore (set to 0)
+        mdhd.modification_time = 0; // the most recent time the presentation was modified => ignore (set to 0)
+        mdhd.timescale = timescale; // the time-scale for the entire presentation
+        mdhd.duration = Math.round(period.duration * timescale); // the duration of this media (in the scale of the timescale). If the duration cannot be determined then duration is set to all 1s.
+        mdhd.language = adaptationSet.lang || 'und'; // declares the language code for this media (see getLanguageCode())
+        mdhd.pre_defined = 0;
+
+        return mdhd;
+    }
+
+    function createHdlrBox(mdia) {
+
+        var hdlr = ISOBoxer.createFullBox('hdlr', mdia);
+
+        hdlr.pre_defined = 0;
+        switch (adaptationSet.type) {
+            case constants.VIDEO:
+                hdlr.handler_type = 'vide';
+                break;
+            case constants.AUDIO:
+                hdlr.handler_type = 'soun';
+                break;
+            default:
+                hdlr.handler_type = 'meta';
+                break;
+        }
+        hdlr.name = representation.id;
+        hdlr.reserved = [0, 0, 0];
+
+        return hdlr;
+    }
+
+    function createVmhdBox(minf) {
+
+        var vmhd = ISOBoxer.createFullBox('vmhd', minf);
+
+        vmhd.flags = 1;
+
+        vmhd.graphicsmode = 0; // specifies a composition mode for this video track, from the following enumerated set, which may be extended by derived specifications: copy = 0 copy over the existing image
+        vmhd.opcolor = [0, 0, 0]; // is a set of 3 colour values (red, green, blue) available for use by graphics modes
+
+        return vmhd;
+    }
+
+    function createSmhdBox(minf) {
+
+        var smhd = ISOBoxer.createFullBox('smhd', minf);
+
+        smhd.flags = 1;
+
+        smhd.balance = 0; // is a fixed-point 8.8 number that places mono audio tracks in a stereo space; 0 is centre (the normal value); full left is -1.0 and full right is 1.0.
+        smhd.reserved = 0;
+
+        return smhd;
+    }
+
+    function createDrefBox(dinf) {
+
+        var dref = ISOBoxer.createFullBox('dref', dinf);
+
+        dref.entry_count = 1;
+        dref.entries = [];
+
+        var url = ISOBoxer.createFullBox('url ', dref, false);
+        url.location = '';
+        url.flags = 1;
+
+        dref.entries.push(url);
+
+        return dref;
+    }
+
+    function createStsdBox(stbl) {
+
+        var stsd = ISOBoxer.createFullBox('stsd', stbl);
+
+        stsd.entries = [];
+        switch (adaptationSet.type) {
+            case constants.VIDEO:
+            case constants.AUDIO:
+                stsd.entries.push(createSampleEntry(stsd));
+                break;
+            default:
+                break;
         }
 
-        function createMvhdBox(moov) {
+        stsd.entry_count = stsd.entries.length; // is an integer that counts the actual entries
+        return stsd;
+    }
 
-                var mvhd = ISOBoxer.createFullBox('mvhd', moov);
+    function createSampleEntry(stsd) {
+        var codec = representation.codecs.substring(0, representation.codecs.indexOf('.'));
 
-                mvhd.version = 1; // version = 1  in order to have 64bits duration value
+        switch (codec) {
+            case 'avc1':
+                return createAVCVisualSampleEntry(stsd, codec);
+            case 'mp4a':
+                return createMP4AudioSampleEntry(stsd, codec);
+            default:
+                throw {
+                    code: _errorsMssErrors2['default'].MSS_UNSUPPORTED_CODEC_CODE,
+                    message: _errorsMssErrors2['default'].MSS_UNSUPPORTED_CODEC_MESSAGE,
+                    data: {
+                        codec: codec
+                    }
+                };
+        }
+    }
 
-                mvhd.creation_time = 0; // the creation time of the presentation => ignore (set to 0)
-                mvhd.modification_time = 0; // the most recent time the presentation was modified => ignore (set to 0)
-                mvhd.timescale = timescale; // the time-scale for the entire presentation => 10000000 for MSS
-                mvhd.duration = Math.round(period.duration * timescale); // the length of the presentation (in the indicated timescale) =>  take duration of period
-                mvhd.rate = 1.0; // 16.16 number, '1.0' = normal playback
-                mvhd.volume = 1.0; // 8.8 number, '1.0' = full volume
-                mvhd.reserved1 = 0;
-                mvhd.reserved2 = [0x0, 0x0];
-                mvhd.matrix = [1, 0, 0, // provides a transformation matrix for the video;
-                0, 1, 0, // (u,v,w) are restricted here to (0,0,1)
-                0, 0, 16384];
-                mvhd.pre_defined = [0, 0, 0, 0, 0, 0];
-                mvhd.next_track_ID = trackId + 1; // indicates a value to use for the track ID of the next track to be added to this presentation
+    function createAVCVisualSampleEntry(stsd, codec) {
+        var avc1 = undefined;
 
-                return mvhd;
+        if (contentProtection) {
+            avc1 = ISOBoxer.createBox('encv', stsd, false);
+        } else {
+            avc1 = ISOBoxer.createBox('avc1', stsd, false);
         }
 
-        function createTkhdBox(trak) {
+        // SampleEntry fields
+        avc1.reserved1 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+        avc1.data_reference_index = 1;
 
-                var tkhd = ISOBoxer.createFullBox('tkhd', trak);
+        // VisualSampleEntry fields
+        avc1.pre_defined1 = 0;
+        avc1.reserved2 = 0;
+        avc1.pre_defined2 = [0, 0, 0];
+        avc1.height = representation.height;
+        avc1.width = representation.width;
+        avc1.horizresolution = 72; // 72 dpi
+        avc1.vertresolution = 72; // 72 dpi
+        avc1.reserved3 = 0;
+        avc1.frame_count = 1; // 1 compressed video frame per sample
+        avc1.compressorname = [0x0A, 0x41, 0x56, 0x43, 0x20, 0x43, 0x6F, 0x64, // = 'AVC Coding';
+        0x69, 0x6E, 0x67, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+        avc1.depth = 0x0018; // 0x0018 – images are in colour with no alpha.
+        avc1.pre_defined3 = 65535;
+        avc1.config = createAVC1ConfigurationRecord();
+        if (contentProtection) {
+            // Create and add Protection Scheme Info Box
+            var sinf = ISOBoxer.createBox('sinf', avc1);
 
-                tkhd.version = 1; // version = 1  in order to have 64bits duration value
-                tkhd.flags = 0x1 | // Track_enabled (0x000001): Indicates that the track is enabled
-                0x2 | // Track_in_movie (0x000002):  Indicates that the track is used in the presentation
-                0x4; // Track_in_preview (0x000004):  Indicates that the track is used when previewing the presentation
+            // Create and add Original Format Box => indicate codec type of the encrypted content
+            createOriginalFormatBox(sinf, codec);
 
-                tkhd.creation_time = 0; // the creation time of the presentation => ignore (set to 0)
-                tkhd.modification_time = 0; // the most recent time the presentation was modified => ignore (set to 0)
-                tkhd.track_ID = trackId; // uniquely identifies this track over the entire life-time of this presentation
-                tkhd.reserved1 = 0;
-                tkhd.duration = Math.round(period.duration * timescale); // the duration of this track (in the timescale indicated in the Movie Header Box) =>  take duration of period
-                tkhd.reserved2 = [0x0, 0x0];
-                tkhd.layer = 0; // specifies the front-to-back ordering of video tracks; tracks with lower numbers are closer to the viewer => 0 since only one video track
-                tkhd.alternate_group = 0; // specifies a group or collection of tracks => ignore
-                tkhd.volume = 1.0; // '1.0' = full volume
-                tkhd.reserved3 = 0;
-                tkhd.matrix = [1, 0, 0, // provides a transformation matrix for the video;
-                0, 1, 0, // (u,v,w) are restricted here to (0,0,1)
-                0, 0, 16384];
-                tkhd.width = representation.width; // visual presentation width
-                tkhd.height = representation.height; // visual presentation height
+            // Create and add Scheme Type box
+            createSchemeTypeBox(sinf);
 
-                return tkhd;
+            // Create and add Scheme Information Box
+            createSchemeInformationBox(sinf);
         }
 
-        function createMdhdBox(mdia) {
+        return avc1;
+    }
 
-                var mdhd = ISOBoxer.createFullBox('mdhd', mdia);
+    function createAVC1ConfigurationRecord() {
 
-                mdhd.version = 1; // version = 1  in order to have 64bits duration value
+        var avcC = null;
+        var avcCLength = 15; // length = 15 by default (0 SPS and 0 PPS)
 
-                mdhd.creation_time = 0; // the creation time of the presentation => ignore (set to 0)
-                mdhd.modification_time = 0; // the most recent time the presentation was modified => ignore (set to 0)
-                mdhd.timescale = timescale; // the time-scale for the entire presentation
-                mdhd.duration = Math.round(period.duration * timescale); // the duration of this media (in the scale of the timescale). If the duration cannot be determined then duration is set to all 1s.
-                mdhd.language = adaptationSet.lang || 'und'; // declares the language code for this media (see getLanguageCode())
-                mdhd.pre_defined = 0;
+        // First get all SPS and PPS from codecPrivateData
+        var sps = [];
+        var pps = [];
+        var AVCProfileIndication = 0;
+        var AVCLevelIndication = 0;
+        var profile_compatibility = 0;
 
-                return mdhd;
+        var nalus = representation.codecPrivateData.split('00000001').slice(1);
+        var naluBytes = undefined,
+            naluType = undefined;
+
+        for (var _i = 0; _i < nalus.length; _i++) {
+            naluBytes = hexStringtoBuffer(nalus[_i]);
+
+            naluType = naluBytes[0] & 0x1F;
+
+            switch (naluType) {
+                case NALUTYPE_SPS:
+                    sps.push(naluBytes);
+                    avcCLength += naluBytes.length + 2; // 2 = sequenceParameterSetLength field length
+                    break;
+                case NALUTYPE_PPS:
+                    pps.push(naluBytes);
+                    avcCLength += naluBytes.length + 2; // 2 = pictureParameterSetLength field length
+                    break;
+                default:
+                    break;
+            }
         }
 
-        function createHdlrBox(mdia) {
-
-                var hdlr = ISOBoxer.createFullBox('hdlr', mdia);
-
-                hdlr.pre_defined = 0;
-                switch (adaptationSet.type) {
-                        case constants.VIDEO:
-                                hdlr.handler_type = 'vide';
-                                break;
-                        case constants.AUDIO:
-                                hdlr.handler_type = 'soun';
-                                break;
-                        default:
-                                hdlr.handler_type = 'meta';
-                                break;
-                }
-                hdlr.name = representation.id;
-                hdlr.reserved = [0, 0, 0];
-
-                return hdlr;
+        // Get profile and level from SPS
+        if (sps.length > 0) {
+            AVCProfileIndication = sps[0][1];
+            profile_compatibility = sps[0][2];
+            AVCLevelIndication = sps[0][3];
         }
 
-        function createVmhdBox(minf) {
+        // Generate avcC buffer
+        avcC = new Uint8Array(avcCLength);
 
-                var vmhd = ISOBoxer.createFullBox('vmhd', minf);
-
-                vmhd.flags = 1;
-
-                vmhd.graphicsmode = 0; // specifies a composition mode for this video track, from the following enumerated set, which may be extended by derived specifications: copy = 0 copy over the existing image
-                vmhd.opcolor = [0, 0, 0]; // is a set of 3 colour values (red, green, blue) available for use by graphics modes
-
-                return vmhd;
+        var i = 0;
+        // length
+        avcC[i++] = (avcCLength & 0xFF000000) >> 24;
+        avcC[i++] = (avcCLength & 0x00FF0000) >> 16;
+        avcC[i++] = (avcCLength & 0x0000FF00) >> 8;
+        avcC[i++] = avcCLength & 0x000000FF;
+        avcC.set([0x61, 0x76, 0x63, 0x43], i); // type = 'avcC'
+        i += 4;
+        avcC[i++] = 1; // configurationVersion = 1
+        avcC[i++] = AVCProfileIndication;
+        avcC[i++] = profile_compatibility;
+        avcC[i++] = AVCLevelIndication;
+        avcC[i++] = 0xFF; // '11111' + lengthSizeMinusOne = 3
+        avcC[i++] = 0xE0 | sps.length; // '111' + numOfSequenceParameterSets
+        for (var n = 0; n < sps.length; n++) {
+            avcC[i++] = (sps[n].length & 0xFF00) >> 8;
+            avcC[i++] = sps[n].length & 0x00FF;
+            avcC.set(sps[n], i);
+            i += sps[n].length;
+        }
+        avcC[i++] = pps.length; // numOfPictureParameterSets
+        for (var n = 0; n < pps.length; n++) {
+            avcC[i++] = (pps[n].length & 0xFF00) >> 8;
+            avcC[i++] = pps[n].length & 0x00FF;
+            avcC.set(pps[n], i);
+            i += pps[n].length;
         }
 
-        function createSmhdBox(minf) {
+        return avcC;
+    }
 
-                var smhd = ISOBoxer.createFullBox('smhd', minf);
+    function createMP4AudioSampleEntry(stsd, codec) {
+        var mp4a = undefined;
 
-                smhd.flags = 1;
-
-                smhd.balance = 0; // is a fixed-point 8.8 number that places mono audio tracks in a stereo space; 0 is centre (the normal value); full left is -1.0 and full right is 1.0.
-                smhd.reserved = 0;
-
-                return smhd;
+        if (contentProtection) {
+            mp4a = ISOBoxer.createBox('enca', stsd, false);
+        } else {
+            mp4a = ISOBoxer.createBox('mp4a', stsd, false);
         }
 
-        function createDrefBox(dinf) {
+        // SampleEntry fields
+        mp4a.reserved1 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+        mp4a.data_reference_index = 1;
 
-                var dref = ISOBoxer.createFullBox('dref', dinf);
+        // AudioSampleEntry fields
+        mp4a.reserved2 = [0x0, 0x0];
+        mp4a.channelcount = representation.audioChannels;
+        mp4a.samplesize = 16;
+        mp4a.pre_defined = 0;
+        mp4a.reserved_3 = 0;
+        mp4a.samplerate = representation.audioSamplingRate << 16;
 
-                dref.entry_count = 1;
-                dref.entries = [];
+        mp4a.esds = createMPEG4AACESDescriptor();
 
-                var url = ISOBoxer.createFullBox('url ', dref, false);
-                url.location = '';
-                url.flags = 1;
+        if (contentProtection) {
+            // Create and add Protection Scheme Info Box
+            var sinf = ISOBoxer.createBox('sinf', mp4a);
 
-                dref.entries.push(url);
+            // Create and add Original Format Box => indicate codec type of the encrypted content
+            createOriginalFormatBox(sinf, codec);
 
-                return dref;
+            // Create and add Scheme Type box
+            createSchemeTypeBox(sinf);
+
+            // Create and add Scheme Information Box
+            createSchemeInformationBox(sinf);
         }
 
-        function createStsdBox(stbl) {
+        return mp4a;
+    }
 
-                var stsd = ISOBoxer.createFullBox('stsd', stbl);
+    function createMPEG4AACESDescriptor() {
 
-                stsd.entries = [];
-                switch (adaptationSet.type) {
-                        case constants.VIDEO:
-                        case constants.AUDIO:
-                                stsd.entries.push(createSampleEntry(stsd));
-                                break;
-                        default:
-                                break;
-                }
+        // AudioSpecificConfig (see ISO/IEC 14496-3, subpart 1) => corresponds to hex bytes contained in 'codecPrivateData' field
+        var audioSpecificConfig = hexStringtoBuffer(representation.codecPrivateData);
 
-                stsd.entry_count = stsd.entries.length; // is an integer that counts the actual entries
-                return stsd;
+        // ESDS length = esds box header length (= 12) +
+        //               ES_Descriptor header length (= 5) +
+        //               DecoderConfigDescriptor header length (= 15) +
+        //               decoderSpecificInfo header length (= 2) +
+        //               AudioSpecificConfig length (= codecPrivateData length)
+        var esdsLength = 34 + audioSpecificConfig.length;
+        var esds = new Uint8Array(esdsLength);
+
+        var i = 0;
+        // esds box
+        esds[i++] = (esdsLength & 0xFF000000) >> 24; // esds box length
+        esds[i++] = (esdsLength & 0x00FF0000) >> 16; // ''
+        esds[i++] = (esdsLength & 0x0000FF00) >> 8; // ''
+        esds[i++] = esdsLength & 0x000000FF; // ''
+        esds.set([0x65, 0x73, 0x64, 0x73], i); // type = 'esds'
+        i += 4;
+        esds.set([0, 0, 0, 0], i); // version = 0, flags = 0
+        i += 4;
+        // ES_Descriptor (see ISO/IEC 14496-1 (Systems))
+        esds[i++] = 0x03; // tag = 0x03 (ES_DescrTag)
+        esds[i++] = 20 + audioSpecificConfig.length; // size
+        esds[i++] = (trackId & 0xFF00) >> 8; // ES_ID = track_id
+        esds[i++] = trackId & 0x00FF; // ''
+        esds[i++] = 0; // flags and streamPriority
+
+        // DecoderConfigDescriptor (see ISO/IEC 14496-1 (Systems))
+        esds[i++] = 0x04; // tag = 0x04 (DecoderConfigDescrTag)
+        esds[i++] = 15 + audioSpecificConfig.length; // size
+        esds[i++] = 0x40; // objectTypeIndication = 0x40 (MPEG-4 AAC)
+        esds[i] = 0x05 << 2; // streamType = 0x05 (Audiostream)
+        esds[i] |= 0 << 1; // upStream = 0
+        esds[i++] |= 1; // reserved = 1
+        esds[i++] = 0xFF; // buffersizeDB = undefined
+        esds[i++] = 0xFF; // ''
+        esds[i++] = 0xFF; // ''
+        esds[i++] = (representation.bandwidth & 0xFF000000) >> 24; // maxBitrate
+        esds[i++] = (representation.bandwidth & 0x00FF0000) >> 16; // ''
+        esds[i++] = (representation.bandwidth & 0x0000FF00) >> 8; // ''
+        esds[i++] = representation.bandwidth & 0x000000FF; // ''
+        esds[i++] = (representation.bandwidth & 0xFF000000) >> 24; // avgbitrate
+        esds[i++] = (representation.bandwidth & 0x00FF0000) >> 16; // ''
+        esds[i++] = (representation.bandwidth & 0x0000FF00) >> 8; // ''
+        esds[i++] = representation.bandwidth & 0x000000FF; // ''
+
+        // DecoderSpecificInfo (see ISO/IEC 14496-1 (Systems))
+        esds[i++] = 0x05; // tag = 0x05 (DecSpecificInfoTag)
+        esds[i++] = audioSpecificConfig.length; // size
+        esds.set(audioSpecificConfig, i); // AudioSpecificConfig bytes
+
+        return esds;
+    }
+
+    function createOriginalFormatBox(sinf, codec) {
+        var frma = ISOBoxer.createBox('frma', sinf);
+        frma.data_format = stringToCharCode(codec);
+    }
+
+    function createSchemeTypeBox(sinf) {
+        var schm = ISOBoxer.createFullBox('schm', sinf);
+
+        schm.flags = 0;
+        schm.version = 0;
+        schm.scheme_type = 0x63656E63; // 'cenc' => common encryption
+        schm.scheme_version = 0x00010000; // version set to 0x00010000 (Major version 1, Minor version 0)
+    }
+
+    function createSchemeInformationBox(sinf) {
+        var schi = ISOBoxer.createBox('schi', sinf);
+
+        // Create and add Track Encryption Box
+        createTrackEncryptionBox(schi);
+    }
+
+    function createProtectionSystemSpecificHeaderBox(moov, keySystems) {
+        var pssh_bytes = undefined,
+            pssh = undefined,
+            i = undefined,
+            parsedBuffer = undefined;
+
+        for (i = 0; i < keySystems.length; i += 1) {
+            pssh_bytes = keySystems[i].initData;
+            parsedBuffer = ISOBoxer.parseBuffer(pssh_bytes);
+            pssh = parsedBuffer.fetch('pssh');
+            if (pssh) {
+                ISOBoxer.Utils.appendBox(moov, pssh);
+            }
+        }
+    }
+
+    function createTrackEncryptionBox(schi) {
+        var tenc = ISOBoxer.createFullBox('tenc', schi);
+
+        tenc.flags = 0;
+        tenc.version = 0;
+
+        tenc.default_IsEncrypted = 0x1;
+        tenc.default_IV_size = 8;
+        tenc.default_KID = contentProtection && contentProtection.length > 0 && contentProtection[0]['cenc:default_KID'] ? contentProtection[0]['cenc:default_KID'] : [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
+    }
+
+    function createTrexBox(moov) {
+        var trex = ISOBoxer.createFullBox('trex', moov);
+
+        trex.track_ID = trackId;
+        trex.default_sample_description_index = 1;
+        trex.default_sample_duration = 0;
+        trex.default_sample_size = 0;
+        trex.default_sample_flags = 0;
+
+        return trex;
+    }
+
+    function hexStringtoBuffer(str) {
+        var buf = new Uint8Array(str.length / 2);
+        var i = undefined;
+
+        for (i = 0; i < str.length / 2; i += 1) {
+            buf[i] = parseInt('' + str[i * 2] + str[i * 2 + 1], 16);
+        }
+        return buf;
+    }
+
+    function stringToCharCode(str) {
+        var code = 0;
+        var i = undefined;
+
+        for (i = 0; i < str.length; i += 1) {
+            code |= str.charCodeAt(i) << (str.length - i - 1) * 8;
+        }
+        return code;
+    }
+
+    function generateMoov(rep) {
+        if (!rep || !rep.adaptation) {
+            return;
         }
 
-        function createSampleEntry(stsd) {
-                var codec = representation.codecs.substring(0, representation.codecs.indexOf('.'));
+        var isoFile = undefined,
+            arrayBuffer = undefined;
 
-                switch (codec) {
-                        case 'avc1':
-                                return createAVCVisualSampleEntry(stsd, codec);
-                        case 'mp4a':
-                                return createMP4AudioSampleEntry(stsd, codec);
-                        default:
-                                throw {
-                                        code: _errorsMssErrors2['default'].MSS_UNSUPPORTED_CODEC_CODE,
-                                        message: _errorsMssErrors2['default'].MSS_UNSUPPORTED_CODEC_MESSAGE,
-                                        data: {
-                                                codec: codec
-                                        }
-                                };
-                }
-        }
+        representation = rep;
+        adaptationSet = representation.adaptation;
 
-        function createAVCVisualSampleEntry(stsd, codec) {
-                var avc1 = undefined;
+        period = adaptationSet.period;
+        trackId = adaptationSet.index + 1;
+        contentProtection = period.mpd.manifest.Period_asArray[period.index].AdaptationSet_asArray[adaptationSet.index].ContentProtection;
 
-                if (contentProtection) {
-                        avc1 = ISOBoxer.createBox('encv', stsd, false);
-                } else {
-                        avc1 = ISOBoxer.createBox('avc1', stsd, false);
-                }
+        timescale = period.mpd.manifest.Period_asArray[period.index].AdaptationSet_asArray[adaptationSet.index].SegmentTemplate.timescale;
 
-                // SampleEntry fields
-                avc1.reserved1 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
-                avc1.data_reference_index = 1;
+        isoFile = ISOBoxer.createFile();
+        createFtypBox(isoFile);
+        createMoovBox(isoFile);
 
-                // VisualSampleEntry fields
-                avc1.pre_defined1 = 0;
-                avc1.reserved2 = 0;
-                avc1.pre_defined2 = [0, 0, 0];
-                avc1.height = representation.height;
-                avc1.width = representation.width;
-                avc1.horizresolution = 72; // 72 dpi
-                avc1.vertresolution = 72; // 72 dpi
-                avc1.reserved3 = 0;
-                avc1.frame_count = 1; // 1 compressed video frame per sample
-                avc1.compressorname = [0x0A, 0x41, 0x56, 0x43, 0x20, 0x43, 0x6F, 0x64, // = 'AVC Coding';
-                0x69, 0x6E, 0x67, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-                avc1.depth = 0x0018; // 0x0018 – images are in colour with no alpha.
-                avc1.pre_defined3 = 65535;
-                avc1.config = createAVC1ConfigurationRecord();
-                if (contentProtection) {
-                        // Create and add Protection Scheme Info Box
-                        var sinf = ISOBoxer.createBox('sinf', avc1);
+        arrayBuffer = isoFile.write();
 
-                        // Create and add Original Format Box => indicate codec type of the encrypted content
-                        createOriginalFormatBox(sinf, codec);
+        return arrayBuffer;
+    }
 
-                        // Create and add Scheme Type box
-                        createSchemeTypeBox(sinf);
+    instance = {
+        generateMoov: generateMoov
+    };
 
-                        // Create and add Scheme Information Box
-                        createSchemeInformationBox(sinf);
-                }
-
-                return avc1;
-        }
-
-        function createAVC1ConfigurationRecord() {
-
-                var avcC = null;
-                var avcCLength = 15; // length = 15 by default (0 SPS and 0 PPS)
-
-                // First get all SPS and PPS from codecPrivateData
-                var sps = [];
-                var pps = [];
-                var AVCProfileIndication = 0;
-                var AVCLevelIndication = 0;
-                var profile_compatibility = 0;
-
-                var nalus = representation.codecPrivateData.split('00000001').slice(1);
-                var naluBytes = undefined,
-                    naluType = undefined;
-
-                for (var _i = 0; _i < nalus.length; _i++) {
-                        naluBytes = hexStringtoBuffer(nalus[_i]);
-
-                        naluType = naluBytes[0] & 0x1F;
-
-                        switch (naluType) {
-                                case NALUTYPE_SPS:
-                                        sps.push(naluBytes);
-                                        avcCLength += naluBytes.length + 2; // 2 = sequenceParameterSetLength field length
-                                        break;
-                                case NALUTYPE_PPS:
-                                        pps.push(naluBytes);
-                                        avcCLength += naluBytes.length + 2; // 2 = pictureParameterSetLength field length
-                                        break;
-                                default:
-                                        break;
-                        }
-                }
-
-                // Get profile and level from SPS
-                if (sps.length > 0) {
-                        AVCProfileIndication = sps[0][1];
-                        profile_compatibility = sps[0][2];
-                        AVCLevelIndication = sps[0][3];
-                }
-
-                // Generate avcC buffer
-                avcC = new Uint8Array(avcCLength);
-
-                var i = 0;
-                // length
-                avcC[i++] = (avcCLength & 0xFF000000) >> 24;
-                avcC[i++] = (avcCLength & 0x00FF0000) >> 16;
-                avcC[i++] = (avcCLength & 0x0000FF00) >> 8;
-                avcC[i++] = avcCLength & 0x000000FF;
-                avcC.set([0x61, 0x76, 0x63, 0x43], i); // type = 'avcC'
-                i += 4;
-                avcC[i++] = 1; // configurationVersion = 1
-                avcC[i++] = AVCProfileIndication;
-                avcC[i++] = profile_compatibility;
-                avcC[i++] = AVCLevelIndication;
-                avcC[i++] = 0xFF; // '11111' + lengthSizeMinusOne = 3
-                avcC[i++] = 0xE0 | sps.length; // '111' + numOfSequenceParameterSets
-                for (var n = 0; n < sps.length; n++) {
-                        avcC[i++] = (sps[n].length & 0xFF00) >> 8;
-                        avcC[i++] = sps[n].length & 0x00FF;
-                        avcC.set(sps[n], i);
-                        i += sps[n].length;
-                }
-                avcC[i++] = pps.length; // numOfPictureParameterSets
-                for (var n = 0; n < pps.length; n++) {
-                        avcC[i++] = (pps[n].length & 0xFF00) >> 8;
-                        avcC[i++] = pps[n].length & 0x00FF;
-                        avcC.set(pps[n], i);
-                        i += pps[n].length;
-                }
-
-                return avcC;
-        }
-
-        function createMP4AudioSampleEntry(stsd, codec) {
-                var mp4a = undefined;
-
-                if (contentProtection) {
-                        mp4a = ISOBoxer.createBox('enca', stsd, false);
-                } else {
-                        mp4a = ISOBoxer.createBox('mp4a', stsd, false);
-                }
-
-                // SampleEntry fields
-                mp4a.reserved1 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
-                mp4a.data_reference_index = 1;
-
-                // AudioSampleEntry fields
-                mp4a.reserved2 = [0x0, 0x0];
-                mp4a.channelcount = representation.audioChannels;
-                mp4a.samplesize = 16;
-                mp4a.pre_defined = 0;
-                mp4a.reserved_3 = 0;
-                mp4a.samplerate = representation.audioSamplingRate << 16;
-
-                mp4a.esds = createMPEG4AACESDescriptor();
-
-                if (contentProtection) {
-                        // Create and add Protection Scheme Info Box
-                        var sinf = ISOBoxer.createBox('sinf', mp4a);
-
-                        // Create and add Original Format Box => indicate codec type of the encrypted content
-                        createOriginalFormatBox(sinf, codec);
-
-                        // Create and add Scheme Type box
-                        createSchemeTypeBox(sinf);
-
-                        // Create and add Scheme Information Box
-                        createSchemeInformationBox(sinf);
-                }
-
-                return mp4a;
-        }
-
-        function createMPEG4AACESDescriptor() {
-
-                // AudioSpecificConfig (see ISO/IEC 14496-3, subpart 1) => corresponds to hex bytes contained in 'codecPrivateData' field
-                var audioSpecificConfig = hexStringtoBuffer(representation.codecPrivateData);
-
-                // ESDS length = esds box header length (= 12) +
-                //               ES_Descriptor header length (= 5) +
-                //               DecoderConfigDescriptor header length (= 15) +
-                //               decoderSpecificInfo header length (= 2) +
-                //               AudioSpecificConfig length (= codecPrivateData length)
-                var esdsLength = 34 + audioSpecificConfig.length;
-                var esds = new Uint8Array(esdsLength);
-
-                var i = 0;
-                // esds box
-                esds[i++] = (esdsLength & 0xFF000000) >> 24; // esds box length
-                esds[i++] = (esdsLength & 0x00FF0000) >> 16; // ''
-                esds[i++] = (esdsLength & 0x0000FF00) >> 8; // ''
-                esds[i++] = esdsLength & 0x000000FF; // ''
-                esds.set([0x65, 0x73, 0x64, 0x73], i); // type = 'esds'
-                i += 4;
-                esds.set([0, 0, 0, 0], i); // version = 0, flags = 0
-                i += 4;
-                // ES_Descriptor (see ISO/IEC 14496-1 (Systems))
-                esds[i++] = 0x03; // tag = 0x03 (ES_DescrTag)
-                esds[i++] = 20 + audioSpecificConfig.length; // size
-                esds[i++] = (trackId & 0xFF00) >> 8; // ES_ID = track_id
-                esds[i++] = trackId & 0x00FF; // ''
-                esds[i++] = 0; // flags and streamPriority
-
-                // DecoderConfigDescriptor (see ISO/IEC 14496-1 (Systems))
-                esds[i++] = 0x04; // tag = 0x04 (DecoderConfigDescrTag)
-                esds[i++] = 15 + audioSpecificConfig.length; // size
-                esds[i++] = 0x40; // objectTypeIndication = 0x40 (MPEG-4 AAC)
-                esds[i] = 0x05 << 2; // streamType = 0x05 (Audiostream)
-                esds[i] |= 0 << 1; // upStream = 0
-                esds[i++] |= 1; // reserved = 1
-                esds[i++] = 0xFF; // buffersizeDB = undefined
-                esds[i++] = 0xFF; // ''
-                esds[i++] = 0xFF; // ''
-                esds[i++] = (representation.bandwidth & 0xFF000000) >> 24; // maxBitrate
-                esds[i++] = (representation.bandwidth & 0x00FF0000) >> 16; // ''
-                esds[i++] = (representation.bandwidth & 0x0000FF00) >> 8; // ''
-                esds[i++] = representation.bandwidth & 0x000000FF; // ''
-                esds[i++] = (representation.bandwidth & 0xFF000000) >> 24; // avgbitrate
-                esds[i++] = (representation.bandwidth & 0x00FF0000) >> 16; // ''
-                esds[i++] = (representation.bandwidth & 0x0000FF00) >> 8; // ''
-                esds[i++] = representation.bandwidth & 0x000000FF; // ''
-
-                // DecoderSpecificInfo (see ISO/IEC 14496-1 (Systems))
-                esds[i++] = 0x05; // tag = 0x05 (DecSpecificInfoTag)
-                esds[i++] = audioSpecificConfig.length; // size
-                esds.set(audioSpecificConfig, i); // AudioSpecificConfig bytes
-
-                return esds;
-        }
-
-        function createOriginalFormatBox(sinf, codec) {
-                var frma = ISOBoxer.createBox('frma', sinf);
-                frma.data_format = stringToCharCode(codec);
-        }
-
-        function createSchemeTypeBox(sinf) {
-                var schm = ISOBoxer.createFullBox('schm', sinf);
-
-                schm.flags = 0;
-                schm.version = 0;
-                schm.scheme_type = 0x63656E63; // 'cenc' => common encryption
-                schm.scheme_version = 0x00010000; // version set to 0x00010000 (Major version 1, Minor version 0)
-        }
-
-        function createSchemeInformationBox(sinf) {
-                var schi = ISOBoxer.createBox('schi', sinf);
-
-                // Create and add Track Encryption Box
-                createTrackEncryptionBox(schi);
-        }
-
-        function createProtectionSystemSpecificHeaderBox(moov, keySystems) {
-                var pssh_bytes = undefined,
-                    pssh = undefined,
-                    i = undefined,
-                    parsedBuffer = undefined;
-
-                for (i = 0; i < keySystems.length; i += 1) {
-                        pssh_bytes = keySystems[i].initData;
-                        parsedBuffer = ISOBoxer.parseBuffer(pssh_bytes);
-                        pssh = parsedBuffer.fetch('pssh');
-                        if (pssh) {
-                                ISOBoxer.Utils.appendBox(moov, pssh);
-                        }
-                }
-        }
-
-        function createTrackEncryptionBox(schi) {
-                var tenc = ISOBoxer.createFullBox('tenc', schi);
-
-                tenc.flags = 0;
-                tenc.version = 0;
-
-                tenc.default_IsEncrypted = 0x1;
-                tenc.default_IV_size = 8;
-                tenc.default_KID = contentProtection && contentProtection.length > 0 && contentProtection[0]['cenc:default_KID'] ? contentProtection[0]['cenc:default_KID'] : [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
-        }
-
-        function createTrexBox(moov) {
-                var trex = ISOBoxer.createFullBox('trex', moov);
-
-                trex.track_ID = trackId;
-                trex.default_sample_description_index = 1;
-                trex.default_sample_duration = 0;
-                trex.default_sample_size = 0;
-                trex.default_sample_flags = 0;
-
-                return trex;
-        }
-
-        function hexStringtoBuffer(str) {
-                var buf = new Uint8Array(str.length / 2);
-                var i = undefined;
-
-                for (i = 0; i < str.length / 2; i += 1) {
-                        buf[i] = parseInt('' + str[i * 2] + str[i * 2 + 1], 16);
-                }
-                return buf;
-        }
-
-        function stringToCharCode(str) {
-                var code = 0;
-                var i = undefined;
-
-                for (i = 0; i < str.length; i += 1) {
-                        code |= str.charCodeAt(i) << (str.length - i - 1) * 8;
-                }
-                return code;
-        }
-
-        function generateMoov(rep) {
-                if (!rep || !rep.adaptation) {
-                        return;
-                }
-
-                var isoFile = undefined,
-                    arrayBuffer = undefined;
-
-                representation = rep;
-                adaptationSet = representation.adaptation;
-
-                period = adaptationSet.period;
-                trackId = adaptationSet.index + 1;
-                contentProtection = period.mpd.manifest.Period_asArray[period.index].AdaptationSet_asArray[adaptationSet.index].ContentProtection;
-
-                timescale = period.mpd.manifest.Period_asArray[period.index].AdaptationSet_asArray[adaptationSet.index].SegmentTemplate.timescale;
-
-                isoFile = ISOBoxer.createFile();
-                createFtypBox(isoFile);
-                createMoovBox(isoFile);
-
-                arrayBuffer = isoFile.write();
-
-                return arrayBuffer;
-        }
-
-        instance = {
-                generateMoov: generateMoov
-        };
-
-        return instance;
+    return instance;
 }
 
 MssFragmentMoovProcessor.__dashjs_factory_name = 'MssFragmentMoovProcessor';
@@ -27379,8 +27379,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          INIT FUNCTIONS
-      ---------------------------------------------------------------------------
+         INIT FUNCTIONS
+     ---------------------------------------------------------------------------
     */
     function setup() {
         logger = debug.getLogger(instance);
@@ -27599,8 +27599,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          PLAYBACK FUNCTIONS
-      ---------------------------------------------------------------------------
+         PLAYBACK FUNCTIONS
+     ---------------------------------------------------------------------------
     */
 
     /**
@@ -28066,8 +28066,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          AUTO BITRATE
-      ---------------------------------------------------------------------------
+         AUTO BITRATE
+     ---------------------------------------------------------------------------
     */
     /**
      * When switching multi-bitrate content (auto or manual mode) this property specifies the maximum bitrate allowed.
@@ -28391,8 +28391,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          MEDIA PLAYER CONFIGURATION
-      ---------------------------------------------------------------------------
+         MEDIA PLAYER CONFIGURATION
+     ---------------------------------------------------------------------------
     */
     /**
      * <p>Set to false to prevent stream from auto-playing when the view is attached.</p>
@@ -29231,8 +29231,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          METRICS
-      ---------------------------------------------------------------------------
+         METRICS
+     ---------------------------------------------------------------------------
     */
     /**
      * Returns the DashMetrics.js Module. You use this Module to get access to all the public metrics
@@ -29259,8 +29259,8 @@ function MediaPlayer() {
     }
     /*
     ---------------------------------------------------------------------------
-          TEXT MANAGEMENT
-      ---------------------------------------------------------------------------
+         TEXT MANAGEMENT
+     ---------------------------------------------------------------------------
     */
     /**
      * Set default language for text. If default language is not one of text tracks, dash will choose the first one.
@@ -29273,8 +29273,7 @@ function MediaPlayer() {
         if (textController === undefined) {
             textController = (0, _textTextController2['default'])(context).getInstance();
         }
-
-        textController.setTextDefaultLanguage(lang);
+        this.setInitialMediaSettingsFor('fragmentedText', { lang: lang });
     }
 
     /**
@@ -29418,8 +29417,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          VIDEO ELEMENT MANAGEMENT
-      ---------------------------------------------------------------------------
+         VIDEO ELEMENT MANAGEMENT
+     ---------------------------------------------------------------------------
     */
 
     /**
@@ -29509,8 +29508,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          STREAM AND TRACK MANAGEMENT
-      ---------------------------------------------------------------------------
+         STREAM AND TRACK MANAGEMENT
+     ---------------------------------------------------------------------------
     */
     /**
      * @param {string} type
@@ -29615,6 +29614,9 @@ function MediaPlayer() {
             throw MEDIA_PLAYER_NOT_INITIALIZED_ERROR;
         }
         mediaController.setInitialSettings(type, value);
+        if (type === _constantsConstants2['default'].FRAGMENTED_TEXT) {
+            textController.setInitialSettings(value);
+        }
     }
 
     /**
@@ -29729,8 +29731,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          PROTECTION MANAGEMENT
-      ---------------------------------------------------------------------------
+         PROTECTION MANAGEMENT
+     ---------------------------------------------------------------------------
     /**
      * Detects if Protection is included and returns an instance of ProtectionController.js
      * @memberof module:MediaPlayer
@@ -29772,8 +29774,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          THUMBNAILS MANAGEMENT
-      ---------------------------------------------------------------------------
+         THUMBNAILS MANAGEMENT
+     ---------------------------------------------------------------------------
     */
 
     /**
@@ -29806,8 +29808,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          PROTECTION CONTROLLER MANAGEMENT
-      ---------------------------------------------------------------------------
+         PROTECTION CONTROLLER MANAGEMENT
+     ---------------------------------------------------------------------------
     */
 
     /**
@@ -29827,8 +29829,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          TOOLS AND OTHERS FUNCTIONS
-      ---------------------------------------------------------------------------
+         TOOLS AND OTHERS FUNCTIONS
+     ---------------------------------------------------------------------------
     */
     /**
      * Allows application to retrieve a manifest.  Manifest loading is asynchro
@@ -35956,12 +35958,6 @@ function MediaController() {
         var tracksForType = getTracksFor(type, streamInfo);
         var tracks = [];
 
-        if (type === _constantsConstants2['default'].FRAGMENTED_TEXT) {
-            // Choose the first track
-            setTrack(tracksForType[0]);
-            return;
-        }
-
         if (!settings) {
             settings = domStorage.getSavedMediaSettings(type);
             setInitialSettings(type, settings);
@@ -36260,7 +36256,8 @@ function MediaController() {
     function resetInitialSettings() {
         initialSettings = {
             audio: null,
-            video: null
+            video: null,
+            fragmentedText: null
         };
     }
 
@@ -36374,6 +36371,7 @@ function MediaController() {
         getSelectionModeForInitialTrack: getSelectionModeForInitialTrack,
         isMultiTrackSupportedByType: isMultiTrackSupportedByType,
         isTracksEqual: isTracksEqual,
+        matchSettings: matchSettings,
         setConfig: setConfig,
         reset: reset
     };
@@ -42249,61 +42247,61 @@ module.exports = exports['default'];
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
-        value: true
+    value: true
 });
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var DVBErrors = function DVBErrors() {
-        _classCallCheck(this, DVBErrors);
+    _classCallCheck(this, DVBErrors);
 
-        this.mpdurl = null;
-        // String - Absolute URL from which the MPD was originally
-        // retrieved (MPD updates will not change this value).
+    this.mpdurl = null;
+    // String - Absolute URL from which the MPD was originally
+    // retrieved (MPD updates will not change this value).
 
-        this.errorcode = null;
-        // String - The value of errorcode depends upon the type
-        // of error being reported. For an error listed in the
-        // ErrorType column below the value is as described in the
-        // Value column.
-        //
-        // ErrorType                                            Value
-        // ---------                                            -----
-        // HTTP error status code                               HTTP status code
-        // Unknown HTTP status code                             HTTP status code
-        // SSL connection failed                                "SSL" followed by SSL alert value
-        // DNS resolution failed                                "C00"
-        // Host unreachable                                     "C01"
-        // Connection refused                                   "C02"
-        // Connection error – Not otherwise specified           "C03"
-        // Corrupt media – ISO BMFF container cannot be parsed  "M00"
-        // Corrupt media – Not otherwise specified              "M01"
-        // Changing Base URL in use due to errors               "F00"
-        // Becoming an error reporting Player                   "S00"
+    this.errorcode = null;
+    // String - The value of errorcode depends upon the type
+    // of error being reported. For an error listed in the
+    // ErrorType column below the value is as described in the
+    // Value column.
+    //
+    // ErrorType                                            Value
+    // ---------                                            -----
+    // HTTP error status code                               HTTP status code
+    // Unknown HTTP status code                             HTTP status code
+    // SSL connection failed                                "SSL" followed by SSL alert value
+    // DNS resolution failed                                "C00"
+    // Host unreachable                                     "C01"
+    // Connection refused                                   "C02"
+    // Connection error – Not otherwise specified           "C03"
+    // Corrupt media – ISO BMFF container cannot be parsed  "M00"
+    // Corrupt media – Not otherwise specified              "M01"
+    // Changing Base URL in use due to errors               "F00"
+    // Becoming an error reporting Player                   "S00"
 
-        this.terror = null;
-        // Real-Time - Date and time at which error occurred in UTC,
-        // formatted as a combined date and time according to ISO 8601.
+    this.terror = null;
+    // Real-Time - Date and time at which error occurred in UTC,
+    // formatted as a combined date and time according to ISO 8601.
 
-        this.url = null;
-        // String - Absolute URL from which data was being requested
-        // when this error occurred. If the error report is in relation
-        // to corrupt media or changing BaseURL, this may be a null
-        // string if the URL from which the media was obtained or
-        // which led to the change of BaseURL is no longer known.
+    this.url = null;
+    // String - Absolute URL from which data was being requested
+    // when this error occurred. If the error report is in relation
+    // to corrupt media or changing BaseURL, this may be a null
+    // string if the URL from which the media was obtained or
+    // which led to the change of BaseURL is no longer known.
 
-        this.ipaddress = null;
-        // String - IP Address which the host name in "url" resolved to.
-        // If the error report is in relation to corrupt media or
-        // changing BaseURL, this may be a null string if the URL
-        // from which the media was obtained or which led to the
-        // change of BaseURL is no longer known.
+    this.ipaddress = null;
+    // String - IP Address which the host name in "url" resolved to.
+    // If the error report is in relation to corrupt media or
+    // changing BaseURL, this may be a null string if the URL
+    // from which the media was obtained or which led to the
+    // change of BaseURL is no longer known.
 
-        this.servicelocation = null;
-        // String - The value of the serviceLocation field in the
-        // BaseURL being used. In the event of this report indicating
-        // a change of BaseURL this is the value from the BaseURL
-        // being moved from.
+    this.servicelocation = null;
+    // String - The value of the serviceLocation field in the
+    // BaseURL being used. In the event of this report indicating
+    // a change of BaseURL this is the value from the BaseURL
+    // being moved from.
 };
 
 DVBErrors.SSL_CONNECTION_FAILED_PREFIX = 'SSL';
@@ -46728,6 +46726,13 @@ function ProtectionController(config) {
     function selectKeySystem(supportedKS, fromManifest) {
         var self = this;
         var requestedKeySystems = [];
+
+        // Reorder key systems according to priority order provided in protectionData
+        supportedKS = supportedKS.sort(function (ksA, ksB) {
+            var indexA = protDataSet && protDataSet[ksA.ks.systemString] && protDataSet[ksA.ks.systemString].priority >= 0 ? protDataSet[ksA.ks.systemString].priority : supportedKS.length;
+            var indexB = protDataSet && protDataSet[ksB.ks.systemString] && protDataSet[ksB.ks.systemString].priority >= 0 ? protDataSet[ksB.ks.systemString].priority : supportedKS.length;
+            return indexA - indexB;
+        });
 
         var ksIdx = undefined;
         if (keySystem) {
@@ -54025,7 +54030,7 @@ function TextController() {
         vttParser = undefined,
         ttmlParser = undefined,
         eventBus = undefined,
-        defaultLanguage = undefined,
+        defaultSettings = undefined,
         lastEnabledIndex = undefined,
         textDefaultEnabled = undefined,
         // this is used for default settings (each time a file is loaded, we check value of this settings )
@@ -54035,7 +54040,7 @@ function TextController() {
 
     function setup() {
 
-        defaultLanguage = '';
+        defaultSettings = {};
         lastEnabledIndex = -1;
         textDefaultEnabled = true;
         forceTextStreaming = false;
@@ -54111,11 +54116,15 @@ function TextController() {
 
     function setTextDefaultLanguage(lang) {
         (0, _utilsSupervisorTools.checkParameterType)(lang, 'string');
-        defaultLanguage = lang;
+        defaultSettings.lang = lang;
+    }
+
+    function setInitialSettings(value) {
+        defaultSettings = value;
     }
 
     function getTextDefaultLanguage() {
-        return defaultLanguage;
+        return defaultSettings.lang || '';
     }
 
     function onTextTracksAdded(e) {
@@ -54124,13 +54133,16 @@ function TextController() {
         var tracks = e.tracks;
         var index = e.index;
 
-        tracks.some(function (item, idx) {
-            if (item.lang === defaultLanguage) {
-                _this.setTextTrack(idx);
-                index = idx;
-                return true;
-            }
-        });
+        if (defaultSettings) {
+            tracks.some(function (item, idx) {
+                // matchSettings is compatible with setTextDefaultLanguage and setInitialSettings
+                if (mediaController.matchSettings(defaultSettings, item)) {
+                    _this.setTextTrack(idx);
+                    index = idx;
+                    return true;
+                }
+            });
+        }
 
         if (!textDefaultEnabled) {
             // disable text at startup
@@ -54192,7 +54204,7 @@ function TextController() {
     }
 
     function setTextTrack(idx) {
-        //For external time text file,  the only action needed to change a track is marking the track mode to showing.
+        //For external time text file, the only action needed to change a track is marking the track mode to showing.
         // Fragmented text tracks need the additional step of calling TextController.setTextTrack();
         var config = textSourceBuffer.getConfig();
         var fragmentModel = config.fragmentModel;
@@ -54284,6 +54296,7 @@ function TextController() {
         setTextDefaultLanguage: setTextDefaultLanguage,
         setTextDefaultEnabled: setTextDefaultEnabled,
         getTextDefaultEnabled: getTextDefaultEnabled,
+        setInitialSettings: setInitialSettings,
         enableText: enableText,
         isTextEnabled: isTextEnabled,
         setTextTrack: setTextTrack,
@@ -56988,7 +57001,7 @@ function DOMStorage(config) {
 
         /* When Safari (OS X or iOS) is in private browsing mode, it appears as though localStorage is available, but trying to call setItem throws an exception.
          http://stackoverflow.com/questions/14555347/html5-localstorage-error-with-safari-quota-exceeded-err-dom-exception-22-an
-           Check if the storage can be used
+          Check if the storage can be used
          */
         try {
             storage.setItem(testKey, testValue);
@@ -57437,7 +57450,7 @@ module.exports = exports['default'];
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
-    value: true
+  value: true
 });
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
@@ -57459,100 +57472,100 @@ var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
  */
 function ErrorHandler() {
 
-    var instance = undefined;
-    var context = this.context;
-    var eventBus = (0, _coreEventBus2['default'])(context).getInstance();
+  var instance = undefined;
+  var context = this.context;
+  var eventBus = (0, _coreEventBus2['default'])(context).getInstance();
 
-    /**
-     * @param {number} err  "mediasource"|"mediakeys"
-     * @memberof module:ErrorHandler
-     * @deprecated
-     */
-    function capabilityError(err) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'capability', event: err });
-    }
+  /**
+   * @param {number} err  "mediasource"|"mediakeys"
+   * @memberof module:ErrorHandler
+   * @deprecated
+   */
+  function capabilityError(err) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'capability', event: err });
+  }
 
-    /**
-     * @param {string} id "manifest"|"SIDX"|"content"|"initialization"|"xlink"
-     * @param {string} url ""
-     * @param {object} request {XMLHttpRequest instance}
-     * @memberof module:ErrorHandler
-     * @deprecated
-     */
-    function downloadError(id, url, request) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'download', event: { id: id, url: url, request: request } });
-    }
+  /**
+   * @param {string} id "manifest"|"SIDX"|"content"|"initialization"|"xlink"
+   * @param {string} url ""
+   * @param {object} request {XMLHttpRequest instance}
+   * @memberof module:ErrorHandler
+   * @deprecated
+   */
+  function downloadError(id, url, request) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'download', event: { id: id, url: url, request: request } });
+  }
 
-    /**
-     * @param {string} message ""
-     * @param {string} id "parse"|"nostreams"
-     * @param {obj} manifest {parsed manifest}
-     * @param {obj} err
-     * @memberof module:ErrorHandler
-     * @deprecated
-     */
-    function manifestError(message, id, manifest, err) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'manifestError', event: { message: message, id: id, manifest: manifest, event: err } });
-    }
+  /**
+   * @param {string} message ""
+   * @param {string} id "parse"|"nostreams"
+   * @param {obj} manifest {parsed manifest}
+   * @param {obj} err
+   * @memberof module:ErrorHandler
+   * @deprecated
+   */
+  function manifestError(message, id, manifest, err) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'manifestError', event: { message: message, id: id, manifest: manifest, event: err } });
+  }
 
-    /**
-     * @param {string} message ''
-     * @param {string} id 'parse'
-     * @param {string} ccContent ''
-     * @memberof module:ErrorHandler
-     * @deprecated
-     */
-    function timedTextError(message, id, ccContent) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'cc', event: { message: message, id: id, cc: ccContent } });
-    }
+  /**
+   * @param {string} message ''
+   * @param {string} id 'parse'
+   * @param {string} ccContent ''
+   * @memberof module:ErrorHandler
+   * @deprecated
+   */
+  function timedTextError(message, id, ccContent) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'cc', event: { message: message, id: id, cc: ccContent } });
+  }
 
-    /**
-     * @param {string} err
-     * @memberof module:ErrorHandler
-     * @deprecated
-     */
-    function mediaSourceError(err) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'mediasource', event: err });
-    }
+  /**
+   * @param {string} err
+   * @memberof module:ErrorHandler
+   * @deprecated
+   */
+  function mediaSourceError(err) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'mediasource', event: err });
+  }
 
-    /**
-     * @param {string} err
-     * @memberof module:ErrorHandler
-     * @deprecated
-     */
-    function mediaKeySessionError(err) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'key_session', event: err });
-    }
+  /**
+   * @param {string} err
+   * @memberof module:ErrorHandler
+   * @deprecated
+   */
+  function mediaKeySessionError(err) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'key_session', event: err });
+  }
 
-    /**
-     * @param {string} err
-     * @memberof module:ErrorHandler
-     * @deprecated
-     */
-    function mediaKeyMessageError(err) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'key_message', event: err });
-    }
+  /**
+   * @param {string} err
+   * @memberof module:ErrorHandler
+   * @deprecated
+   */
+  function mediaKeyMessageError(err) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'key_message', event: err });
+  }
 
-    /**
-     * @param {object} err DashJSError with code, message and data attributes
-     * @memberof module:ErrorHandler
-     */
-    function error(err) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: err });
-    }
+  /**
+   * @param {object} err DashJSError with code, message and data attributes
+   * @memberof module:ErrorHandler
+   */
+  function error(err) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: err });
+  }
 
-    instance = {
-        capabilityError: capabilityError,
-        downloadError: downloadError,
-        manifestError: manifestError,
-        timedTextError: timedTextError,
-        mediaSourceError: mediaSourceError,
-        mediaKeySessionError: mediaKeySessionError,
-        mediaKeyMessageError: mediaKeyMessageError,
-        error: error
-    };
+  instance = {
+    capabilityError: capabilityError,
+    downloadError: downloadError,
+    manifestError: manifestError,
+    timedTextError: timedTextError,
+    mediaSourceError: mediaSourceError,
+    mediaKeySessionError: mediaKeySessionError,
+    mediaKeyMessageError: mediaKeyMessageError,
+    error: error
+  };
 
-    return instance;
+  return instance;
 }
 
 ErrorHandler.__dashjs_factory_name = 'ErrorHandler';
@@ -57909,7 +57922,7 @@ module.exports = exports['default'];
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
-    value: true
+  value: true
 });
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
@@ -57928,25 +57941,25 @@ var _fastDeepEqual2 = _interopRequireDefault(_fastDeepEqual);
  */
 function ObjectUtils() {
 
-    var instance = undefined;
+  var instance = undefined;
 
-    /**
-     * Returns true if objects are equal
-     * @return {boolean}
-     * @param {object} obj1
-     * @param {object} obj2
-     * @memberof module:ObjectUtils
-     * @instance
-     */
-    function areEqual(obj1, obj2) {
-        return (0, _fastDeepEqual2['default'])(obj1, obj2);
-    }
+  /**
+   * Returns true if objects are equal
+   * @return {boolean}
+   * @param {object} obj1
+   * @param {object} obj2
+   * @memberof module:ObjectUtils
+   * @instance
+   */
+  function areEqual(obj1, obj2) {
+    return (0, _fastDeepEqual2['default'])(obj1, obj2);
+  }
 
-    instance = {
-        areEqual: areEqual
-    };
+  instance = {
+    areEqual: areEqual
+  };
 
-    return instance;
+  return instance;
 }
 
 ObjectUtils.__dashjs_factory_name = 'ObjectUtils';

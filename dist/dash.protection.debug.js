@@ -1292,6 +1292,13 @@ function ProtectionController(config) {
         var self = this;
         var requestedKeySystems = [];
 
+        // Reorder key systems according to priority order provided in protectionData
+        supportedKS = supportedKS.sort(function (ksA, ksB) {
+            var indexA = protDataSet && protDataSet[ksA.ks.systemString] && protDataSet[ksA.ks.systemString].priority >= 0 ? protDataSet[ksA.ks.systemString].priority : supportedKS.length;
+            var indexB = protDataSet && protDataSet[ksB.ks.systemString] && protDataSet[ksB.ks.systemString].priority >= 0 ? protDataSet[ksB.ks.systemString].priority : supportedKS.length;
+            return indexA - indexB;
+        });
+
         var ksIdx = undefined;
         if (keySystem) {
             // We have a key system

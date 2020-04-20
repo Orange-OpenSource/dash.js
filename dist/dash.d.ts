@@ -192,7 +192,7 @@ declare namespace dashjs {
         getTracksFor(type: 'video' | 'audio' | 'text' | 'fragmentedText'): MediaInfo[];
         getTracksForTypeFromManifest(type: 'video' | 'audio' | 'text' | 'fragmentedText', manifest: object, streamInfo: StreamInfo): MediaInfo[];
         getCurrentTrackFor(type: 'video' | 'audio' | 'text' | 'fragmentedText'): MediaInfo | null;
-        setInitialMediaSettingsFor(type: 'video' | 'audio', value: MediaSettings): void;
+        setInitialMediaSettingsFor(type: 'video' | 'audio' | 'fragmentedText', value: MediaSettings): void;
         getInitialMediaSettingsFor(type: 'video' | 'audio'): MediaSettings;
         setCurrentTrack(track: MediaInfo): void;
         getTrackSwitchModeFor(type: 'video' | 'audio'): TrackSwitchMode;
@@ -834,6 +834,9 @@ declare namespace dashjs {
          * Corresponding property values are keys, base64-encoded (no padding).
          */
         clearkeys?: { [key: string]: string };
+
+        /** Priority level of the key system to be selected (0 is the highest prority, -1 for undefined priority) */
+        priority?: number;
     }
 
     export interface KeySystem {

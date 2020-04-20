@@ -16053,7 +16053,7 @@ Object.defineProperty(exports, '__esModule', {
     value: true
 });
 exports.getVersionString = getVersionString;
-var VERSION = '2.9.3-o.15';
+var VERSION = '2.9.3-o.16';
 
 function getVersionString() {
     return VERSION;
@@ -24517,8 +24517,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          INIT FUNCTIONS
-      ---------------------------------------------------------------------------
+         INIT FUNCTIONS
+     ---------------------------------------------------------------------------
     */
     function setup() {
         logger = debug.getLogger(instance);
@@ -24737,8 +24737,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          PLAYBACK FUNCTIONS
-      ---------------------------------------------------------------------------
+         PLAYBACK FUNCTIONS
+     ---------------------------------------------------------------------------
     */
 
     /**
@@ -25204,8 +25204,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          AUTO BITRATE
-      ---------------------------------------------------------------------------
+         AUTO BITRATE
+     ---------------------------------------------------------------------------
     */
     /**
      * When switching multi-bitrate content (auto or manual mode) this property specifies the maximum bitrate allowed.
@@ -25529,8 +25529,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          MEDIA PLAYER CONFIGURATION
-      ---------------------------------------------------------------------------
+         MEDIA PLAYER CONFIGURATION
+     ---------------------------------------------------------------------------
     */
     /**
      * <p>Set to false to prevent stream from auto-playing when the view is attached.</p>
@@ -26369,8 +26369,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          METRICS
-      ---------------------------------------------------------------------------
+         METRICS
+     ---------------------------------------------------------------------------
     */
     /**
      * Returns the DashMetrics.js Module. You use this Module to get access to all the public metrics
@@ -26397,8 +26397,8 @@ function MediaPlayer() {
     }
     /*
     ---------------------------------------------------------------------------
-          TEXT MANAGEMENT
-      ---------------------------------------------------------------------------
+         TEXT MANAGEMENT
+     ---------------------------------------------------------------------------
     */
     /**
      * Set default language for text. If default language is not one of text tracks, dash will choose the first one.
@@ -26411,8 +26411,7 @@ function MediaPlayer() {
         if (textController === undefined) {
             textController = (0, _textTextController2['default'])(context).getInstance();
         }
-
-        textController.setTextDefaultLanguage(lang);
+        this.setInitialMediaSettingsFor('fragmentedText', { lang: lang });
     }
 
     /**
@@ -26556,8 +26555,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          VIDEO ELEMENT MANAGEMENT
-      ---------------------------------------------------------------------------
+         VIDEO ELEMENT MANAGEMENT
+     ---------------------------------------------------------------------------
     */
 
     /**
@@ -26647,8 +26646,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          STREAM AND TRACK MANAGEMENT
-      ---------------------------------------------------------------------------
+         STREAM AND TRACK MANAGEMENT
+     ---------------------------------------------------------------------------
     */
     /**
      * @param {string} type
@@ -26753,6 +26752,9 @@ function MediaPlayer() {
             throw MEDIA_PLAYER_NOT_INITIALIZED_ERROR;
         }
         mediaController.setInitialSettings(type, value);
+        if (type === _constantsConstants2['default'].FRAGMENTED_TEXT) {
+            textController.setInitialSettings(value);
+        }
     }
 
     /**
@@ -26867,8 +26869,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          PROTECTION MANAGEMENT
-      ---------------------------------------------------------------------------
+         PROTECTION MANAGEMENT
+     ---------------------------------------------------------------------------
     /**
      * Detects if Protection is included and returns an instance of ProtectionController.js
      * @memberof module:MediaPlayer
@@ -26910,8 +26912,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          THUMBNAILS MANAGEMENT
-      ---------------------------------------------------------------------------
+         THUMBNAILS MANAGEMENT
+     ---------------------------------------------------------------------------
     */
 
     /**
@@ -26944,8 +26946,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          PROTECTION CONTROLLER MANAGEMENT
-      ---------------------------------------------------------------------------
+         PROTECTION CONTROLLER MANAGEMENT
+     ---------------------------------------------------------------------------
     */
 
     /**
@@ -26965,8 +26967,8 @@ function MediaPlayer() {
 
     /*
     ---------------------------------------------------------------------------
-          TOOLS AND OTHERS FUNCTIONS
-      ---------------------------------------------------------------------------
+         TOOLS AND OTHERS FUNCTIONS
+     ---------------------------------------------------------------------------
     */
     /**
      * Allows application to retrieve a manifest.  Manifest loading is asynchro
@@ -32871,12 +32873,6 @@ function MediaController() {
         var tracksForType = getTracksFor(type, streamInfo);
         var tracks = [];
 
-        if (type === _constantsConstants2['default'].FRAGMENTED_TEXT) {
-            // Choose the first track
-            setTrack(tracksForType[0]);
-            return;
-        }
-
         if (!settings) {
             settings = domStorage.getSavedMediaSettings(type);
             setInitialSettings(type, settings);
@@ -33175,7 +33171,8 @@ function MediaController() {
     function resetInitialSettings() {
         initialSettings = {
             audio: null,
-            video: null
+            video: null,
+            fragmentedText: null
         };
     }
 
@@ -33289,6 +33286,7 @@ function MediaController() {
         getSelectionModeForInitialTrack: getSelectionModeForInitialTrack,
         isMultiTrackSupportedByType: isMultiTrackSupportedByType,
         isTracksEqual: isTracksEqual,
+        matchSettings: matchSettings,
         setConfig: setConfig,
         reset: reset
     };
@@ -43333,7 +43331,7 @@ function TextController() {
         vttParser = undefined,
         ttmlParser = undefined,
         eventBus = undefined,
-        defaultLanguage = undefined,
+        defaultSettings = undefined,
         lastEnabledIndex = undefined,
         textDefaultEnabled = undefined,
         // this is used for default settings (each time a file is loaded, we check value of this settings )
@@ -43343,7 +43341,7 @@ function TextController() {
 
     function setup() {
 
-        defaultLanguage = '';
+        defaultSettings = {};
         lastEnabledIndex = -1;
         textDefaultEnabled = true;
         forceTextStreaming = false;
@@ -43419,11 +43417,15 @@ function TextController() {
 
     function setTextDefaultLanguage(lang) {
         (0, _utilsSupervisorTools.checkParameterType)(lang, 'string');
-        defaultLanguage = lang;
+        defaultSettings.lang = lang;
+    }
+
+    function setInitialSettings(value) {
+        defaultSettings = value;
     }
 
     function getTextDefaultLanguage() {
-        return defaultLanguage;
+        return defaultSettings.lang || '';
     }
 
     function onTextTracksAdded(e) {
@@ -43432,13 +43434,16 @@ function TextController() {
         var tracks = e.tracks;
         var index = e.index;
 
-        tracks.some(function (item, idx) {
-            if (item.lang === defaultLanguage) {
-                _this.setTextTrack(idx);
-                index = idx;
-                return true;
-            }
-        });
+        if (defaultSettings) {
+            tracks.some(function (item, idx) {
+                // matchSettings is compatible with setTextDefaultLanguage and setInitialSettings
+                if (mediaController.matchSettings(defaultSettings, item)) {
+                    _this.setTextTrack(idx);
+                    index = idx;
+                    return true;
+                }
+            });
+        }
 
         if (!textDefaultEnabled) {
             // disable text at startup
@@ -43500,7 +43505,7 @@ function TextController() {
     }
 
     function setTextTrack(idx) {
-        //For external time text file,  the only action needed to change a track is marking the track mode to showing.
+        //For external time text file, the only action needed to change a track is marking the track mode to showing.
         // Fragmented text tracks need the additional step of calling TextController.setTextTrack();
         var config = textSourceBuffer.getConfig();
         var fragmentModel = config.fragmentModel;
@@ -43592,6 +43597,7 @@ function TextController() {
         setTextDefaultLanguage: setTextDefaultLanguage,
         setTextDefaultEnabled: setTextDefaultEnabled,
         getTextDefaultEnabled: getTextDefaultEnabled,
+        setInitialSettings: setInitialSettings,
         enableText: enableText,
         isTextEnabled: isTextEnabled,
         setTextTrack: setTextTrack,
@@ -46296,7 +46302,7 @@ function DOMStorage(config) {
 
         /* When Safari (OS X or iOS) is in private browsing mode, it appears as though localStorage is available, but trying to call setItem throws an exception.
          http://stackoverflow.com/questions/14555347/html5-localstorage-error-with-safari-quota-exceeded-err-dom-exception-22-an
-           Check if the storage can be used
+          Check if the storage can be used
          */
         try {
             storage.setItem(testKey, testValue);
@@ -46745,7 +46751,7 @@ module.exports = exports['default'];
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
-    value: true
+  value: true
 });
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
@@ -46767,100 +46773,100 @@ var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
  */
 function ErrorHandler() {
 
-    var instance = undefined;
-    var context = this.context;
-    var eventBus = (0, _coreEventBus2['default'])(context).getInstance();
+  var instance = undefined;
+  var context = this.context;
+  var eventBus = (0, _coreEventBus2['default'])(context).getInstance();
 
-    /**
-     * @param {number} err  "mediasource"|"mediakeys"
-     * @memberof module:ErrorHandler
-     * @deprecated
-     */
-    function capabilityError(err) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'capability', event: err });
-    }
+  /**
+   * @param {number} err  "mediasource"|"mediakeys"
+   * @memberof module:ErrorHandler
+   * @deprecated
+   */
+  function capabilityError(err) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'capability', event: err });
+  }
 
-    /**
-     * @param {string} id "manifest"|"SIDX"|"content"|"initialization"|"xlink"
-     * @param {string} url ""
-     * @param {object} request {XMLHttpRequest instance}
-     * @memberof module:ErrorHandler
-     * @deprecated
-     */
-    function downloadError(id, url, request) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'download', event: { id: id, url: url, request: request } });
-    }
+  /**
+   * @param {string} id "manifest"|"SIDX"|"content"|"initialization"|"xlink"
+   * @param {string} url ""
+   * @param {object} request {XMLHttpRequest instance}
+   * @memberof module:ErrorHandler
+   * @deprecated
+   */
+  function downloadError(id, url, request) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'download', event: { id: id, url: url, request: request } });
+  }
 
-    /**
-     * @param {string} message ""
-     * @param {string} id "parse"|"nostreams"
-     * @param {obj} manifest {parsed manifest}
-     * @param {obj} err
-     * @memberof module:ErrorHandler
-     * @deprecated
-     */
-    function manifestError(message, id, manifest, err) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'manifestError', event: { message: message, id: id, manifest: manifest, event: err } });
-    }
+  /**
+   * @param {string} message ""
+   * @param {string} id "parse"|"nostreams"
+   * @param {obj} manifest {parsed manifest}
+   * @param {obj} err
+   * @memberof module:ErrorHandler
+   * @deprecated
+   */
+  function manifestError(message, id, manifest, err) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'manifestError', event: { message: message, id: id, manifest: manifest, event: err } });
+  }
 
-    /**
-     * @param {string} message ''
-     * @param {string} id 'parse'
-     * @param {string} ccContent ''
-     * @memberof module:ErrorHandler
-     * @deprecated
-     */
-    function timedTextError(message, id, ccContent) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'cc', event: { message: message, id: id, cc: ccContent } });
-    }
+  /**
+   * @param {string} message ''
+   * @param {string} id 'parse'
+   * @param {string} ccContent ''
+   * @memberof module:ErrorHandler
+   * @deprecated
+   */
+  function timedTextError(message, id, ccContent) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'cc', event: { message: message, id: id, cc: ccContent } });
+  }
 
-    /**
-     * @param {string} err
-     * @memberof module:ErrorHandler
-     * @deprecated
-     */
-    function mediaSourceError(err) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'mediasource', event: err });
-    }
+  /**
+   * @param {string} err
+   * @memberof module:ErrorHandler
+   * @deprecated
+   */
+  function mediaSourceError(err) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'mediasource', event: err });
+  }
 
-    /**
-     * @param {string} err
-     * @memberof module:ErrorHandler
-     * @deprecated
-     */
-    function mediaKeySessionError(err) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'key_session', event: err });
-    }
+  /**
+   * @param {string} err
+   * @memberof module:ErrorHandler
+   * @deprecated
+   */
+  function mediaKeySessionError(err) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'key_session', event: err });
+  }
 
-    /**
-     * @param {string} err
-     * @memberof module:ErrorHandler
-     * @deprecated
-     */
-    function mediaKeyMessageError(err) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'key_message', event: err });
-    }
+  /**
+   * @param {string} err
+   * @memberof module:ErrorHandler
+   * @deprecated
+   */
+  function mediaKeyMessageError(err) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: 'key_message', event: err });
+  }
 
-    /**
-     * @param {object} err DashJSError with code, message and data attributes
-     * @memberof module:ErrorHandler
-     */
-    function error(err) {
-        eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: err });
-    }
+  /**
+   * @param {object} err DashJSError with code, message and data attributes
+   * @memberof module:ErrorHandler
+   */
+  function error(err) {
+    eventBus.trigger(_coreEventsEvents2['default'].ERROR, { error: err });
+  }
 
-    instance = {
-        capabilityError: capabilityError,
-        downloadError: downloadError,
-        manifestError: manifestError,
-        timedTextError: timedTextError,
-        mediaSourceError: mediaSourceError,
-        mediaKeySessionError: mediaKeySessionError,
-        mediaKeyMessageError: mediaKeyMessageError,
-        error: error
-    };
+  instance = {
+    capabilityError: capabilityError,
+    downloadError: downloadError,
+    manifestError: manifestError,
+    timedTextError: timedTextError,
+    mediaSourceError: mediaSourceError,
+    mediaKeySessionError: mediaKeySessionError,
+    mediaKeyMessageError: mediaKeyMessageError,
+    error: error
+  };
 
-    return instance;
+  return instance;
 }
 
 ErrorHandler.__dashjs_factory_name = 'ErrorHandler';
@@ -47217,7 +47223,7 @@ module.exports = exports['default'];
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
-    value: true
+  value: true
 });
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
@@ -47236,25 +47242,25 @@ var _fastDeepEqual2 = _interopRequireDefault(_fastDeepEqual);
  */
 function ObjectUtils() {
 
-    var instance = undefined;
+  var instance = undefined;
 
-    /**
-     * Returns true if objects are equal
-     * @return {boolean}
-     * @param {object} obj1
-     * @param {object} obj2
-     * @memberof module:ObjectUtils
-     * @instance
-     */
-    function areEqual(obj1, obj2) {
-        return (0, _fastDeepEqual2['default'])(obj1, obj2);
-    }
+  /**
+   * Returns true if objects are equal
+   * @return {boolean}
+   * @param {object} obj1
+   * @param {object} obj2
+   * @memberof module:ObjectUtils
+   * @instance
+   */
+  function areEqual(obj1, obj2) {
+    return (0, _fastDeepEqual2['default'])(obj1, obj2);
+  }
 
-    instance = {
-        areEqual: areEqual
-    };
+  instance = {
+    areEqual: areEqual
+  };
 
-    return instance;
+  return instance;
 }
 
 ObjectUtils.__dashjs_factory_name = 'ObjectUtils';

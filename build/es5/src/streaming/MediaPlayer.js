@@ -1083,7 +1083,7 @@ mediaPlayerModel.setFastSwitchEnabled(value);}/**
      * @param {string} lang - default language
      * @memberof module:MediaPlayer
      * @instance
-     */function setTextDefaultLanguage(lang){if(textController===undefined){textController=(0,_TextController2.default)(context).getInstance();}textController.setTextDefaultLanguage(lang);}/**
+     */function setTextDefaultLanguage(lang){if(textController===undefined){textController=(0,_TextController2.default)(context).getInstance();}this.setInitialMediaSettingsFor('fragmentedText',{lang:lang});}/**
      * Get default language for text.
      *
      * @return {string} the default language if it has been set using setTextDefaultLanguage
@@ -1233,7 +1233,7 @@ resetPlaybackControllers();}initializePlayback();}/**
      * @memberof module:MediaPlayer
      * @throws {@link module:MediaPlayer~MEDIA_PLAYER_NOT_INITIALIZED_ERROR MEDIA_PLAYER_NOT_INITIALIZED_ERROR} if called before initialize function
      * @instance
-     */function setInitialMediaSettingsFor(type,value){if(!mediaPlayerInitialized){throw MEDIA_PLAYER_NOT_INITIALIZED_ERROR;}mediaController.setInitialSettings(type,value);}/**
+     */function setInitialMediaSettingsFor(type,value){if(!mediaPlayerInitialized){throw MEDIA_PLAYER_NOT_INITIALIZED_ERROR;}mediaController.setInitialSettings(type,value);if(type===_Constants2.default.FRAGMENTED_TEXT){textController.setInitialSettings(value);}}/**
      * This method returns media settings that is used to pick the initial track. Format of the settings
      * is following:
      * {lang: langValue,
