@@ -2055,8 +2055,7 @@ function MediaPlayer() {
         if (textController === undefined) {
             textController = TextController(context).getInstance();
         }
-
-        textController.setTextDefaultLanguage(lang);
+        this.setInitialMediaSettingsFor('fragmentedText', { lang: lang });
     }
 
     /**
@@ -2399,6 +2398,9 @@ function MediaPlayer() {
             throw MEDIA_PLAYER_NOT_INITIALIZED_ERROR;
         }
         mediaController.setInitialSettings(type, value);
+        if (type === Constants.FRAGMENTED_TEXT) {
+            textController.setInitialSettings(value);
+        }
     }
 
     /**
