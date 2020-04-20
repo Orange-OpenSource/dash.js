@@ -78,12 +78,6 @@ function MediaController() {
         const tracksForType = getTracksFor(type, streamInfo);
         const tracks = [];
 
-        if (type === Constants.FRAGMENTED_TEXT) {
-            // Choose the first track
-            setTrack(tracksForType[0]);
-            return;
-        }
-
         if (!settings) {
             settings = domStorage.getSavedMediaSettings(type);
             setInitialSettings(type, settings);
@@ -384,7 +378,8 @@ function MediaController() {
     function resetInitialSettings() {
         initialSettings = {
             audio: null,
-            video: null
+            video: null,
+            fragmentedText: null
         };
     }
 
@@ -496,6 +491,7 @@ function MediaController() {
         getSelectionModeForInitialTrack: getSelectionModeForInitialTrack,
         isMultiTrackSupportedByType: isMultiTrackSupportedByType,
         isTracksEqual: isTracksEqual,
+        matchSettings: matchSettings,
         setConfig: setConfig,
         reset: reset
     };
