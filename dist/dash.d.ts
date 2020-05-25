@@ -770,6 +770,7 @@ declare namespace dashjs {
         loadedTime: Date;
         maxFragmentDuration: number;
         minBufferTime: number;
+        protocol?: string;
     }
 
     export class StreamInfo {
@@ -777,7 +778,7 @@ declare namespace dashjs {
         index: number;
         start: number;
         duration: number;
-        manifestInfo: object;
+        manifestInfo: IManifestInfo;
         isLast: boolean;
     }
 
