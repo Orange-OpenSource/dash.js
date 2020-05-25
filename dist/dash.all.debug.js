@@ -25431,10 +25431,14 @@ function MssHandler(config) {
 
     function reset() {
         // Restore default configuration parameters
-        mediaPlayerModel.setLiveDelay(liveDelay);
-        mediaPlayerModel.setStableBufferTime(stableBufferTime);
-        mediaPlayerModel.setBufferTimeAtTopQuality(bufferTimeAtTopQuality);
-        mediaPlayerModel.setBufferTimeAtTopQualityLongForm(bufferTimeAtTopQualityLongForm);
+        if (mssParser) {
+            mediaPlayerModel.setLiveDelay(liveDelay);
+            mediaPlayerModel.setStableBufferTime(stableBufferTime);
+            mediaPlayerModel.setBufferTimeAtTopQuality(bufferTimeAtTopQuality);
+            mediaPlayerModel.setBufferTimeAtTopQualityLongForm(bufferTimeAtTopQualityLongForm);
+        }
+
+        mssParser = undefined;
 
         eventBus.off(events.INIT_REQUESTED, onInitializationRequested, this);
         eventBus.off(events.PLAYBACK_PAUSED, onPlaybackPaused, this);
