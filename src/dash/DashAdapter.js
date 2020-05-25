@@ -187,6 +187,9 @@ function DashAdapter() {
         manifestInfo.maxFragmentDuration = mpd.maxSegmentDuration;
         manifestInfo.duration = dashManifestModel.getDuration(mpd.manifest);
         manifestInfo.isDynamic = dashManifestModel.getIsDynamic(mpd.manifest);
+        if (mpd.manifest.protocol) {
+            manifestInfo.protocol = mpd.manifest.protocol;
+        }
 
         return manifestInfo;
     }
