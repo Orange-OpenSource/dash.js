@@ -40,15 +40,16 @@ import DashJSError from '../streaming/vo/DashJSError';
 function MssHandler(config) {
 
     config = config || {};
-    let context = this.context;
-    let eventBus = config.eventBus;
+    const context = this.context;
+    const eventBus = config.eventBus;
     const events = config.events;
     const constants = config.constants;
     const initSegmentType = config.initSegmentType;
-    let metricsModel = config.metricsModel;
-    let playbackController = config.playbackController;
-    let protectionController = config.protectionController;
-    let mssFragmentProcessor = MssFragmentProcessor(context).create({
+    const metricsModel = config.metricsModel;
+    const mediaPlayerModel = config.mediaPlayerModel;
+    const playbackController = config.playbackController;
+    const protectionController = config.protectionController;
+    const mssFragmentProcessor = MssFragmentProcessor(context).create({
         metricsModel: metricsModel,
         playbackController: playbackController,
         protectionController: protectionController,
@@ -59,6 +60,10 @@ function MssHandler(config) {
         errHandler: config.errHandler
     });
     let mssParser,
+        liveDelay,
+        stableBufferTime,
+        bufferTimeAtTopQuality,
+        bufferTimeAtTopQualityLongForm,
         instance;
 
     function setup() {}
@@ -197,6 +202,12 @@ function MssHandler(config) {
     }
 
     function reset() {
+        // Restore default configuration parameters
+        mediaPlayerModel.setLiveDelay(liveDelay);
+        mediaPlayerModel.setStableBufferTime(stableBufferTime);
+        mediaPlayerModel.setBufferTimeAtTopQuality(bufferTimeAtTopQuality);
+        mediaPlayerModel.setBufferTimeAtTopQualityLongForm(bufferTimeAtTopQualityLongForm);
+
         eventBus.off(events.INIT_REQUESTED, onInitializationRequested, this);
         eventBus.off(events.PLAYBACK_PAUSED, onPlaybackPaused, this);
         eventBus.off(events.PLAYBACK_SEEK_ASKED, onPlaybackSeekAsked, this);
@@ -205,6 +216,12 @@ function MssHandler(config) {
     }
 
     function createMssParser() {
+        // Store default configuration parameters (that can be modified by parser)
+        liveDelay = mediaPlayerModel.getLiveDelay();
+        stableBufferTime = mediaPlayerModel.getStableBufferTime();
+        bufferTimeAtTopQuality = mediaPlayerModel.getBufferTimeAtTopQuality();
+        bufferTimeAtTopQualityLongForm = mediaPlayerModel.getBufferTimeAtTopQualityLongForm();
+
         mssParser = MssParser(context).create(config);
         return mssParser;
     }
