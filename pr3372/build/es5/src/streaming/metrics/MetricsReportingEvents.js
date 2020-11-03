@@ -27,5 +27,8 @@
  *  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
- */var MetricsReportingEvents=function(_EventsBase){_inherits(MetricsReportingEvents,_EventsBase);function MetricsReportingEvents(){_classCallCheck(this,MetricsReportingEvents);var _this=_possibleConstructorReturn(this,(MetricsReportingEvents.__proto__||Object.getPrototypeOf(MetricsReportingEvents)).call(this));_this.METRICS_INITIALISATION_COMPLETE='internal_metricsReportingInitialized';_this.BECAME_REPORTING_PLAYER='internal_becameReportingPlayer';return _this;}return MetricsReportingEvents;}(_EventsBase3.default);var metricsReportingEvents=new MetricsReportingEvents();exports.default=metricsReportingEvents;
+ */var MetricsReportingEvents=function(_EventsBase){_inherits(MetricsReportingEvents,_EventsBase);function MetricsReportingEvents(){_classCallCheck(this,MetricsReportingEvents);var _this=_possibleConstructorReturn(this,(MetricsReportingEvents.__proto__||Object.getPrototypeOf(MetricsReportingEvents)).call(this));_this.METRICS_INITIALISATION_COMPLETE='internal_metricsReportingInitialized';_this.BECAME_REPORTING_PLAYER='internal_becameReportingPlayer';/**
+         * Triggered when CMCD data was generated for a HTTP request
+         * @event MetricsReportingEvents#CMCD_DATA_GENERATED
+         */_this.CMCD_DATA_GENERATED='cmcdDataGenerated';return _this;}return MetricsReportingEvents;}(_EventsBase3.default);var metricsReportingEvents=new MetricsReportingEvents();exports.default=metricsReportingEvents;
 //# sourceMappingURL=MetricsReportingEvents.js.map

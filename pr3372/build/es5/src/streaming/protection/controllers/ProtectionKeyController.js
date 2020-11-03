@@ -97,8 +97,8 @@ keySystem=(0,_KeySystemW3CClearKey2.default)(context).getInstance({BASE64:BASE64
      * supported key systems were found
      * @memberof module:ProtectionKeyController
      * @instance
-     */function getSupportedKeySystemsFromContentProtection(cps){var cp=void 0,ks=void 0,ksIdx=void 0,cpIdx=void 0;var supportedKS=[];if(cps){for(ksIdx=0;ksIdx<keySystems.length;++ksIdx){ks=keySystems[ksIdx];for(cpIdx=0;cpIdx<cps.length;++cpIdx){cp=cps[cpIdx];if(cp.schemeIdUri.toLowerCase()===ks.schemeIdURI){// Look for DRM-specific ContentProtection
-var initData=ks.getInitData(cp);supportedKS.push({ks:keySystems[ksIdx],initData:initData,cdmData:ks.getCDMData(),sessionId:ks.getSessionId(cp)});}}}}return supportedKS;}/**
+     */function getSupportedKeySystemsFromContentProtection(cps){var cp=void 0,ks=void 0,ksIdx=void 0,cpIdx=void 0;var supportedKS=[];if(cps){var cencContentProtection=_CommonEncryption2.default.findCencContentProtection(cps);for(ksIdx=0;ksIdx<keySystems.length;++ksIdx){ks=keySystems[ksIdx];for(cpIdx=0;cpIdx<cps.length;++cpIdx){cp=cps[cpIdx];if(cp.schemeIdUri.toLowerCase()===ks.schemeIdURI){// Look for DRM-specific ContentProtection
+var initData=ks.getInitData(cp,cencContentProtection);supportedKS.push({ks:keySystems[ksIdx],initData:initData,cdmData:ks.getCDMData(),sessionId:ks.getSessionId(cp)});}}}}return supportedKS;}/**
      * Returns key systems supported by this player for the given PSSH
      * initializationData. Only key systems supported by this player
      * that have protection data present will be returned.  Key systems are returned in priority order
@@ -106,7 +106,7 @@ var initData=ks.getInitData(cp);supportedKS.push({ks:keySystems[ksIdx],initData:
      *
      * @param {ArrayBuffer} initData Concatenated PSSH data for all DRMs
      * supported by the content
-     * @param {ProtectionDataSet} protDataSet user specified protection data - license server url etc
+     * @param {ProtectionData} protDataSet user specified protection data - license server url etc
      * supported by the content
      * @returns {Array.<Object>} array of objects indicating which supported key
      * systems were found.  Empty array is returned if no
@@ -118,7 +118,7 @@ var initData=ks.getInitData(cp);supportedKS.push({ks:keySystems[ksIdx],initData:
      *
      * @param {KeySystem} keySystem the key system
      * associated with this license request
-     * @param {ProtectionDataSet} protData protection data to use for the
+     * @param {ProtectionData} protData protection data to use for the
      * request
      * @param {string} [messageType="license-request"] the message type associated with this
      * request.  Supported message types can be found
@@ -135,7 +135,7 @@ if(messageType==='license-release'||messageType==='individualization-request'){r
      * Allows application-specific retrieval of ClearKey keys.
      *
      * @param {KeySystem} clearkeyKeySystem They exact ClearKey System to be used
-     * @param {ProtectionDataSet} protData protection data to use for the
+     * @param {ProtectionData} protData protection data to use for the
      * request
      * @param {ArrayBuffer} message the key message from the CDM
      * @return {ClearKeyKeySet|null} the clear keys associated with

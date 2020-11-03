@@ -68,6 +68,8 @@
  * @param {Object} contentProtection the json-style contentProtection
  * object representing the ContentProtection element parsed from the
  * MPD XML document.
+ * @param {Object} cencContentProtection the Common Encryption content protection element or
+ * null if not specified.
  * @returns {ArrayBuffer} EME initialization data
  *//**
  * For some key systems, the CDM message contains HTTP headers that

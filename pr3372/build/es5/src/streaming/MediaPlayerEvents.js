@@ -105,6 +105,9 @@
          * @event MediaPlayerEvents#STREAM_INITIALIZING
          */_this.STREAM_INITIALIZING='streamInitializing';/**
          * Triggered when a stream (period) is loaded
+         * @event MediaPlayerEvents#STREAM_UPDATED
+         */_this.STREAM_UPDATED='streamUpdated';/**
+         * Triggered when a stream (period) is updated
          * @event MediaPlayerEvents#STREAM_INITIALIZED
          */_this.STREAM_INITIALIZED='streamInitialized';/**
          * Triggered when the player has been reset.
@@ -190,7 +193,7 @@
          * Manifest validity changed - As a result of an MPD validity expiration event.
          * @event MediaPlayerEvents#MANIFEST_VALIDITY_CHANGED
          */_this.MANIFEST_VALIDITY_CHANGED='manifestValidityChanged';/**
-         * A gap occured in the timeline which requires a seek
-         * @event MediaPlayerEvents#MANIFEST_VALIDITY_CHANGED
-         */_this.GAP_CAUSED_PLAYBACK_SEEK='gapCausedPlaybackSeek';return _this;}return MediaPlayerEvents;}(_EventsBase3.default);var mediaPlayerEvents=new MediaPlayerEvents();exports.default=mediaPlayerEvents;
+         * A gap occured in the timeline which requires a seek to the next period
+         * @event MediaPlayerEvents#GAP_CAUSED_SEEK_TO_PERIOD_END
+         */_this.GAP_CAUSED_SEEK_TO_PERIOD_END='gapCausedSeekToPeriodEnd';return _this;}return MediaPlayerEvents;}(_EventsBase3.default);var mediaPlayerEvents=new MediaPlayerEvents();exports.default=mediaPlayerEvents;
 //# sourceMappingURL=MediaPlayerEvents.js.map

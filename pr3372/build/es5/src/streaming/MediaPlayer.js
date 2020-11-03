@@ -632,11 +632,11 @@ resetPlaybackControllers();}initializePlayback();}/**
      */function getTrackSwitchModeFor(type){if(!mediaPlayerInitialized){throw MEDIA_PLAYER_NOT_INITIALIZED_ERROR;}return mediaController.getSwitchMode(type);}/**
      * This method sets the current track switch mode. Available options are:
      *
-     * MediaController.TRACK_SWITCH_MODE_NEVER_REPLACE
+     * Constants.TRACK_SWITCH_MODE_NEVER_REPLACE
      * (used to forbid clearing the buffered data (prior to current playback position) after track switch.
      * Defers to fastSwitchEnabled for placement of new data. Default for video)
      *
-     * MediaController.TRACK_SWITCH_MODE_ALWAYS_REPLACE
+     * Constants.TRACK_SWITCH_MODE_ALWAYS_REPLACE
      * (used to clear the buffered data (prior to current playback position) after track switch. Default for audio)
      *
      * @param {MediaType} type
@@ -648,10 +648,10 @@ resetPlaybackControllers();}initializePlayback();}/**
      * This method sets the selection mode for the initial track. This mode defines how the initial track will be selected
      * if no initial media settings are set. If initial media settings are set this parameter will be ignored. Available options are:
      *
-     * MediaController.TRACK_SELECTION_MODE_HIGHEST_BITRATE
+     * Constants.TRACK_SELECTION_MODE_HIGHEST_BITRATE
      * this mode makes the player select the track with a highest bitrate. This mode is a default mode.
      *
-     * MediaController.TRACK_SELECTION_MODE_WIDEST_RANGE
+     * Constants.TRACK_SELECTION_MODE_WIDEST_RANGE
      * this mode makes the player select the track with a widest range of bitrates
      *
      * @param {string} mode
@@ -819,7 +819,7 @@ if(streamController){streamController.setProtectionData(protectionData);}}/*
 //***********************************
 function resetPlaybackControllers(){playbackInitialized=false;streamingInitialized=false;adapter.reset();streamController.reset();gapController.reset();playbackController.reset();abrController.reset();mediaController.reset();textController.reset();if(protectionController){if(settings.get().streaming.keepProtectionMediaKeys){protectionController.stop();}else{protectionController.reset();protectionController=null;detectProtection();}}cmcdModel.reset();}function createPlaybackControllers(){// creates or get objects instances
 var manifestLoader=createManifestLoader();if(!streamController){streamController=(0,_StreamController2.default)(context).getInstance();}// configure controllers
-mediaController.setConfig({domStorage:domStorage});streamController.setConfig({capabilities:capabilities,manifestLoader:manifestLoader,manifestModel:manifestModel,mediaPlayerModel:mediaPlayerModel,protectionController:protectionController,adapter:adapter,dashMetrics:dashMetrics,errHandler:errHandler,timelineConverter:timelineConverter,videoModel:videoModel,playbackController:playbackController,abrController:abrController,mediaController:mediaController,textController:textController,settings:settings,baseURLController:baseURLController});gapController.setConfig({settings:settings,playbackController:playbackController,streamController:streamController,videoModel:videoModel});playbackController.setConfig({streamController:streamController,dashMetrics:dashMetrics,mediaPlayerModel:mediaPlayerModel,adapter:adapter,videoModel:videoModel,timelineConverter:timelineConverter,uriFragmentModel:uriFragmentModel,settings:settings});abrController.setConfig({streamController:streamController,domStorage:domStorage,mediaPlayerModel:mediaPlayerModel,dashMetrics:dashMetrics,adapter:adapter,videoModel:videoModel,settings:settings});abrController.createAbrRulesCollection();textController.setConfig({errHandler:errHandler,manifestModel:manifestModel,adapter:adapter,mediaController:mediaController,streamController:streamController,videoModel:videoModel});cmcdModel.setConfig({abrController:abrController,dashMetrics:dashMetrics,playbackController:playbackController});// initialises controller
+mediaController.setConfig({domStorage:domStorage,settings:settings});streamController.setConfig({capabilities:capabilities,manifestLoader:manifestLoader,manifestModel:manifestModel,mediaPlayerModel:mediaPlayerModel,protectionController:protectionController,adapter:adapter,dashMetrics:dashMetrics,errHandler:errHandler,timelineConverter:timelineConverter,videoModel:videoModel,playbackController:playbackController,abrController:abrController,mediaController:mediaController,textController:textController,settings:settings,baseURLController:baseURLController});gapController.setConfig({settings:settings,playbackController:playbackController,streamController:streamController,videoModel:videoModel,timelineConverter:timelineConverter,adapter:adapter});playbackController.setConfig({streamController:streamController,dashMetrics:dashMetrics,mediaPlayerModel:mediaPlayerModel,adapter:adapter,videoModel:videoModel,timelineConverter:timelineConverter,uriFragmentModel:uriFragmentModel,settings:settings});abrController.setConfig({streamController:streamController,domStorage:domStorage,mediaPlayerModel:mediaPlayerModel,dashMetrics:dashMetrics,adapter:adapter,videoModel:videoModel,settings:settings});abrController.createAbrRulesCollection();textController.setConfig({errHandler:errHandler,manifestModel:manifestModel,adapter:adapter,mediaController:mediaController,streamController:streamController,videoModel:videoModel});cmcdModel.setConfig({abrController:abrController,dashMetrics:dashMetrics,playbackController:playbackController});// initialises controller
 streamController.initialize(autoPlay,protectionData);gapController.initialize();cmcdModel.initialize();}function createManifestLoader(){return(0,_ManifestLoader2.default)(context).create({debug:debug,errHandler:errHandler,dashMetrics:dashMetrics,mediaPlayerModel:mediaPlayerModel,requestModifier:(0,_RequestModifier2.default)(context).getInstance(),mssHandler:mssHandler,settings:settings});}function detectProtection(){if(protectionController){return protectionController;}// do not require Protection as dependencies as this is optional and intended to be loaded separately
 var Protection=dashjs.Protection;/* jshint ignore:line */if(typeof Protection==='function'){//TODO need a better way to register/detect plugin components
 var protection=Protection(context).create();_Events2.default.extend(Protection.events);_MediaPlayerEvents2.default.extend(Protection.events,{publicOnly:true});_Errors2.default.extend(Protection.errors);if(!capabilities){capabilities=(0,_Capabilities2.default)(context).getInstance();}protectionController=protection.createProtectionSystem({debug:debug,errHandler:errHandler,videoModel:videoModel,capabilities:capabilities,eventBus:eventBus,events:_Events2.default,BASE64:_base2.default,constants:_Constants2.default});return protectionController;}return null;}function detectMetricsReporting(){if(metricsReportingController){return;}// do not require MetricsReporting as dependencies as this is optional and intended to be loaded separately

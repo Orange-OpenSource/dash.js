@@ -111,6 +111,8 @@ declare namespace dashjs {
             liveDelay?: number;
             scheduleWhilePaused?: boolean;
             fastSwitchEnabled?: boolean;
+            flushBufferAtTrackSwitch?: boolean;
+            calcSegmentAvailabilityRangeFromTimeline?: boolean,
             bufferPruningInterval?: number;
             bufferToKeep?: number;
             bufferAheadToKeep?: number;
@@ -143,6 +145,11 @@ declare namespace dashjs {
                 video?: number;
                 audio?: number;
             };
+            trackSwitchMode?: {
+                video?: TrackSwitchMode;
+                audio?: TrackSwitchMode;
+            }
+            selectionModeForInitialTrack?: TrackSelectionMode
             retryIntervals?: {
                 'MPD'?:                       number;
                 'XLinkExpansion'?:            number;
@@ -194,6 +201,11 @@ declare namespace dashjs {
                     audio?: boolean;
                     video?: boolean;
                 };
+            },
+            cmcd?: {
+                enabled?: boolean,
+                sid?: string,
+                cid?: string
             }
         }
     }

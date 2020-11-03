@@ -15736,8 +15736,7 @@ function EventBus() {
 
     function trigger(type) {
         var payload = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
-        var streamId = arguments.length <= 2 || arguments[2] === undefined ? undefined : arguments[2];
-        var mediaType = arguments.length <= 3 || arguments[3] === undefined ? undefined : arguments[3];
+        var filters = arguments.length <= 2 || arguments[2] === undefined ? {} : arguments[2];
 
         if (!type || !handlers[type]) return;
 
@@ -15746,23 +15745,13 @@ function EventBus() {
         if (payload.hasOwnProperty('type')) throw new Error('\'type\' is a reserved word for event dispatching');
 
         payload.type = type;
-        if (streamId) {
-            payload.streamId = streamId;
-        }
-        if (mediaType) {
-            payload.mediaType = mediaType;
-        }
 
         handlers[type] = handlers[type].filter(function (item) {
             return item;
         });
         var eventHandlers = handlers[type].filter(function (item) {
-            if (streamId && item.streamId && item.streamId !== streamId) {
-                return false;
-            }
-            if (mediaType && item.mediaType && item.mediaType !== mediaType) {
-                return false;
-            }
+            if (filters.streamId && item.streamId && item.streamId !== filters.streamId) return false;
+            if (filters.mediaType && item.mediaType && item.mediaType !== filters.mediaType) return false;
             return true;
         });
 
@@ -16153,6 +16142,7 @@ var _streamingVoMetricsHTTPRequest = _dereq_(242);
  *          liveDelay: null,
  *          scheduleWhilePaused: true,
  *          fastSwitchEnabled: false,
+ *          flushBufferAtTrackSwitch: false,
  *          bufferPruningInterval: 10,
  *          bufferToKeep: 20,
  *          jumpGaps: true,
@@ -16327,6 +16317,12 @@ var _streamingVoMetricsHTTPRequest = _dereq_(242);
  * 1. In IE11 with auto switching off, if a user switches to a quality they can not download in time the
  * fragment may be appended in the same range as the playhead or even in the past, in IE11 it may cause a stutter
  * or stall in playback.
+ * @property {boolean} [flushBufferAtTrackSwitch=false]
+ * When enabled, after a track switch and in case buffer is being replaced (see MEdiaPlayer.setTrackSwitchModeFor(Constants.TRACK_SWITCH_MODE_ALWAYS_REPLACE)),
+ * the video element is flushed (seek at current playback time) once a segment of the new track is appended in buffer in order to force video decoder to play new track.
+ * This can be required on some devices like GoogleCast devices to make track switching functional. Otherwise track switching will be effective only once after previous
+ * buffered track is fully consumed.
+ * @property {boolean} [calcSegmentAvailabilityRangeFromTimeline=true] Enable calculation of the DVR window for SegmentTimeline manifests based on the entries in <SegmentTimeline>
  * @property {number} [bufferPruningInterval=10] The interval of pruning buffer in sconds.
  * @property {number} [bufferToKeep=20]
  * This value influences the buffer pruning logic.
@@ -16480,6 +16476,8 @@ function Settings() {
             liveDelay: null,
             scheduleWhilePaused: true,
             fastSwitchEnabled: false,
+            flushBufferAtTrackSwitch: false,
+            calcSegmentAvailabilityRangeFromTimeline: true,
             bufferPruningInterval: 10,
             bufferToKeep: 20,
             jumpGaps: true,
@@ -16503,6 +16501,8 @@ function Settings() {
             lastBitrateCachingInfo: { enabled: true, ttl: 360000 },
             lastMediaSettingsCachingInfo: { enabled: true, ttl: 360000 },
             cacheLoadThresholds: { video: 50, audio: 5 },
+            trackSwitchMode: { audio: _streamingConstantsConstants2['default'].TRACK_SWITCH_MODE_ALWAYS_REPLACE, video: _streamingConstantsConstants2['default'].TRACK_SWITCH_MODE_NEVER_REPLACE },
+            selectionModeForInitialTrack: _streamingConstantsConstants2['default'].TRACK_SELECTION_MODE_HIGHEST_BITRATE,
             retryIntervals: (_retryIntervals = {}, _defineProperty(_retryIntervals, _streamingVoMetricsHTTPRequest.HTTPRequest.MPD_TYPE, 500), _defineProperty(_retryIntervals, _streamingVoMetricsHTTPRequest.HTTPRequest.XLINK_EXPANSION_TYPE, 500), _defineProperty(_retryIntervals, _streamingVoMetricsHTTPRequest.HTTPRequest.MEDIA_SEGMENT_TYPE, 1000), _defineProperty(_retryIntervals, _streamingVoMetricsHTTPRequest.HTTPRequest.INIT_SEGMENT_TYPE, 1000), _defineProperty(_retryIntervals, _streamingVoMetricsHTTPRequest.HTTPRequest.BITSTREAM_SWITCHING_SEGMENT_TYPE, 1000), _defineProperty(_retryIntervals, _streamingVoMetricsHTTPRequest.HTTPRequest.INDEX_SEGMENT_TYPE, 1000), _defineProperty(_retryIntervals, _streamingVoMetricsHTTPRequest.HTTPRequest.OTHER_TYPE, 1000), _defineProperty(_retryIntervals, 'lowLatencyReductionFactor', 10), _retryIntervals),
             retryAttempts: (_retryAttempts = {}, _defineProperty(_retryAttempts, _streamingVoMetricsHTTPRequest.HTTPRequest.MPD_TYPE, 3), _defineProperty(_retryAttempts, _streamingVoMetricsHTTPRequest.HTTPRequest.XLINK_EXPANSION_TYPE, 1), _defineProperty(_retryAttempts, _streamingVoMetricsHTTPRequest.HTTPRequest.MEDIA_SEGMENT_TYPE, 3), _defineProperty(_retryAttempts, _streamingVoMetricsHTTPRequest.HTTPRequest.INIT_SEGMENT_TYPE, 3), _defineProperty(_retryAttempts, _streamingVoMetricsHTTPRequest.HTTPRequest.BITSTREAM_SWITCHING_SEGMENT_TYPE, 3), _defineProperty(_retryAttempts, _streamingVoMetricsHTTPRequest.HTTPRequest.INDEX_SEGMENT_TYPE, 3), _defineProperty(_retryAttempts, _streamingVoMetricsHTTPRequest.HTTPRequest.OTHER_TYPE, 3), _defineProperty(_retryAttempts, 'lowLatencyMultiplyFactor', 5), _retryAttempts),
             abr: {
@@ -16524,8 +16524,7 @@ function Settings() {
             cmcd: {
                 enabled: false,
                 sid: null,
-                cid: null,
-                did: null
+                cid: null
             }
         }
     };
@@ -16762,7 +16761,7 @@ Object.defineProperty(exports, '__esModule', {
     value: true
 });
 exports.getVersionString = getVersionString;
-var VERSION = '3.1.3';
+var VERSION = '3.1.4';
 
 function getVersionString() {
     return VERSION;
@@ -17391,7 +17390,6 @@ function DashAdapter() {
             representationInfo.DVRWindow = voRepresentation.segmentAvailabilityRange;
             representationInfo.fragmentDuration = voRepresentation.segmentDuration || (voRepresentation.segments && voRepresentation.segments.length > 0 ? voRepresentation.segments[0].duration : NaN);
             representationInfo.MSETimeOffset = voRepresentation.MSETimeOffset;
-            representationInfo.useCalculatedLiveEdgeTime = voRepresentation.useCalculatedLiveEdgeTime;
             representationInfo.mediaInfo = convertAdaptationToMediaInfo(voRepresentation.adaptation);
 
             return representationInfo;
@@ -17458,7 +17456,7 @@ function DashAdapter() {
 
             if (currentMediaInfo[streamInfo.id] && currentMediaInfo[streamInfo.id][type]) {
                 for (var i = 0, ln = adaptations.length; i < ln; i++) {
-                    if (currentMediaInfo[streamInfo.id][type].isMediaInfoEqual(allMediaInfoForType[i])) {
+                    if (areMediaInfosEqual(currentMediaInfo[streamInfo.id][type], allMediaInfoForType[i])) {
                         return adaptations[i];
                     }
                 }
@@ -17472,6 +17470,27 @@ function DashAdapter() {
         }
 
         return adaptations[0];
+    }
+
+    /**
+     * Compares two mediaInfo objects
+     * @param {MediaInfo} mInfoOne
+     * @param {MediaInfo} mInfoTwo
+     * @returns {boolean}
+     */
+    function areMediaInfosEqual(mInfoOne, mInfoTwo) {
+        if (!mInfoOne || !mInfoTwo) {
+            return false;
+        }
+
+        var sameId = mInfoOne.id === mInfoTwo.id;
+        var sameViewpoint = mInfoOne.viewpoint === mInfoTwo.viewpoint;
+        var sameLang = mInfoOne.lang === mInfoTwo.lang;
+        var sameRoles = mInfoOne.roles.toString() === mInfoTwo.roles.toString();
+        var sameAccessibility = mInfoOne.accessibility.toString() === mInfoTwo.accessibility.toString();
+        var sameAudioChannelConfiguration = mInfoOne.audioChannelConfiguration.toString() === mInfoTwo.audioChannelConfiguration.toString();
+
+        return sameId && sameViewpoint && sameLang && sameRoles && sameAccessibility && sameAudioChannelConfiguration;
     }
 
     /**
@@ -17864,19 +17883,6 @@ function DashAdapter() {
     }
 
     /**
-     *
-     * @param {object} mediaInfo
-     * @returns {boolean}
-     * @memberOf module:DashAdapter
-     * @instance
-     * @ignore
-     */
-    function getUseCalculatedLiveEdgeTimeForMediaInfo(mediaInfo) {
-        var voAdaptation = getAdaptationForMediaInfo(mediaInfo);
-        return dashManifestModel.getUseCalculatedLiveEdgeTimeForAdaptation(voAdaptation);
-    }
-
-    /**
      * Checks if the manifest has a DVB profile
      * @param {object} manifest
      * @returns {boolean}
@@ -18211,7 +18217,6 @@ function DashAdapter() {
         getMpd: getMpd,
         setConfig: setConfig,
         updatePeriods: updatePeriods,
-        getUseCalculatedLiveEdgeTimeForMediaInfo: getUseCalculatedLiveEdgeTimeForMediaInfo,
         getIsTextTrack: getIsTextTrack,
         getUTCTimingSources: getUTCTimingSources,
         getSuggestedPresentationDelay: getSuggestedPresentationDelay,
@@ -18453,7 +18458,7 @@ function DashHandler(config) {
         // If representation has initialization and segments information, REPRESENTATION_UPDATE_COMPLETED can be triggered immediately
         // otherwise, it means that a request has to be made to get initialization and/or segments informations
         if (hasInitialization && hasSegments) {
-            eventBus.trigger(events.REPRESENTATION_UPDATE_COMPLETED, { representation: voRepresentation }, streamInfo.id, type);
+            eventBus.trigger(events.REPRESENTATION_UPDATE_COMPLETED, { representation: voRepresentation }, { streamId: streamInfo.id, mediaType: type });
         } else {
             segmentsController.update(voRepresentation, selectedMimeType, hasInitialization, hasSegments);
         }
@@ -18570,8 +18575,8 @@ function DashHandler(config) {
         requestedTime = null;
 
         var indexToRequest = segmentIndex + 1;
-        logger.debug('Getting the next request at index: ' + indexToRequest);
 
+        logger.debug('Getting the next request at index: ' + indexToRequest);
         // check that there is a segment in this index
         var segment = segmentsController.getSegmentByIndex(representation, indexToRequest, lastSegment ? lastSegment.mediaStartTime : -1);
         if (!segment && isEndlessMedia(representation) && !dynamicStreamCompleted) {
@@ -18615,7 +18620,7 @@ function DashHandler(config) {
         var representation = e.representation;
         if (!representation.segments) return;
 
-        eventBus.trigger(events.REPRESENTATION_UPDATE_COMPLETED, { representation: representation }, streamInfo.id, type);
+        eventBus.trigger(events.REPRESENTATION_UPDATE_COMPLETED, { representation: representation }, { streamId: streamInfo.id, mediaType: type });
     }
 
     function onSegmentsLoaded(e) {
@@ -18644,7 +18649,10 @@ function DashHandler(config) {
         }
 
         if (segments.length > 0) {
-            representation.segmentAvailabilityRange = { start: segments[0].presentationStartTime, end: segments[segments.length - 1].presentationStartTime };
+            representation.segmentAvailabilityRange = {
+                start: segments[0].presentationStartTime,
+                end: segments[segments.length - 1].presentationStartTime
+            };
             representation.availableSegmentsNumber = segments.length;
             representation.segments = segments;
 
@@ -18660,7 +18668,7 @@ function DashHandler(config) {
             return;
         }
 
-        eventBus.trigger(events.REPRESENTATION_UPDATE_COMPLETED, { representation: representation }, streamInfo.id, type);
+        eventBus.trigger(events.REPRESENTATION_UPDATE_COMPLETED, { representation: representation }, { streamId: streamInfo.id, mediaType: type });
     }
 
     function onDynamicStreamCompleted() {
@@ -19440,7 +19448,7 @@ function SegmentBaseLoader() {
                 representation.range = initRange;
                 // note that we don't explicitly set rep.initialization as this
                 // will be computed when all BaseURLs are resolved later
-                eventBus.trigger(events.INITIALIZATION_LOADED, { representation: representation }, streamId, mediaType);
+                eventBus.trigger(events.INITIALIZATION_LOADED, { representation: representation }, { streamId: streamId, mediaType: mediaType });
             } else {
                 info.range.end = info.bytesLoaded + info.bytesToLoad;
                 loadInitialization(streamId, mediaType, representation, info);
@@ -19448,7 +19456,7 @@ function SegmentBaseLoader() {
         };
 
         var onerror = function onerror() {
-            eventBus.trigger(events.INITIALIZATION_LOADED, { representation: representation });
+            eventBus.trigger(events.INITIALIZATION_LOADED, { representation: representation }, { streamId: streamId, mediaType: mediaType });
         };
 
         urlLoader.load({ request: request, success: onload, error: onerror });
@@ -19529,7 +19537,7 @@ function SegmentBaseLoader() {
                         var segs = [];
                         var count = 0;
                         var offset = (sidx.offset || info.range.start) + sidx.size;
-                        var tmpCallback = function tmpCallback(result) {
+                        var tmpCallback = function tmpCallback(streamId, mediaType, result) {
                             if (result) {
                                 segs = segs.concat(result);
                                 count++;
@@ -19624,7 +19632,7 @@ function SegmentBaseLoader() {
             segments: segments,
             representation: representation,
             error: segments ? undefined : new _streamingVoDashJSError2['default'](errors.SEGMENT_BASE_LOADER_ERROR_CODE, errors.SEGMENT_BASE_LOADER_ERROR_MESSAGE)
-        }, streamId, mediaType);
+        }, { streamId: streamId, mediaType: mediaType });
     }
 
     instance = {
@@ -19995,11 +20003,11 @@ function WebmSegmentBaseLoader() {
         var onload = function onload() {
             // note that we don't explicitly set rep.initialization as this
             // will be computed when all BaseURLs are resolved later
-            eventBus.trigger(events.INITIALIZATION_LOADED, { representation: representation }, streamId, mediaType);
+            eventBus.trigger(events.INITIALIZATION_LOADED, { representation: representation }, { streamId: streamId, mediaType: mediaType });
         };
 
         var onloadend = function onloadend() {
-            eventBus.trigger(events.INITIALIZATION_LOADED, { representation: representation }, streamId, mediaType);
+            eventBus.trigger(events.INITIALIZATION_LOADED, { representation: representation }, { streamId: streamId, mediaType: mediaType });
         };
 
         urlLoader.load({
@@ -20060,7 +20068,7 @@ function WebmSegmentBaseLoader() {
             segments: segments,
             representation: representation,
             error: segments ? undefined : new _streamingVoDashJSError2['default'](errors.SEGMENT_BASE_LOADER_ERROR_CODE, errors.SEGMENT_BASE_LOADER_ERROR_MESSAGE)
-        }, streamId, mediaType);
+        }, { streamId: streamId, mediaType: mediaType });
     }
 
     function getFragmentRequest(info) {
@@ -20428,7 +20436,7 @@ function RepresentationController(config) {
     function updateRepresentation(representation, isDynamic) {
         representation.segmentAvailabilityRange = timelineConverter.calcSegmentAvailabilityRange(representation, isDynamic);
 
-        if (representation.segmentAvailabilityRange.end < representation.segmentAvailabilityRange.start && !representation.useCalculatedLiveEdgeTime) {
+        if (representation.segmentAvailabilityRange.end < representation.segmentAvailabilityRange.start) {
             var error = new _streamingVoDashJSError2['default'](errors.SEGMENTS_UNAVAILABLE_ERROR_CODE, errors.SEGMENTS_UNAVAILABLE_ERROR_MESSAGE, { availabilityDelay: representation.segmentAvailabilityRange.start - representation.segmentAvailabilityRange.end });
             endDataUpdate(error);
             return;
@@ -20445,7 +20453,7 @@ function RepresentationController(config) {
         for (var i = 0, ln = voAvailableRepresentations.length; i < ln; i++) {
             updateRepresentation(voAvailableRepresentations[i], isDynamic);
             if (notifyUpdate) {
-                eventBus.trigger(events.REPRESENTATION_UPDATE_STARTED, { representation: voAvailableRepresentations[i] }, streamInfo.id, type);
+                eventBus.trigger(events.REPRESENTATION_UPDATE_STARTED, { representation: voAvailableRepresentations[i] }, { streamId: streamInfo.id, mediaType: type });
             }
         }
     }
@@ -20458,7 +20466,7 @@ function RepresentationController(config) {
 
     function startDataUpdate() {
         updating = true;
-        eventBus.trigger(events.DATA_UPDATE_STARTED, {}, streamInfo.id, type);
+        eventBus.trigger(events.DATA_UPDATE_STARTED, {}, { streamId: streamInfo.id, mediaType: type });
     }
 
     function endDataUpdate(error) {
@@ -20467,7 +20475,7 @@ function RepresentationController(config) {
             data: realAdaptation,
             currentRepresentation: currentVoRepresentation,
             error: error
-        }, streamInfo.id, type);
+        }, { streamId: streamInfo.id, mediaType: type });
     }
 
     function postponeUpdate(postponeTimePeriod) {
@@ -21354,30 +21362,6 @@ function DashManifestModel() {
         }
     }
 
-    function isLastRepeatAttributeValid(segmentTimeline) {
-        var s = segmentTimeline.S_asArray[segmentTimeline.S_asArray.length - 1];
-        return !s.hasOwnProperty('r') || s.r >= 0;
-    }
-
-    function getUseCalculatedLiveEdgeTimeForAdaptation(voAdaptation) {
-        var realAdaptation = getRealAdaptationFor(voAdaptation);
-        var realRepresentation = realAdaptation && Array.isArray(realAdaptation.Representation_asArray) ? realAdaptation.Representation_asArray[0] : null;
-        var segmentInfo = undefined;
-        if (realRepresentation) {
-            if (realRepresentation.hasOwnProperty(_constantsDashConstants2['default'].SEGMENT_LIST)) {
-                segmentInfo = realRepresentation.SegmentList;
-                return segmentInfo.hasOwnProperty(_constantsDashConstants2['default'].SEGMENT_TIMELINE) ? isLastRepeatAttributeValid(segmentInfo.SegmentTimeline) : true;
-            } else if (realRepresentation.hasOwnProperty(_constantsDashConstants2['default'].SEGMENT_TEMPLATE)) {
-                segmentInfo = realRepresentation.SegmentTemplate;
-                if (segmentInfo.hasOwnProperty(_constantsDashConstants2['default'].SEGMENT_TIMELINE)) {
-                    return isLastRepeatAttributeValid(segmentInfo.SegmentTimeline);
-                }
-            }
-        }
-
-        return false;
-    }
-
     function getRepresentationsForAdaptation(voAdaptation) {
         var voRepresentations = [];
         var processedRealAdaptation = getRealAdaptationFor(voAdaptation);
@@ -21434,17 +21418,14 @@ function DashManifestModel() {
 
                     if (segmentInfo.hasOwnProperty(_constantsDashConstants2['default'].SEGMENT_TIMELINE)) {
                         voRepresentation.segmentInfoType = _constantsDashConstants2['default'].SEGMENT_TIMELINE;
-                        voRepresentation.useCalculatedLiveEdgeTime = isLastRepeatAttributeValid(segmentInfo.SegmentTimeline);
                     } else {
                         voRepresentation.segmentInfoType = _constantsDashConstants2['default'].SEGMENT_LIST;
-                        voRepresentation.useCalculatedLiveEdgeTime = true;
                     }
                 } else if (realRepresentation.hasOwnProperty(_constantsDashConstants2['default'].SEGMENT_TEMPLATE)) {
                     segmentInfo = realRepresentation.SegmentTemplate;
 
                     if (segmentInfo.hasOwnProperty(_constantsDashConstants2['default'].SEGMENT_TIMELINE)) {
                         voRepresentation.segmentInfoType = _constantsDashConstants2['default'].SEGMENT_TIMELINE;
-                        voRepresentation.useCalculatedLiveEdgeTime = isLastRepeatAttributeValid(segmentInfo.SegmentTimeline);
                     } else {
                         voRepresentation.segmentInfoType = _constantsDashConstants2['default'].SEGMENT_TEMPLATE;
                     }
@@ -22147,7 +22128,6 @@ function DashManifestModel() {
         getBaseURLsFromElement: getBaseURLsFromElement,
         getRepresentationSortFunction: getRepresentationSortFunction,
         getLocation: getLocation,
-        getUseCalculatedLiveEdgeTimeForAdaptation: getUseCalculatedLiveEdgeTimeForAdaptation,
         getSuggestedPresentationDelay: getSuggestedPresentationDelay,
         getAvailabilityStartTime: getAvailabilityStartTime,
         getServiceDescriptions: getServiceDescriptions,
@@ -23266,10 +23246,13 @@ function ListSegmentsGetter(config, isDynamic) {
         var list = representation.adaptation.period.mpd.manifest.Period_asArray[representation.adaptation.period.index].AdaptationSet_asArray[representation.adaptation.index].Representation_asArray[representation.index].SegmentList;
         var len = list.SegmentURL_asArray.length;
 
+        var startNumber = representation && !isNaN(representation.startNumber) ? representation.startNumber : 1;
+        var offsetToSubtract = Math.max(startNumber - 1, 0);
+
         var start = representation.startNumber;
         var segment = null;
-        if (index < len) {
-            var s = list.SegmentURL_asArray[index];
+        if (index - offsetToSubtract < len) {
+            var s = list.SegmentURL_asArray[index - offsetToSubtract];
 
             segment = (0, _SegmentsUtils.getIndexBasedSegment)(timelineConverter, isDynamic, representation, index);
             if (segment) {
@@ -23520,8 +23503,7 @@ function SegmentBaseGetter(config) {
     function getSegmentByTime(representation, requestedTime) {
         checkConfig();
 
-        var periodTime = timelineConverter.calcPeriodRelativeTimeFromMpdRelativeTime(representation, requestedTime);
-        var index = getIndexByTime(representation, periodTime);
+        var index = getIndexByTime(representation, requestedTime);
 
         return getSegmentByIndex(representation, index);
     }
@@ -23993,10 +23975,15 @@ var _modelsDashManifestModel = _dereq_(65);
 
 var _modelsDashManifestModel2 = _interopRequireDefault(_modelsDashManifestModel);
 
+var _coreSettings = _dereq_(48);
+
+var _coreSettings2 = _interopRequireDefault(_coreSettings);
+
 function TimelineConverter() {
 
     var context = this.context;
     var eventBus = (0, _coreEventBus2['default'])(context).getInstance();
+    var settings = (0, _coreSettings2['default'])(context).getInstance();
 
     var instance = undefined,
         dashManifestModel = undefined,
@@ -24116,7 +24103,7 @@ function TimelineConverter() {
         var d = voRepresentation.segmentDuration || (voRepresentation.segments && voRepresentation.segments.length ? voRepresentation.segments[voRepresentation.segments.length - 1].duration : 0);
 
         // Specific use case of SegmentTimeline without timeShiftBufferDepth
-        if (voRepresentation.segmentInfoType === _constantsDashConstants2['default'].SEGMENT_TIMELINE && voPeriod.mpd.timeShiftBufferDepth === Number.POSITIVE_INFINITY) {
+        if (voRepresentation.segmentInfoType === _constantsDashConstants2['default'].SEGMENT_TIMELINE && settings.get().streaming.calcSegmentAvailabilityRangeFromTimeline) {
             return calcSegmentAvailabilityRangeFromTimeline(voRepresentation);
         }
 
@@ -24134,7 +24121,6 @@ function TimelineConverter() {
     function calcSegmentAvailabilityRangeFromTimeline(voRepresentation) {
         var adaptation = voRepresentation.adaptation.period.mpd.manifest.Period_asArray[voRepresentation.adaptation.period.index].AdaptationSet_asArray[voRepresentation.adaptation.index];
         var representation = dashManifestModel.getRepresentationFor(voRepresentation.index, adaptation);
-
         var timeline = representation.SegmentTemplate.SegmentTimeline;
         var timescale = representation.SegmentTemplate.timescale;
         var segments = timeline.S_asArray;
@@ -24145,7 +24131,7 @@ function TimelineConverter() {
             i = undefined,
             len = undefined;
 
-        range.start = segments[0].t / timescale;
+        range.start = calcPresentationTimeFromMediaTime(segments[0].t / timescale, voRepresentation);
 
         for (i = 0, len = segments.length; i < len; i++) {
             segment = segments[i];
@@ -24241,7 +24227,7 @@ TimelineConverter.__dashjs_factory_name = 'TimelineConverter';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(TimelineConverter);
 module.exports = exports['default'];
 
-},{"46":46,"47":47,"54":54,"61":61,"65":65}],83:[function(_dereq_,module,exports){
+},{"46":46,"47":47,"48":48,"54":54,"61":61,"65":65}],83:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -24800,55 +24786,31 @@ module.exports = exports["default"];
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+  value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var MediaInfo = (function () {
-    function MediaInfo() {
-        _classCallCheck(this, MediaInfo);
+var MediaInfo = function MediaInfo() {
+  _classCallCheck(this, MediaInfo);
 
-        this.id = null;
-        this.index = null;
-        this.type = null;
-        this.streamInfo = null;
-        this.representationCount = 0;
-        this.lang = null;
-        this.viewpoint = null;
-        this.accessibility = null;
-        this.audioChannelConfiguration = null;
-        this.roles = null;
-        this.codec = null;
-        this.mimeType = null;
-        this.contentProtection = null;
-        this.isText = false;
-        this.KID = null;
-        this.bitrateList = null;
-    }
-
-    _createClass(MediaInfo, [{
-        key: "isMediaInfoEqual",
-        value: function isMediaInfoEqual(mediaInfo) {
-            if (!mediaInfo) {
-                return false;
-            }
-
-            var sameId = this.id === mediaInfo.id;
-            var sameViewpoint = this.viewpoint === mediaInfo.viewpoint;
-            var sameLang = this.lang === mediaInfo.lang;
-            var sameRoles = this.roles.toString() === mediaInfo.roles.toString();
-            var sameAccessibility = this.accessibility.toString() === mediaInfo.accessibility.toString();
-            var sameAudioChannelConfiguration = this.audioChannelConfiguration.toString() === mediaInfo.audioChannelConfiguration.toString();
-
-            return sameId && sameViewpoint && sameLang && sameRoles && sameAccessibility && sameAudioChannelConfiguration;
-        }
-    }]);
-
-    return MediaInfo;
-})();
+  this.id = null;
+  this.index = null;
+  this.type = null;
+  this.streamInfo = null;
+  this.representationCount = 0;
+  this.lang = null;
+  this.viewpoint = null;
+  this.accessibility = null;
+  this.audioChannelConfiguration = null;
+  this.roles = null;
+  this.codec = null;
+  this.mimeType = null;
+  this.contentProtection = null;
+  this.isText = false;
+  this.KID = null;
+  this.bitrateList = null;
+};
 
 exports["default"] = MediaInfo;
 module.exports = exports["default"];
@@ -25458,7 +25420,11 @@ function FragmentLoader(config) {
                 },
                 abort: function abort(request) {
                     if (request) {
-                        eventBus.trigger(events.LOADING_ABANDONED, { request: request, mediaType: request.mediaType, sender: instance });
+                        eventBus.trigger(events.LOADING_ABANDONED, {
+                            mediaType: request.mediaType,
+                            request: request,
+                            sender: instance
+                        });
                     }
                 }
             });
@@ -25630,9 +25596,7 @@ function ManifestLoader(config) {
     }
 
     function onXlinkReady(event) {
-        eventBus.trigger(_coreEventsEvents2['default'].INTERNAL_MANIFEST_LOADED, {
-            manifest: event.manifest
-        });
+        eventBus.trigger(_coreEventsEvents2['default'].INTERNAL_MANIFEST_LOADED, { manifest: event.manifest });
     }
 
     function createParser(data) {
@@ -25728,9 +25692,7 @@ function ManifestLoader(config) {
                     manifest.loadedTime = new Date();
                     xlinkController.resolveManifestOnLoad(manifest);
 
-                    eventBus.trigger(_coreEventsEvents2['default'].ORIGINAL_MANIFEST_LOADED, {
-                        originalManifest: data
-                    });
+                    eventBus.trigger(_coreEventsEvents2['default'].ORIGINAL_MANIFEST_LOADED, { originalManifest: data });
                 } else {
                     eventBus.trigger(_coreEventsEvents2['default'].INTERNAL_MANIFEST_LOADED, {
                         manifest: null,
@@ -25854,6 +25816,7 @@ function ManifestUpdater() {
         refreshDelay = undefined,
         refreshTimer = undefined,
         isPaused = undefined,
+        isStopped = undefined,
         isUpdating = undefined,
         manifestLoader = undefined,
         manifestModel = undefined,
@@ -25902,6 +25865,7 @@ function ManifestUpdater() {
         refreshDelay = NaN;
         isUpdating = false;
         isPaused = true;
+        isStopped = false;
         stopManifestRefreshTimer();
     }
 
@@ -25924,6 +25888,10 @@ function ManifestUpdater() {
 
     function startManifestRefreshTimer(delay) {
         stopManifestRefreshTimer();
+
+        if (isStopped) {
+            return;
+        }
 
         if (isNaN(delay) && !isNaN(refreshDelay)) {
             delay = refreshDelay * 1000;
@@ -25952,6 +25920,8 @@ function ManifestUpdater() {
         // Stop manifest update, ignore static manifest and signal end of dynamic stream to detect end of stream
         if (manifestModel.getValue() && manifestModel.getValue().type === _dashConstantsDashConstants2['default'].DYNAMIC && manifest.type === _dashConstantsDashConstants2['default'].STATIC) {
             eventBus.trigger(_coreEventsEvents2['default'].DYNAMIC_STREAM_COMPLETED);
+            isUpdating = false;
+            isStopped = true;
             return;
         }
 
@@ -25974,7 +25944,7 @@ function ManifestUpdater() {
     }
 
     function onRefreshTimer() {
-        if (isPaused && !settings.get().streaming.scheduleWhilePaused) {
+        if (isPaused) {
             return;
         }
         if (isUpdating) {
@@ -25998,8 +25968,11 @@ function ManifestUpdater() {
     }
 
     function onPlaybackPaused() /*e*/{
-        isPaused = true;
-        stopManifestRefreshTimer();
+        isPaused = !settings.get().streaming.scheduleWhilePaused;
+
+        if (isPaused) {
+            stopManifestRefreshTimer();
+        }
     }
 
     function onStreamsComposed() /*e*/{
@@ -27680,11 +27653,11 @@ function MediaPlayer() {
     /**
      * This method sets the current track switch mode. Available options are:
      *
-     * MediaController.TRACK_SWITCH_MODE_NEVER_REPLACE
+     * Constants.TRACK_SWITCH_MODE_NEVER_REPLACE
      * (used to forbid clearing the buffered data (prior to current playback position) after track switch.
      * Defers to fastSwitchEnabled for placement of new data. Default for video)
      *
-     * MediaController.TRACK_SWITCH_MODE_ALWAYS_REPLACE
+     * Constants.TRACK_SWITCH_MODE_ALWAYS_REPLACE
      * (used to clear the buffered data (prior to current playback position) after track switch. Default for audio)
      *
      * @param {MediaType} type
@@ -27704,10 +27677,10 @@ function MediaPlayer() {
      * This method sets the selection mode for the initial track. This mode defines how the initial track will be selected
      * if no initial media settings are set. If initial media settings are set this parameter will be ignored. Available options are:
      *
-     * MediaController.TRACK_SELECTION_MODE_HIGHEST_BITRATE
+     * Constants.TRACK_SELECTION_MODE_HIGHEST_BITRATE
      * this mode makes the player select the track with a highest bitrate. This mode is a default mode.
      *
-     * MediaController.TRACK_SELECTION_MODE_WIDEST_RANGE
+     * Constants.TRACK_SELECTION_MODE_WIDEST_RANGE
      * this mode makes the player select the track with a widest range of bitrates
      *
      * @param {string} mode
@@ -28067,7 +28040,8 @@ function MediaPlayer() {
 
         // configure controllers
         mediaController.setConfig({
-            domStorage: domStorage
+            domStorage: domStorage,
+            settings: settings
         });
 
         streamController.setConfig({
@@ -28093,7 +28067,9 @@ function MediaPlayer() {
             settings: settings,
             playbackController: playbackController,
             streamController: streamController,
-            videoModel: videoModel
+            videoModel: videoModel,
+            timelineConverter: timelineConverter,
+            adapter: adapter
         });
 
         playbackController.setConfig({
@@ -28651,6 +28627,12 @@ var MediaPlayerEvents = (function (_EventsBase) {
 
     /**
      * Triggered when a stream (period) is loaded
+     * @event MediaPlayerEvents#STREAM_UPDATED
+     */
+    this.STREAM_UPDATED = 'streamUpdated';
+
+    /**
+     * Triggered when a stream (period) is updated
      * @event MediaPlayerEvents#STREAM_INITIALIZED
      */
     this.STREAM_INITIALIZED = 'streamInitialized';
@@ -28811,10 +28793,10 @@ var MediaPlayerEvents = (function (_EventsBase) {
     this.MANIFEST_VALIDITY_CHANGED = 'manifestValidityChanged';
 
     /**
-     * A gap occured in the timeline which requires a seek
-     * @event MediaPlayerEvents#MANIFEST_VALIDITY_CHANGED
+     * A gap occured in the timeline which requires a seek to the next period
+     * @event MediaPlayerEvents#GAP_CAUSED_SEEK_TO_PERIOD_END
      */
-    this.GAP_CAUSED_PLAYBACK_SEEK = 'gapCausedPlaybackSeek';
+    this.GAP_CAUSED_SEEK_TO_PERIOD_END = 'gapCausedSeekToPeriodEnd';
   }
 
   return MediaPlayerEvents;
@@ -29287,6 +29269,8 @@ function SourceBufferSink(mediaSource, mediaInfo, onAppendedCallback, oldBuffer)
                 buffer.changeType(codec);
             }
 
+            updateAppendWindow();
+
             var CHECK_INTERVAL = 50;
             // use updateend event if possible
             if (typeof buffer.addEventListener === 'function') {
@@ -29325,15 +29309,11 @@ function SourceBufferSink(mediaSource, mediaInfo, onAppendedCallback, oldBuffer)
                 buffer.removeEventListener('abort', errHandler, false);
             }
             clearInterval(intervalId);
-            try {
-                buffer.appendWindowEnd = Infinity;
-                buffer.appendWindowStart = 0;
-            } catch (e) {
-                logger.error('Failed to reset append window');
-            }
+            callbacks = [];
             if (!keepBuffer) {
                 try {
                     if (!buffer.getClassName || buffer.getClassName() !== 'TextSourceBuffer') {
+                        logger.debug('Removing sourcebuffer from media source');
                         mediaSource.removeSourceBuffer(buffer);
                     }
                 } catch (e) {
@@ -29408,18 +29388,22 @@ function SourceBufferSink(mediaSource, mediaInfo, onAppendedCallback, oldBuffer)
             return;
         }
         waitForUpdateEnd(function () {
-            var appendWindowEnd = mediaSource.duration;
-            var appendWindowStart = 0;
-            if (sInfo.start && sInfo.duration && isFinite(sInfo.duration)) {
-                appendWindowEnd = sInfo.start + sInfo.duration;
+            try {
+                var appendWindowEnd = mediaSource.duration;
+                var appendWindowStart = 0;
+                if (sInfo && !isNaN(sInfo.start) && !isNaN(sInfo.duration) && isFinite(sInfo.duration)) {
+                    appendWindowEnd = sInfo.start + sInfo.duration;
+                }
+                if (sInfo && !isNaN(sInfo.start)) {
+                    appendWindowStart = sInfo.start;
+                }
+                buffer.appendWindowStart = 0;
+                buffer.appendWindowEnd = appendWindowEnd;
+                buffer.appendWindowStart = appendWindowStart;
+                logger.debug('Updated append window. Set start to ' + buffer.appendWindowStart + ' and end to ' + buffer.appendWindowEnd);
+            } catch (e) {
+                logger.warn('Failed to set append window');
             }
-            if (sInfo.start) {
-                appendWindowStart = sInfo.start;
-            }
-            buffer.appendWindowStart = 0;
-            buffer.appendWindowEnd = appendWindowEnd;
-            buffer.appendWindowStart = appendWindowStart;
-            logger.debug('Updated append window. Set start to ' + buffer.appendWindowStart + ' and end to ' + buffer.appendWindowEnd);
         });
     }
 
@@ -29774,6 +29758,7 @@ function Stream(config) {
     function initialize() {
         registerEvents();
         registerProtectionEvents();
+        eventBus.trigger(_coreEventsEvents2['default'].STREAM_UPDATED, { streamInfo: streamInfo });
     }
 
     function registerEvents() {
@@ -30301,7 +30286,7 @@ function Stream(config) {
 
             eventBus.trigger(_coreEventsEvents2['default'].STREAM_INITIALIZED, {
                 streamInfo: streamInfo,
-                liveStartTime: getLiveStartTime()
+                liveStartTime: !preloaded ? getLiveStartTime() : NaN
             });
         }
 
@@ -30338,9 +30323,7 @@ function Stream(config) {
         return buffers;
     }
 
-    function onBufferingCompleted(e) {
-        if (e.streamId !== streamInfo.id) return;
-
+    function onBufferingCompleted() {
         var processors = getProcessors();
         var ln = processors.length;
 
@@ -30359,9 +30342,7 @@ function Stream(config) {
         }
 
         logger.debug('onBufferingCompleted - trigger STREAM_BUFFERING_COMPLETED');
-        eventBus.trigger(_coreEventsEvents2['default'].STREAM_BUFFERING_COMPLETED, {
-            streamInfo: streamInfo
-        });
+        eventBus.trigger(_coreEventsEvents2['default'].STREAM_BUFFERING_COMPLETED, { streamInfo: streamInfo });
     }
 
     function onDataUpdateCompleted(e) {
@@ -30410,6 +30391,8 @@ function Stream(config) {
         isUpdating = true;
         streamInfo = updatedStreamInfo;
 
+        eventBus.trigger(_coreEventsEvents2['default'].STREAM_UPDATED, { streamInfo: streamInfo });
+
         if (eventController) {
             addInlineEvents();
         }
@@ -30440,19 +30423,25 @@ function Stream(config) {
     }
 
     function isMediaCodecCompatible(newStream) {
-        return compareCodecs(newStream, _constantsConstants2['default'].VIDEO) && compareCodecs(newStream, _constantsConstants2['default'].AUDIO);
+        var previousStream = arguments.length <= 1 || arguments[1] === undefined ? null : arguments[1];
+
+        return compareCodecs(newStream, _constantsConstants2['default'].VIDEO, previousStream) && compareCodecs(newStream, _constantsConstants2['default'].AUDIO, previousStream);
     }
 
     function isProtectionCompatible(stream) {
-        return compareProtectionConfig(stream, _constantsConstants2['default'].VIDEO) && compareProtectionConfig(stream, _constantsConstants2['default'].AUDIO);
+        var previousStream = arguments.length <= 1 || arguments[1] === undefined ? null : arguments[1];
+
+        return compareProtectionConfig(stream, _constantsConstants2['default'].VIDEO, previousStream) && compareProtectionConfig(stream, _constantsConstants2['default'].AUDIO, previousStream);
     }
 
     function compareProtectionConfig(stream, type) {
+        var previousStream = arguments.length <= 2 || arguments[2] === undefined ? null : arguments[2];
+
         if (!stream) {
             return false;
         }
         var newStreamInfo = stream.getStreamInfo();
-        var currentStreamInfo = getStreamInfo();
+        var currentStreamInfo = previousStream ? previousStream.getStreamInfo() : getStreamInfo();
 
         if (!newStreamInfo || !currentStreamInfo) {
             return false;
@@ -30466,20 +30455,29 @@ function Stream(config) {
             return !newAdaptation && !currentAdaptation;
         }
 
-        // If any of the periods requires EME, we can't do smooth transition
-        if (newAdaptation.ContentProtection || currentAdaptation.ContentProtection) {
+        // If the current period is unencrypted and the upcoming one is encrypted we need to reset sourcebuffers.
+        return !(!isAdaptationDrmProtected(currentAdaptation) && isAdaptationDrmProtected(newAdaptation));
+    }
+
+    function isAdaptationDrmProtected(adaptation) {
+
+        if (!adaptation) {
+            // If there is no adaptation for neither the old or the new stream they're compatible
             return false;
         }
 
-        return true;
+        // If the current period is unencrypted and the upcoming one is encrypted we need to reset sourcebuffers.
+        return !!(adaptation.ContentProtection || adaptation.Representation && adaptation.Representation.length > 0 && adaptation.Representation[0].ContentProtection);
     }
 
     function compareCodecs(newStream, type) {
+        var previousStream = arguments.length <= 2 || arguments[2] === undefined ? null : arguments[2];
+
         if (!newStream || !newStream.hasOwnProperty('getStreamInfo')) {
             return false;
         }
         var newStreamInfo = newStream.getStreamInfo();
-        var currentStreamInfo = getStreamInfo();
+        var currentStreamInfo = previousStream ? previousStream.getStreamInfo() : getStreamInfo();
 
         if (!newStreamInfo || !currentStreamInfo) {
             return false;
@@ -30916,7 +30914,10 @@ function StreamProcessor(config) {
         }
         if (!e.error || e.error.code === _coreErrorsErrors2['default'].SEGMENTS_UPDATE_FAILED_ERROR_CODE) {
             // Update has been postponed, update nevertheless DVR info
-            addDVRMetric();
+            var activeStreamId = playbackController.getStreamController().getActiveStreamInfo().id;
+            if (activeStreamId === streamInfo.id) {
+                addDVRMetric();
+            }
         }
     }
 
@@ -30929,7 +30930,8 @@ function StreamProcessor(config) {
 
     function onBufferLevelUpdated(e) {
         dashMetrics.addBufferLevel(type, new Date(), e.bufferLevel * 1000);
-        if (!manifestModel.getValue().doNotUpdateDVRWindowOnBufferUpdated) {
+        var activeStreamId = playbackController.getStreamController().getActiveStreamInfo().id;
+        if (!manifestModel.getValue().doNotUpdateDVRWindowOnBufferUpdated && streamInfo.id === activeStreamId) {
             addDVRMetric();
         }
     }
@@ -31174,7 +31176,6 @@ function StreamProcessor(config) {
 
     function onMediaFragmentLoaded(e) {
         var chunk = e.chunk;
-        if (chunk.streamId !== streamInfo.id || chunk.mediaInfo.type != type) return;
 
         var bytes = chunk.bytes;
         var quality = chunk.quality;
@@ -31192,7 +31193,7 @@ function StreamProcessor(config) {
             })[0];
 
             var events = handleInbandEvents(bytes, request, eventStreamMedia, eventStreamTrack);
-            eventBus.trigger(_coreEventsEvents2['default'].INBAND_EVENTS, { events: events }, streamInfo.id);
+            eventBus.trigger(_coreEventsEvents2['default'].INBAND_EVENTS, { events: events }, { streamId: streamInfo.id });
         }
     }
 
@@ -31738,11 +31739,40 @@ var Constants = (function () {
       this.BAD_ARGUMENT_ERROR = 'Invalid Arguments';
 
       /**
-       *  @constant {string} MISSING_CONFIG_ERROR Missing ocnfiguration parameters type of error
+       *  @constant {string} MISSING_CONFIG_ERROR Missing configuration parameters type of error
        *  @memberof Constants#
        *  @static
        */
       this.MISSING_CONFIG_ERROR = 'Missing config parameter(s)';
+
+      /**
+       *  @constant {string} TRACK_SWITCH_MODE_ALWAYS_REPLACE used to clear the buffered data (prior to current playback position) after track switch. Default for audio
+       *  @memberof Constants#
+       *  @static
+       */
+      this.TRACK_SWITCH_MODE_ALWAYS_REPLACE = 'alwaysReplace';
+
+      /**
+       *  @constant {string} TRACK_SWITCH_MODE_NEVER_REPLACE used to forbid clearing the buffered data (prior to current playback position) after track switch. Defers to fastSwitchEnabled for placement of new data. Default for video
+       *  @memberof Constants#
+       *  @static
+       */
+      this.TRACK_SWITCH_MODE_NEVER_REPLACE = 'neverReplace';
+
+      /**
+       *  @constant {string} TRACK_SELECTION_MODE_HIGHEST_BITRATE makes the player select the track with a highest bitrate. This mode is a default mode.
+       *  @memberof Constants#
+       *  @static
+       */
+      this.TRACK_SELECTION_MODE_HIGHEST_BITRATE = 'highestBitrate';
+
+      /**
+       *  @constant {string} TRACK_SELECTION_MODE_WIDEST_RANGE this mode makes the player select the track with a widest range of bitrates
+       *  @memberof Constants#
+       *  @static
+       */
+      this.TRACK_SELECTION_MODE_WIDEST_RANGE = 'widestRange';
+
       this.LOCATION = 'Location';
       this.INITIALIZE = 'initialize';
       this.TEXT_SHOWING = 'showing';
@@ -32348,7 +32378,8 @@ function AbrController() {
             eventBus.trigger(_coreEventsEvents2['default'].QUALITY_CHANGE_REQUESTED, {
                 oldQuality: oldQuality,
                 newQuality: newQuality,
-                reason: reason }, streamInfo.id, type);
+                reason: reason
+            }, { streamId: streamInfo.id, mediaType: type });
             var bitrate = throughputHistory.getAverageThroughput(type);
             if (!isNaN(bitrate)) {
                 domStorage.setSavedBitrateSettings(type, bitrate);
@@ -32986,10 +33017,6 @@ var _AbrController = _dereq_(111);
 
 var _AbrController2 = _interopRequireDefault(_AbrController);
 
-var _MediaController = _dereq_(118);
-
-var _MediaController2 = _interopRequireDefault(_MediaController);
-
 var _coreEventBus = _dereq_(46);
 
 var _coreEventBus2 = _interopRequireDefault(_coreEventBus);
@@ -33196,7 +33223,6 @@ function BufferController(config) {
 
     function onMediaFragmentLoaded(e) {
         var chunk = e.chunk;
-        if (chunk.streamId !== streamInfo.id || chunk.mediaInfo.type !== type) return;
 
         if (replacingBuffer) {
             mediaChunk = chunk;
@@ -33279,7 +33305,7 @@ function BufferController(config) {
             // (and previous buffered data removed) then seek stream to current time
             var currentTime = playbackController.getTime();
             logger.debug('AppendToBuffer seek target should be ' + currentTime);
-            triggerEvent(_coreEventsEvents2['default'].SEEK_TARGET, { time: currentTime });
+            triggerEvent(_coreEventsEvents2['default'].SEEK_TARGET, { time: currentTime, mediaType: type, streamId: streamInfo.id });
         }
 
         if (appendedBytesInfo) {
@@ -33676,7 +33702,7 @@ function BufferController(config) {
 
         if (e.unintended) {
             logger.warn('Detected unintended removal from:', e.from, 'to', e.to, 'setting index handler time to', e.from);
-            triggerEvent(_coreEventsEvents2['default'].SEEK_TARGET, { time: e.from });
+            triggerEvent(_coreEventsEvents2['default'].SEEK_TARGET, { time: e.from, mediaType: type, streamId: streamInfo.id });
         }
 
         if (isPruningInProgress) {
@@ -33721,7 +33747,6 @@ function BufferController(config) {
     }
 
     function onStreamCompleted(e) {
-        if (e.request.mediaInfo.streamInfo.id !== streamInfo.id || e.request.mediaType !== type) return;
         lastIndex = e.request.index;
         checkIfBufferingCompleted();
     }
@@ -33733,7 +33758,7 @@ function BufferController(config) {
         if (!ranges) return;
 
         logger.info('Track change asked');
-        if (mediaController.getSwitchMode(type) === _MediaController2['default'].TRACK_SWITCH_MODE_ALWAYS_REPLACE) {
+        if (mediaController.getSwitchMode(type) === _constantsConstants2['default'].TRACK_SWITCH_MODE_ALWAYS_REPLACE) {
             if (ranges && ranges.length > 0 && playbackController.getTimeToStreamEnd() > STALL_THRESHOLD) {
                 isBufferingCompleted = false;
                 lastIndex = Number.POSITIVE_INFINITY;
@@ -33815,7 +33840,7 @@ function BufferController(config) {
 
     function triggerEvent(eventType, data) {
         var payload = data || {};
-        eventBus.trigger(eventType, payload, streamInfo.id, type);
+        eventBus.trigger(eventType, payload, { streamId: streamInfo.id, mediaType: type });
     }
 
     function resetInitialSettings(errored, keepBuffers) {
@@ -33895,7 +33920,7 @@ BufferController.__dashjs_factory_name = BUFFER_CONTROLLER_TYPE;
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(BufferController);
 module.exports = exports['default'];
 
-},{"103":103,"104":104,"108":108,"109":109,"111":111,"118":118,"150":150,"214":214,"226":226,"242":242,"45":45,"46":46,"47":47,"51":51,"54":54}],115:[function(_dereq_,module,exports){
+},{"103":103,"104":104,"108":108,"109":109,"111":111,"150":150,"214":214,"226":226,"242":242,"45":45,"46":46,"47":47,"51":51,"54":54}],115:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -34513,7 +34538,7 @@ function FragmentController(config) {
         eventBus.trigger(isInit ? _coreEventsEvents2['default'].INIT_FRAGMENT_LOADED : _coreEventsEvents2['default'].MEDIA_FRAGMENT_LOADED, {
             chunk: chunk,
             request: request
-        }, strInfo.id, request.mediaType);
+        }, { streamId: strInfo.id, mediaType: request.mediaType });
     }
 
     instance = {
@@ -34603,6 +34628,8 @@ function GapController() {
         playbackController = undefined,
         streamController = undefined,
         videoModel = undefined,
+        timelineConverter = undefined,
+        adapter = undefined,
         logger = undefined;
 
     function initialize() {
@@ -34643,6 +34670,12 @@ function GapController() {
         if (config.videoModel) {
             videoModel = config.videoModel;
         }
+        if (config.timelineConverter) {
+            timelineConverter = config.timelineConverter;
+        }
+        if (config.adapter) {
+            adapter = config.adapter;
+        }
     }
 
     function registerEvents() {
@@ -34662,7 +34695,7 @@ function GapController() {
     }
 
     function _shouldCheckForGaps() {
-        return settings.get().streaming.jumpGaps && streamController.getActiveStreamProcessors().length > 0 && !playbackController.isSeeking() && !playbackController.isPaused() && !streamController.getIsStreamSwitchInProgress() && !streamController.getHasMediaOrIntialisationError();
+        return settings.get().streaming.jumpGaps && streamController.getActiveStreamProcessors().length > 0 && (!playbackController.isSeeking() || streamController.hasStreamFinishedBuffering(streamController.getActiveStream())) && !playbackController.isPaused() && !streamController.getIsStreamSwitchInProgress() && !streamController.getHasMediaOrIntialisationError();
     }
 
     function onWallclockTimeUpdated() /*e*/{
@@ -34677,6 +34710,7 @@ function GapController() {
                 jumpGap(currentTime, true);
             } else {
                 lastPlaybackTime = currentTime;
+                lastGapJumpPosition = NaN;
             }
             wallclockTicked = 0;
         }
@@ -34746,16 +34780,17 @@ function GapController() {
             }
         }
 
+        // Playback has stalled before period end. We seek to the end of the period
         var timeToStreamEnd = playbackController.getTimeToStreamEnd();
-        if (isNaN(seekToPosition) && playbackStalled && isFinite(timeToStreamEnd) && !isNaN(timeToStreamEnd) && timeToStreamEnd < smallGapLimit) {
-            seekToPosition = parseFloat(currentTime + timeToStreamEnd).toFixed(5);
+        if (isNaN(seekToPosition) && playbackStalled && isFinite(timeToStreamEnd) && !isNaN(timeToStreamEnd) && (timeToStreamEnd < smallGapLimit || streamController.hasStreamFinishedBuffering(streamController.getActiveStream()))) {
+            seekToPosition = parseFloat(playbackController.getStreamEndTime().toFixed(5));
             jumpToStreamEnd = true;
         }
 
         if (seekToPosition > 0 && lastGapJumpPosition !== seekToPosition) {
             if (jumpToStreamEnd) {
                 logger.warn('Jumping to end of stream because of gap from ' + currentTime + ' to ' + seekToPosition + '. Gap duration: ' + (seekToPosition - currentTime));
-                eventBus.trigger(_coreEventsEvents2['default'].GAP_CAUSED_PLAYBACK_SEEK, { seekTime: seekToPosition });
+                eventBus.trigger(_coreEventsEvents2['default'].GAP_CAUSED_SEEK_TO_PERIOD_END, { seekTime: seekToPosition });
             } else {
                 logger.warn('Jumping gap from ' + currentTime + ' to ' + seekToPosition + '. Gap duration: ' + (seekToPosition - currentTime));
                 playbackController.seek(seekToPosition, true, true);
@@ -34838,12 +34873,6 @@ var _coreDebug = _dereq_(45);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
 
-var TRACK_SWITCH_MODE_NEVER_REPLACE = 'neverReplace';
-var TRACK_SWITCH_MODE_ALWAYS_REPLACE = 'alwaysReplace';
-var TRACK_SELECTION_MODE_HIGHEST_BITRATE = 'highestBitrate';
-var TRACK_SELECTION_MODE_WIDEST_RANGE = 'widestRange';
-var DEFAULT_INIT_TRACK_SELECTION_MODE = TRACK_SELECTION_MODE_HIGHEST_BITRATE;
-
 function MediaController() {
 
     var context = this.context;
@@ -34852,14 +34881,13 @@ function MediaController() {
     var instance = undefined,
         logger = undefined,
         tracks = undefined,
+        settings = undefined,
         initialSettings = undefined,
-        selectionMode = undefined,
-        switchMode = undefined,
         domStorage = undefined;
 
-    var validTrackSwitchModes = [TRACK_SWITCH_MODE_ALWAYS_REPLACE, TRACK_SWITCH_MODE_NEVER_REPLACE];
+    var validTrackSwitchModes = [_constantsConstants2['default'].TRACK_SWITCH_MODE_ALWAYS_REPLACE, _constantsConstants2['default'].TRACK_SWITCH_MODE_NEVER_REPLACE];
 
-    var validTrackSelectionModes = [TRACK_SELECTION_MODE_HIGHEST_BITRATE, TRACK_SELECTION_MODE_WIDEST_RANGE];
+    var validTrackSelectionModes = [_constantsConstants2['default'].TRACK_SELECTION_MODE_HIGHEST_BITRATE, _constantsConstants2['default'].TRACK_SELECTION_MODE_WIDEST_RANGE];
 
     function setup() {
         logger = (0, _coreDebug2['default'])(context).getInstance().getLogger(instance);
@@ -34993,29 +35021,33 @@ function MediaController() {
         tracks[id][type].current = track;
 
         if (tracks[id][type].current && !(noSettingsSave && type === _constantsConstants2['default'].FRAGMENTED_TEXT)) {
-            eventBus.trigger(_coreEventsEvents2['default'].CURRENT_TRACK_CHANGED, { oldMediaInfo: current, newMediaInfo: track, switchMode: switchMode[type] });
+            eventBus.trigger(_coreEventsEvents2['default'].CURRENT_TRACK_CHANGED, {
+                oldMediaInfo: current,
+                newMediaInfo: track,
+                switchMode: getSwitchMode(type)
+            });
         }
 
         if (!noSettingsSave) {
 
-            var settings = extractSettings(track);
+            var _settings = extractSettings(track);
 
-            if (!settings || !tracks[id][type].storeLastSettings) return;
+            if (!_settings || !tracks[id][type].storeLastSettings) return;
 
-            if (settings.roles) {
-                settings.role = settings.roles[0];
-                delete settings.roles;
+            if (_settings.roles) {
+                _settings.role = _settings.roles[0];
+                delete _settings.roles;
             }
 
-            if (settings.accessibility) {
-                settings.accessibility = settings.accessibility[0];
+            if (_settings.accessibility) {
+                _settings.accessibility = _settings.accessibility[0];
             }
 
-            if (settings.audioChannelConfiguration) {
-                settings.audioChannelConfiguration = settings.audioChannelConfiguration[0];
+            if (_settings.audioChannelConfiguration) {
+                _settings.audioChannelConfiguration = _settings.audioChannelConfiguration[0];
             }
 
-            domStorage.setSavedMediaSettings(type, settings);
+            domStorage.setSavedMediaSettings(type, _settings);
         }
     }
 
@@ -35052,8 +35084,10 @@ function MediaController() {
      * @param {string} type
      * @param {string} mode
      * @memberof MediaController#
+     * @deprecated Please use updateSettings({streaming: { trackSwitchMode: mode } }) instead
      */
     function setSwitchMode(type, mode) {
+        logger.warn('deprecated: Please use updateSettings({streaming: { trackSwitchMode: mode } }) instead');
         var isModeSupported = validTrackSwitchModes.indexOf(mode) !== -1;
 
         if (!isModeSupported) {
@@ -35061,7 +35095,14 @@ function MediaController() {
             return;
         }
 
+        var switchMode = {};
         switchMode[type] = mode;
+
+        settings.update({
+            streaming: {
+                trackSwitchMode: switchMode
+            }
+        });
     }
 
     /**
@@ -35070,21 +35111,28 @@ function MediaController() {
      * @memberof MediaController#
      */
     function getSwitchMode(type) {
-        return switchMode[type];
+        return settings.get().streaming.trackSwitchMode[type];
     }
 
     /**
      * @param {string} mode
      * @memberof MediaController#
+     * @deprecated Please use updateSettings({streaming: { selectionModeForInitialTrack: mode } }) instead
      */
     function setSelectionModeForInitialTrack(mode) {
+        logger.warn('deprecated: Please use updateSettings({streaming: { selectionModeForInitialTrack: mode } }) instead');
         var isModeSupported = validTrackSelectionModes.indexOf(mode) !== -1;
 
         if (!isModeSupported) {
             logger.warn('Track selection mode is not supported: ' + mode);
             return;
         }
-        selectionMode = mode;
+
+        settings.update({
+            streaming: {
+                selectionModeForInitialTrack: mode
+            }
+        });
     }
 
     /**
@@ -35092,7 +35140,7 @@ function MediaController() {
      * @memberof MediaController#
      */
     function getSelectionModeForInitialTrack() {
-        return selectionMode || DEFAULT_INIT_TRACK_SELECTION_MODE;
+        return settings.get().streaming.selectionModeForInitialTrack;
     }
 
     /**
@@ -35135,6 +35183,10 @@ function MediaController() {
         if (config.domStorage) {
             domStorage = config.domStorage;
         }
+
+        if (config.settings) {
+            settings = config.settings;
+        }
     }
 
     /**
@@ -35143,7 +35195,6 @@ function MediaController() {
     function reset() {
         tracks = {};
         resetInitialSettings();
-        resetSwitchMode();
     }
 
     function extractSettings(mediaInfo) {
@@ -35173,13 +35224,6 @@ function MediaController() {
         })[0];
 
         return matchLang && matchViewPoint && matchRole && matchAccessibility && matchAudioChannelConfiguration;
-    }
-
-    function resetSwitchMode() {
-        switchMode = {
-            audio: TRACK_SWITCH_MODE_ALWAYS_REPLACE,
-            video: TRACK_SWITCH_MODE_NEVER_REPLACE
-        };
     }
 
     function resetInitialSettings() {
@@ -35236,14 +35280,14 @@ function MediaController() {
         };
 
         switch (mode) {
-            case TRACK_SELECTION_MODE_HIGHEST_BITRATE:
+            case _constantsConstants2['default'].TRACK_SELECTION_MODE_HIGHEST_BITRATE:
                 tmpArr = getTracksWithHighestBitrate(tracks);
 
                 if (tmpArr.length > 1) {
                     tmpArr = getTracksWithWidestRange(tmpArr);
                 }
                 break;
-            case TRACK_SELECTION_MODE_WIDEST_RANGE:
+            case _constantsConstants2['default'].TRACK_SELECTION_MODE_WIDEST_RANGE:
                 tmpArr = getTracksWithWidestRange(tracks);
 
                 if (tmpArr.length > 1) {
@@ -35316,11 +35360,6 @@ function MediaController() {
 
 MediaController.__dashjs_factory_name = 'MediaController';
 var factory = _coreFactoryMaker2['default'].getSingletonFactory(MediaController);
-factory.TRACK_SWITCH_MODE_NEVER_REPLACE = TRACK_SWITCH_MODE_NEVER_REPLACE;
-factory.TRACK_SWITCH_MODE_ALWAYS_REPLACE = TRACK_SWITCH_MODE_ALWAYS_REPLACE;
-factory.TRACK_SELECTION_MODE_HIGHEST_BITRATE = TRACK_SELECTION_MODE_HIGHEST_BITRATE;
-factory.TRACK_SELECTION_MODE_WIDEST_RANGE = TRACK_SELECTION_MODE_WIDEST_RANGE;
-factory.DEFAULT_INIT_TRACK_SELECTION_MODE = DEFAULT_INIT_TRACK_SELECTION_MODE;
 _coreFactoryMaker2['default'].updateSingletonFactory(MediaController.__dashjs_factory_name, factory);
 exports['default'] = factory;
 module.exports = exports['default'];
@@ -35561,8 +35600,8 @@ function PlaybackController() {
         reset();
     }
 
-    function initialize(StreamInfo, periodSwitch, seekTime) {
-        streamInfo = StreamInfo;
+    function initialize(sInfo, periodSwitch, seekTime) {
+        streamInfo = sInfo;
         addAllListeners();
         isDynamic = streamInfo.manifestInfo.isDynamic;
         isLowLatencySeekingInProgress = false;
@@ -35582,7 +35621,7 @@ function PlaybackController() {
         eventBus.on(_coreEventsEvents2['default'].BUFFER_LEVEL_STATE_CHANGED, onBufferLevelStateChanged, this);
         eventBus.on(_coreEventsEvents2['default'].PLAYBACK_PROGRESS, onPlaybackProgression, this);
         eventBus.on(_coreEventsEvents2['default'].PLAYBACK_TIME_UPDATED, onPlaybackProgression, this);
-        eventBus.on(_coreEventsEvents2['default'].PLAYBACK_ENDED, onPlaybackEnded, this);
+        eventBus.on(_coreEventsEvents2['default'].PLAYBACK_ENDED, onPlaybackEnded, this, _coreEventBus2['default'].EVENT_PRIORITY_HIGH);
         eventBus.on(_coreEventsEvents2['default'].STREAM_INITIALIZING, onStreamInitializing, this);
 
         if (playOnceInitialized) {
@@ -35629,9 +35668,7 @@ function PlaybackController() {
 
         if (!isNaN(startTime) && startTime !== videoModel.getTime()) {
             // Trigger PLAYBACK_SEEKING event for controllers
-            eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_SEEKING, {
-                seekTime: startTime
-            });
+            eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_SEEKING, { seekTime: startTime });
             // Seek video model
             seek(startTime, false, true);
         }
@@ -35891,6 +35928,8 @@ function PlaybackController() {
         if (!DVRWindow) {
             return NaN;
         }
+
+        logger.debug('Checking DVR window for at ' + currentTime + ' with DVR window range ' + DVRWindow.start + ' - ' + DVRWindow.end);
         if (currentTime > DVRWindow.end) {
             actualTime = Math.max(DVRWindow.end - liveDelay, DVRWindow.start);
         } else if (currentTime > 0 && currentTime + 0.250 < DVRWindow.start && Math.abs(currentTime - DVRWindow.start) < 315360000) {
@@ -35901,7 +35940,7 @@ function PlaybackController() {
             // Checking also duration of the DVR makes sense. We detected temporary situations in which currentTime
             // is bad reported by the browser which causes playback to jump to start (315360000 = 1 year)
             //actualTime = DVRWindow.start;
-            actualTime = Math.max(DVRWindow.end - liveDelay, DVRWindow.start);
+            actualTime = DVRWindow.start;
         } else {
             actualTime = currentTime;
         }
@@ -35930,6 +35969,7 @@ function PlaybackController() {
         var actualTime = getActualPresentationTime(currentTime);
         var timeChanged = !isNaN(actualTime) && actualTime !== currentTime;
         if (timeChanged) {
+            logger.debug('UpdateCurrentTime: Seek to actual time: ' + actualTime + ' from currentTime: ' + currentTime);
             seek(actualTime);
         }
     }
@@ -35954,30 +35994,22 @@ function PlaybackController() {
         logger.info('Native video element event: play');
         updateCurrentTime();
         startUpdatingWallclockTime();
-        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_STARTED, {
-            startTime: getTime()
-        });
+        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_STARTED, { startTime: getTime() });
     }
 
     function onPlaybackWaiting() {
         logger.info('Native video element event: waiting');
-        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_WAITING, {
-            playingTime: getTime()
-        });
+        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_WAITING, { playingTime: getTime() });
     }
 
     function onPlaybackPlaying() {
         logger.info('Native video element event: playing');
-        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_PLAYING, {
-            playingTime: getTime()
-        });
+        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_PLAYING, { playingTime: getTime() });
     }
 
     function onPlaybackPaused() {
         logger.info('Native video element event: pause');
-        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_PAUSED, {
-            ended: getEnded()
-        });
+        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_PAUSED, { ended: getEnded() });
     }
 
     function onPlaybackSeeking() {
@@ -35991,9 +36023,7 @@ function PlaybackController() {
 
         logger.info('Seeking to: ' + seekTime);
         startUpdatingWallclockTime();
-        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_SEEKING, {
-            seekTime: seekTime
-        });
+        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_SEEKING, { seekTime: seekTime });
     }
 
     function onPlaybackSeeked() {
@@ -36027,9 +36057,7 @@ function PlaybackController() {
     function onPlaybackRateChanged() {
         var rate = getPlaybackRate();
         logger.info('Native video element event: ratechange: ', rate);
-        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_RATE_CHANGED, {
-            playbackRate: rate
-        });
+        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_RATE_CHANGED, { playbackRate: rate });
     }
 
     function onPlaybackMetaDataLoaded() {
@@ -36060,9 +36088,7 @@ function PlaybackController() {
 
     function onPlaybackError(event) {
         var target = event.target || event.srcElement;
-        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_ERROR, {
-            error: target.error
-        });
+        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_ERROR, { error: target.error });
     }
 
     function onWallclockTime() {
@@ -36182,9 +36208,7 @@ function PlaybackController() {
     }
 
     function onPlaybackStalled(e) {
-        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_STALLED, {
-            e: e
-        });
+        eventBus.trigger(_coreEventsEvents2['default'].PLAYBACK_STALLED, { e: e });
     }
 
     function onStreamInitializing(e) {
@@ -36284,6 +36308,7 @@ function PlaybackController() {
         isPaused: isPaused,
         pause: pause,
         isSeeking: isSeeking,
+        getStreamEndTime: getStreamEndTime,
         seek: seek,
         reset: reset
     };
@@ -36367,10 +36392,6 @@ var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
 var _coreDebug = _dereq_(45);
 
 var _coreDebug2 = _interopRequireDefault(_coreDebug);
-
-var _MediaController = _dereq_(118);
-
-var _MediaController2 = _interopRequireDefault(_MediaController);
 
 function ScheduleController(config) {
 
@@ -36510,7 +36531,7 @@ function ScheduleController(config) {
                 if ((currentRepresentationInfo.quality !== lastInitQuality || switchTrack) && !replacingBuffer) {
                     if (switchTrack) {
                         logger.debug('Switch track for ' + type + ', representation id = ' + currentRepresentationInfo.id);
-                        replacingBuffer = mediaController.getSwitchMode(type) === _MediaController2['default'].TRACK_SWITCH_MODE_ALWAYS_REPLACE;
+                        replacingBuffer = mediaController.getSwitchMode(type) === _constantsConstants2['default'].TRACK_SWITCH_MODE_ALWAYS_REPLACE;
                         if (replacingBuffer && bufferController.replaceBuffer) {
                             bufferController.replaceBuffer();
                         }
@@ -36518,9 +36539,7 @@ function ScheduleController(config) {
                     } else {
                         logger.debug('Quality has changed, get init request for representationid = ' + currentRepresentationInfo.id);
                     }
-                    eventBus.trigger(_coreEventsEvents2['default'].INIT_FRAGMENT_NEEDED, {
-                        representationId: currentRepresentationInfo.id
-                    }, streamInfo.id, type);
+                    eventBus.trigger(_coreEventsEvents2['default'].INIT_FRAGMENT_NEEDED, { representationId: currentRepresentationInfo.id }, { streamId: streamInfo.id, mediaType: type });
                     lastInitQuality = currentRepresentationInfo.quality;
                     checkPlaybackQuality = false;
                 } else {
@@ -36528,15 +36547,10 @@ function ScheduleController(config) {
 
                     if (replacement && replacement.isInitializationRequest()) {
                         // To be sure the specific init segment had not already been loaded
-                        eventBus.trigger(_coreEventsEvents2['default'].INIT_FRAGMENT_NEEDED, {
-                            representationId: replacement.representationId
-                        }, streamInfo.id, type);
+                        eventBus.trigger(_coreEventsEvents2['default'].INIT_FRAGMENT_NEEDED, { representationId: replacement.representationId }, { streamId: streamInfo.id, mediaType: type });
                         checkPlaybackQuality = false;
                     } else {
-                        eventBus.trigger(_coreEventsEvents2['default'].MEDIA_FRAGMENT_NEEDED, {
-                            seekTarget: seekTarget,
-                            replacement: replacement
-                        }, streamInfo.id, type);
+                        eventBus.trigger(_coreEventsEvents2['default'].MEDIA_FRAGMENT_NEEDED, { seekTarget: seekTarget, replacement: replacement }, { streamId: streamInfo.id, mediaType: type });
                         checkPlaybackQuality = true;
                     }
                 }
@@ -36578,7 +36592,7 @@ function ScheduleController(config) {
             var abandonmentState = abrController.getAbandonmentStateFor(type);
 
             // Only replace on track switch when NEVER_REPLACE
-            var trackChanged = !mediaController.isCurrentTrack(request.mediaInfo) && mediaController.getSwitchMode(request.mediaInfo.type) === _MediaController2['default'].TRACK_SWITCH_MODE_NEVER_REPLACE;
+            var trackChanged = !mediaController.isCurrentTrack(request.mediaInfo) && mediaController.getSwitchMode(request.mediaInfo.type) === _constantsConstants2['default'].TRACK_SWITCH_MODE_NEVER_REPLACE;
             var qualityChanged = request.quality < currentRepresentationInfo.quality;
 
             if (fastSwitchModeEnabled && (trackChanged || qualityChanged) && bufferLevel >= safeBufferLevel && abandonmentState !== _constantsMetricsConstants2['default'].ABANDON_LOAD) {
@@ -36666,12 +36680,10 @@ function ScheduleController(config) {
         }
     }
 
-    function onStreamCompleted(e) {
-        if (e.request.mediaInfo.streamInfo.id !== streamInfo.id || e.request.mediaType !== type) return;
-
+    function onStreamCompleted() {
         stop();
         setFragmentProcessState(false);
-        logger.info('Stream is complete');
+        logger.info('Stream ' + streamInfo.id + ' is complete');
     }
 
     function onFragmentLoadingCompleted(e) {
@@ -36742,6 +36754,12 @@ function ScheduleController(config) {
     }
 
     function onBufferCleared(e) {
+        if (replacingBuffer && settings.get().streaming.flushBufferAtTrackSwitch) {
+            // For some devices (like chromecast) it is necessary to seek the video element to reset the internal decoding buffer,
+            // otherwise audio track switch will be effective only once after previous buffered track is consumed
+            playbackController.seek(playbackController.getTime() + 0.001, false, true);
+        }
+
         // (Re)start schedule once buffer has been pruned after a QuotaExceededError
         if (e.hasEnoughSpaceToAppend && e.quotaExceeded) {
             start();
@@ -36876,7 +36894,7 @@ ScheduleController.__dashjs_factory_name = 'ScheduleController';
 exports['default'] = _coreFactoryMaker2['default'].getClassFactory(ScheduleController);
 module.exports = exports['default'];
 
-},{"108":108,"109":109,"118":118,"150":150,"197":197,"45":45,"46":46,"47":47,"54":54}],122:[function(_dereq_,module,exports){
+},{"108":108,"109":109,"150":150,"197":197,"45":45,"46":46,"47":47,"54":54}],122:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -37073,11 +37091,11 @@ function StreamController() {
     function registerEvents() {
         eventBus.on(_coreEventsEvents2['default'].PLAYBACK_TIME_UPDATED, onPlaybackTimeUpdated, instance);
         eventBus.on(_coreEventsEvents2['default'].PLAYBACK_SEEKING, onPlaybackSeeking, instance);
-        eventBus.on(_coreEventsEvents2['default'].GAP_CAUSED_PLAYBACK_SEEK, onGapCausedPlaybackSeek, instance);
+        eventBus.on(_coreEventsEvents2['default'].GAP_CAUSED_SEEK_TO_PERIOD_END, onGapCausedPlaybackSeek, instance);
         eventBus.on(_coreEventsEvents2['default'].PLAYBACK_ERROR, onPlaybackError, instance);
         eventBus.on(_coreEventsEvents2['default'].PLAYBACK_STARTED, onPlaybackStarted, instance);
         eventBus.on(_coreEventsEvents2['default'].PLAYBACK_PAUSED, onPlaybackPaused, instance);
-        eventBus.on(_coreEventsEvents2['default'].PLAYBACK_ENDED, onEnded, instance);
+        eventBus.on(_coreEventsEvents2['default'].PLAYBACK_ENDED, onEnded, instance, _coreEventBus2['default'].EVENT_PRIORITY_HIGH);
         eventBus.on(_coreEventsEvents2['default'].MANIFEST_UPDATED, onManifestUpdated, instance);
         eventBus.on(_coreEventsEvents2['default'].STREAM_BUFFERING_COMPLETED, onStreamBufferingCompleted, instance);
         eventBus.on(_coreEventsEvents2['default'].MANIFEST_VALIDITY_CHANGED, onManifestValidityChanged, instance);
@@ -37088,7 +37106,7 @@ function StreamController() {
     function unRegisterEvents() {
         eventBus.off(_coreEventsEvents2['default'].PLAYBACK_TIME_UPDATED, onPlaybackTimeUpdated, instance);
         eventBus.off(_coreEventsEvents2['default'].PLAYBACK_SEEKING, onPlaybackSeeking, instance);
-        eventBus.off(_coreEventsEvents2['default'].GAP_CAUSED_PLAYBACK_SEEK, onGapCausedPlaybackSeek, instance);
+        eventBus.off(_coreEventsEvents2['default'].GAP_CAUSED_SEEK_TO_PERIOD_END, onGapCausedPlaybackSeek, instance);
         eventBus.off(_coreEventsEvents2['default'].PLAYBACK_ERROR, onPlaybackError, instance);
         eventBus.off(_coreEventsEvents2['default'].PLAYBACK_STARTED, onPlaybackStarted, instance);
         eventBus.off(_coreEventsEvents2['default'].PLAYBACK_PAUSED, onPlaybackPaused, instance);
@@ -37173,8 +37191,10 @@ function StreamController() {
     }
 
     function stopPlaybackEndedTimerInterval() {
-        clearInterval(playbackEndedTimerInterval);
-        playbackEndedTimerInterval = null;
+        if (playbackEndedTimerInterval) {
+            clearInterval(playbackEndedTimerInterval);
+            playbackEndedTimerInterval = null;
+        }
     }
 
     function startCheckIfPrebufferingCanStartInterval() {
@@ -37214,7 +37234,8 @@ function StreamController() {
                         var mediaInfo = adapter.getMediaInfoForType(stream.getStreamInfo(), mediaType);
                         var voRepresentations = adapter.getVoRepresentations(mediaInfo);
                         voRepresentations.forEach(function (voRep) {
-                            var range = timelineConverter.calcSegmentAvailabilityRange(voRep, true);
+                            var isDynamic = adapter.getIsDynamic();
+                            var range = timelineConverter.calcSegmentAvailabilityRange(voRep, isDynamic);
 
                             if (range.end < range.start) {
                                 segmentAvailabilityRangeIsOk = false;
@@ -37266,6 +37287,14 @@ function StreamController() {
         }
     }
 
+    function canSourceBuffersBeReused(nextStream, previousStream) {
+        try {
+            return previousStream.isProtectionCompatible(nextStream, previousStream) && (supportsChangeType || previousStream.isMediaCodecCompatible(nextStream, previousStream)) && !hasCriticalTexttracks(nextStream);
+        } catch (e) {
+            return false;
+        }
+    }
+
     function onStreamCanLoadNext(nextStream) {
         var previousStream = arguments.length <= 1 || arguments[1] === undefined ? null : arguments[1];
 
@@ -37273,11 +37302,11 @@ function StreamController() {
             // Seamless period switch allowed only if:
             // - none of the periods uses contentProtection.
             // - AND changeType method implemented by browser or periods use the same codec.
-            var seamlessPeriodSwitch = previousStream.isProtectionCompatible(nextStream) && (supportsChangeType || previousStream.isMediaCodecCompatible(nextStream));
+            var seamlessPeriodSwitch = canSourceBuffersBeReused(nextStream, previousStream);
 
             if (seamlessPeriodSwitch) {
                 nextStream.setPreloadingScheduled(true);
-                logger.info('[onStreamCanLoadNext] Preloading next stream');
+                logger.info('[onStreamCanLoadNext] Preloading next stream with id ' + nextStream.getId());
                 isPeriodSwitchInProgress = true;
                 nextStream.preload(mediaSource, buffers);
                 preloadingStreams.push(nextStream);
@@ -37285,6 +37314,21 @@ function StreamController() {
                     p.setBufferingTime(nextStream.getStartTime());
                 });
             }
+        }
+    }
+
+    function hasCriticalTexttracks(stream) {
+        try {
+            // if the upcoming stream has stpp or wvtt texttracks we need to reset the sourcebuffers and can not prebuffer
+            var streamInfo = stream.getStreamInfo();
+            var as = adapter.getAdaptationForType(streamInfo.index, _constantsConstants2['default'].FRAGMENTED_TEXT, streamInfo);
+            if (!as) {
+                return false;
+            }
+
+            return as.codecs.indexOf('stpp') !== -1 || as.codecs.indexOf('wvtt') !== -1;
+        } catch (e) {
+            return false;
         }
     }
 
@@ -37305,7 +37349,7 @@ function StreamController() {
 
         for (var i = 0; i < ln; i++) {
             stream = streams[i];
-            streamDuration = parseFloat(streamDuration + stream.getDuration());
+            streamDuration = parseFloat((streamDuration + stream.getDuration()).toFixed(5));
 
             if (time < streamDuration) {
                 return stream;
@@ -37355,11 +37399,12 @@ function StreamController() {
         return activeStream ? activeStream.getProcessors() : [];
     }
 
-    function onEnded() {
+    function onEnded(e) {
         if (!activeStream.getIsEndedEventSignaled()) {
             activeStream.setIsEndedEventSignaled(true);
             var nextStream = getNextStream();
             if (nextStream) {
+                logger.debug('StreamController onEnded, found next stream with id ' + nextStream.getStreamInfo().id);
                 switchStream(nextStream, activeStream, NaN);
             } else {
                 logger.debug('StreamController no next stream found');
@@ -37368,6 +37413,9 @@ function StreamController() {
             flushPlaylistMetrics(nextStream ? _voMetricsPlayList.PlayListTrace.END_OF_PERIOD_STOP_REASON : _voMetricsPlayList.PlayListTrace.END_OF_CONTENT_STOP_REASON);
             isPeriodSwitchInProgress = false;
         }
+        if (e && e.isLast) {
+            stopPlaybackEndedTimerInterval();
+        }
     }
 
     function getNextStream() {
@@ -37375,19 +37423,30 @@ function StreamController() {
 
         var refStream = stream ? stream : activeStream ? activeStream : null;
         if (refStream) {
-            var _ret2 = (function () {
-                var start = refStream.getStreamInfo().start;
-                var duration = refStream.getStreamInfo().duration;
-                var streamEnd = parseFloat((start + duration).toFixed(5));
+            var start = refStream.getStreamInfo().start;
+            var duration = refStream.getStreamInfo().duration;
+            var streamEnd = parseFloat((start + duration).toFixed(5));
 
-                return {
-                    v: streams.filter(function (stream) {
-                        return Math.abs(stream.getStreamInfo().start - streamEnd) <= 0.1;
-                    })[0]
-                };
-            })();
+            var i = 0;
+            var targetIndex = -1;
+            var lastDiff = NaN;
+            while (i < streams.length) {
+                var s = streams[i];
+                var diff = s.getStreamInfo().start - streamEnd;
 
-            if (typeof _ret2 === 'object') return _ret2.v;
+                if (diff >= 0 && (isNaN(lastDiff) || diff < lastDiff)) {
+                    lastDiff = diff;
+                    targetIndex = i;
+                }
+
+                i += 1;
+            }
+
+            if (targetIndex >= 0) {
+                return streams[targetIndex];
+            }
+
+            return null;
         }
 
         return null;
@@ -37398,7 +37457,7 @@ function StreamController() {
             var refStream = stream ? stream : activeStream ? activeStream : null;
 
             if (refStream) {
-                var _ret3 = (function () {
+                var _ret2 = (function () {
                     var start = refStream.getStreamInfo().start;
 
                     return {
@@ -37408,7 +37467,7 @@ function StreamController() {
                     };
                 })();
 
-                if (typeof _ret3 === 'object') return _ret3.v;
+                if (typeof _ret2 === 'object') return _ret2.v;
             }
         } catch (e) {
             return [];
@@ -37418,7 +37477,6 @@ function StreamController() {
     function switchStream(stream, previousStream, seekTime) {
 
         if (isStreamSwitchingInProgress || !stream || previousStream === stream && stream.isActive()) return;
-        logger.info('Switch stream to ' + stream.getId() + ' at t=' + seekTime);
         isStreamSwitchingInProgress = true;
 
         eventBus.trigger(_coreEventsEvents2['default'].PERIOD_SWITCH_STARTED, {
@@ -37428,14 +37486,16 @@ function StreamController() {
 
         var seamlessPeriodSwitch = false;
         if (previousStream) {
-            seamlessPeriodSwitch = activeStream.isProtectionCompatible(stream) && (supportsChangeType || activeStream.isMediaCodecCompatible(stream)) && !seekTime || stream.getPreloaded();
+            seamlessPeriodSwitch = canSourceBuffersBeReused(stream, previousStream);
             previousStream.deactivate(seamlessPeriodSwitch);
         }
 
         // Determine seek time when switching to new period
         // - seek at given seek time
-        // - or seek at period start if seamless period switching
+        // - or seek at period start if upcoming period is not prebuffered
         seekTime = !isNaN(seekTime) ? seekTime : !seamlessPeriodSwitch && previousStream ? stream.getStreamInfo().start : NaN;
+        logger.info('Switch to stream ' + stream.getId() + '. Seektime is ' + seekTime + ', current playback time is ' + playbackController.getTime());
+        logger.info('Seamless period switch is set to ' + seamlessPeriodSwitch);
 
         activeStream = stream;
         preloadingStreams = preloadingStreams.filter(function (s) {
@@ -37443,7 +37503,6 @@ function StreamController() {
         });
         playbackController.initialize(getActiveStreamInfo(), !!previousStream, seekTime);
         if (videoModel.getElement()) {
-            //TODO detect if we should close jump to activateStream.
             openMediaSource(seekTime, previousStream === null, false, seamlessPeriodSwitch);
         } else {
             activateStream(seekTime, seamlessPeriodSwitch);
@@ -37463,7 +37522,7 @@ function StreamController() {
 
         function onMediaSourceOpen() {
             // Manage situations in which a call to reset happens while MediaSource is being opened
-            if (!mediaSource || mediaSource.readyState != 'open') return;
+            if (!mediaSource || mediaSource.readyState !== 'open') return;
 
             logger.debug('MediaSource is open!');
             window.URL.revokeObjectURL(sourceUrl);
@@ -37504,6 +37563,10 @@ function StreamController() {
         }
     }
 
+    function getActiveStream() {
+        return activeStream;
+    }
+
     function activateStream(seekTime, keepBuffers) {
         buffers = activeStream.activate(mediaSource, keepBuffers ? buffers : undefined);
 
@@ -37511,22 +37574,22 @@ function StreamController() {
         if (buffers) {
             var keys = Object.keys(buffers);
             if (keys.length > 0 && buffers[keys[0]].changeType) {
-                logger.debug('SourceBuffer changeType method supported. Use it to switch codecs in periods transitions');
                 supportsChangeType = true;
             }
         }
 
         if (!initialPlayback) {
             if (!isNaN(seekTime)) {
-                playbackController.seek(seekTime); //we only need to call seek here, bufferingTime was set from seeking event
-            } else {
-                    // let startTime = playbackController.getStreamStartTime(true);
-                    // if (!keepBuffers) {
-                    //     getActiveStreamProcessors().forEach(p => {
-                    //         p.setBufferingTime(startTime);
-                    //     });
-                    // }
+                // If the streamswitch has been triggered by a seek command there is no need to seek again. Still we need to trigger the seeking event in order for the controllers to adjust the new time
+                if (seekTime === playbackController.getTime()) {
+                    eventBus.trigger(_coreEventsEvents2['default'].SEEK_TARGET, {
+                        streamId: activeStream.getId(),
+                        time: seekTime
+                    });
+                } else {
+                    playbackController.seek(seekTime);
                 }
+            }
         }
 
         if (autoPlay || !initialPlayback) {
@@ -37534,9 +37597,7 @@ function StreamController() {
         }
 
         isStreamSwitchingInProgress = false;
-        eventBus.trigger(_coreEventsEvents2['default'].PERIOD_SWITCH_COMPLETED, {
-            toStreamInfo: getActiveStreamInfo()
-        });
+        eventBus.trigger(_coreEventsEvents2['default'].PERIOD_SWITCH_COMPLETED, { toStreamInfo: getActiveStreamInfo() });
     }
 
     function setMediaDuration(duration) {
@@ -37559,79 +37620,100 @@ function StreamController() {
 
     function composeStreams() {
         try {
-            var streamsInfo = adapter.getStreamsInfo();
-            if (streamsInfo.length === 0) {
-                throw new Error('There are no streams');
-            }
+            (function () {
+                var streamsInfo = adapter.getStreamsInfo();
+                if (streamsInfo.length === 0) {
+                    throw new Error('There are no streams');
+                }
 
-            dashMetrics.updateManifestUpdateInfo({
-                currentTime: playbackController.getTime(),
-                buffered: videoModel.getBufferRange(),
-                presentationStartTime: streamsInfo[0].start,
-                clientTimeOffset: timelineConverter.getClientTimeOffset()
-            });
+                dashMetrics.updateManifestUpdateInfo({
+                    currentTime: playbackController.getTime(),
+                    buffered: videoModel.getBufferRange(),
+                    presentationStartTime: streamsInfo[0].start,
+                    clientTimeOffset: timelineConverter.getClientTimeOffset()
+                });
 
-            for (var i = 0, ln = streamsInfo.length; i < ln; i++) {
-                // If the Stream object does not exist we probably loaded the manifest the first time or it was
-                // introduced in the updated manifest, so we need to create a new Stream and perform all the initialization operations
-                var streamInfo = streamsInfo[i];
-                var stream = getComposedStream(streamInfo);
+                // Filter streams that are outdated and not included in the MPD anymore
+                if (streams.length > 0) {
+                    streams = streams.filter(function (stream) {
 
-                if (!stream) {
-                    stream = (0, _Stream2['default'])(context).create({
-                        manifestModel: manifestModel,
-                        mediaPlayerModel: mediaPlayerModel,
-                        dashMetrics: dashMetrics,
-                        manifestUpdater: manifestUpdater,
-                        adapter: adapter,
-                        timelineConverter: timelineConverter,
-                        capabilities: capabilities,
-                        errHandler: errHandler,
-                        baseURLController: baseURLController,
-                        abrController: abrController,
-                        playbackController: playbackController,
-                        eventController: eventController,
-                        mediaController: mediaController,
-                        textController: textController,
-                        protectionController: protectionController,
-                        videoModel: videoModel,
-                        streamInfo: streamInfo,
-                        settings: settings
+                        var isStillIncluded = streamsInfo.filter(function (sInfo) {
+                            return sInfo.id === stream.getId();
+                        }).length > 0;
+
+                        var shouldKeepStream = isStillIncluded || stream.getId() === activeStream.getId();
+
+                        if (!shouldKeepStream) {
+                            logger.debug('Removing stream ' + stream.getId());
+                        }
+
+                        return shouldKeepStream;
                     });
-                    streams.push(stream);
-                    stream.initialize();
-                } else {
-                    stream.updateData(streamInfo);
                 }
 
-                dashMetrics.addManifestUpdateStreamInfo(streamInfo);
-            }
+                for (var i = 0, ln = streamsInfo.length; i < ln; i++) {
+                    // If the Stream object does not exist we probably loaded the manifest the first time or it was
+                    // introduced in the updated manifest, so we need to create a new Stream and perform all the initialization operations
+                    var streamInfo = streamsInfo[i];
+                    var stream = getComposedStream(streamInfo);
 
-            if (!activeStream) {
-                if (adapter.getIsDynamic() && streams.length) {
-                    // Compute and set live delay
-                    var manifestInfo = streamsInfo[0].manifestInfo;
-                    var fragmentDuration = getFragmentDurationForLiveDelayCalculation(streamsInfo, manifestInfo);
-                    playbackController.computeAndSetLiveDelay(fragmentDuration, manifestInfo.DVRWindowSize, manifestInfo.minBufferTime);
+                    if (!stream) {
+                        stream = (0, _Stream2['default'])(context).create({
+                            manifestModel: manifestModel,
+                            mediaPlayerModel: mediaPlayerModel,
+                            dashMetrics: dashMetrics,
+                            manifestUpdater: manifestUpdater,
+                            adapter: adapter,
+                            timelineConverter: timelineConverter,
+                            capabilities: capabilities,
+                            errHandler: errHandler,
+                            baseURLController: baseURLController,
+                            abrController: abrController,
+                            playbackController: playbackController,
+                            eventController: eventController,
+                            mediaController: mediaController,
+                            textController: textController,
+                            protectionController: protectionController,
+                            videoModel: videoModel,
+                            streamInfo: streamInfo,
+                            settings: settings
+                        });
+                        streams.push(stream);
+                        stream.initialize();
+                    } else {
+                        stream.updateData(streamInfo);
+                    }
+
+                    dashMetrics.addManifestUpdateStreamInfo(streamInfo);
                 }
 
-                // we need to figure out what the correct starting period is
-                var initialStream = null;
-                var startTimeFromUri = playbackController.getStartTimeFromUriParameters(streamsInfo[0].start, adapter.getIsDynamic());
+                if (!activeStream) {
+                    if (adapter.getIsDynamic() && streams.length) {
+                        // Compute and set live delay
+                        var manifestInfo = streamsInfo[0].manifestInfo;
+                        var fragmentDuration = getFragmentDurationForLiveDelayCalculation(streamsInfo, manifestInfo);
+                        playbackController.computeAndSetLiveDelay(fragmentDuration, manifestInfo.DVRWindowSize, manifestInfo.minBufferTime);
+                    }
 
-                initialStream = getStreamForTime(startTimeFromUri);
+                    // we need to figure out what the correct starting period is
+                    var initialStream = null;
+                    var startTimeFromUri = playbackController.getStartTimeFromUriParameters(streamsInfo[0].start, adapter.getIsDynamic());
 
-                // For multiperiod streams we should avoid a switch of streams after the seek to the live edge. So we do a calculation of the expected seek time to find the right stream object.
-                if (!initialStream && adapter.getIsDynamic() && streams.length) {
-                    logger.debug('Dynamic stream: Trying to find the correct starting period');
-                    initialStream = getInitialStream();
+                    initialStream = getStreamForTime(startTimeFromUri);
+
+                    // For multiperiod streams we should avoid a switch of streams after the seek to the live edge. So we do a calculation of the expected seek time to find the right stream object.
+                    if (!initialStream && adapter.getIsDynamic() && streams.length) {
+                        logger.debug('Dynamic stream: Trying to find the correct starting period');
+                        initialStream = getInitialStream();
+                    }
+                    var startStream = initialStream !== null ? initialStream : streams[0];
+                    switchStream(startStream, null, NaN);
+                    startPlaybackEndedTimerInterval();
+                    startCheckIfPrebufferingCanStartInterval();
                 }
-                switchStream(initialStream !== null ? initialStream : streams[0], null, NaN);
-                startPlaybackEndedTimerInterval();
-                startCheckIfPrebufferingCanStartInterval();
-            }
 
-            eventBus.trigger(_coreEventsEvents2['default'].STREAMS_COMPOSED);
+                eventBus.trigger(_coreEventsEvents2['default'].STREAMS_COMPOSED);
+            })();
         } catch (e) {
             errHandler.error(new _voDashJSError2['default'](_coreErrorsErrors2['default'].MANIFEST_ERROR_ID_NOSTREAMS_CODE, e.message + 'nostreamscomposed', manifestModel.getValue()));
             hasInitialisationError = true;
@@ -37730,21 +37812,9 @@ function StreamController() {
                 //is SegmentTimeline to avoid using time source
                 var manifest = e.manifest;
                 adapter.updatePeriods(manifest);
-                var streamInfo = adapter.getStreamsInfo(undefined, 1)[0];
-                var mediaInfo = adapter.getMediaInfoForType(streamInfo, _constantsConstants2['default'].VIDEO) || adapter.getMediaInfoForType(streamInfo, _constantsConstants2['default'].AUDIO);
-
-                var useCalculatedLiveEdgeTime = undefined;
-                if (mediaInfo) {
-                    useCalculatedLiveEdgeTime = adapter.getUseCalculatedLiveEdgeTimeForMediaInfo(mediaInfo);
-                    if (useCalculatedLiveEdgeTime) {
-                        logger.debug('SegmentTimeline detected using calculated Live Edge Time');
-                        var s = { streaming: { useManifestDateHeaderTimeSource: false } };
-                        settings.update(s);
-                    }
-                }
 
                 var manifestUTCTimingSources = adapter.getUTCTimingSources();
-                var allUTCTimingSources = !adapter.getIsDynamic() || useCalculatedLiveEdgeTime ? manifestUTCTimingSources : manifestUTCTimingSources.concat(mediaPlayerModel.getUTCTimingSources());
+                var allUTCTimingSources = !adapter.getIsDynamic() ? manifestUTCTimingSources : manifestUTCTimingSources.concat(mediaPlayerModel.getUTCTimingSources());
                 var isHTTPS = urlUtils.isHTTPS(e.manifest.url);
 
                 //If https is detected on manifest then lets apply that protocol to only the default time source(s). In the future we may find the need to apply this to more then just default so left code at this level instead of in MediaPlayer.
@@ -37987,9 +38057,7 @@ function StreamController() {
             protectionController = null;
             protectionData = null;
             if (manifestModel.getValue()) {
-                eventBus.trigger(_coreEventsEvents2['default'].PROTECTION_DESTROYED, {
-                    data: manifestModel.getValue().url
-                });
+                eventBus.trigger(_coreEventsEvents2['default'].PROTECTION_DESTROYED, { data: manifestModel.getValue().url });
             }
         }
 
@@ -38030,7 +38098,9 @@ function StreamController() {
         setProtectionData: setProtectionData,
         getIsStreamSwitchInProgress: getIsStreamSwitchInProgress,
         getHasMediaOrIntialisationError: getHasMediaOrIntialisationError,
+        hasStreamFinishedBuffering: hasStreamFinishedBuffering,
         getStreams: getStreams,
+        getActiveStream: getActiveStream,
         reset: reset
     };
 
@@ -38348,7 +38418,11 @@ function TimeSyncController() {
 
     function completeTimeSyncSequence(failed, time, offset) {
         setIsSynchronizing(false);
-        eventBus.trigger(_coreEventsEvents2['default'].TIME_SYNCHRONIZATION_COMPLETED, { time: time, offset: offset, error: failed ? new _voDashJSError2['default'](_coreErrorsErrors2['default'].TIME_SYNC_FAILED_ERROR_CODE, _coreErrorsErrors2['default'].TIME_SYNC_FAILED_ERROR_MESSAGE) : null });
+        eventBus.trigger(_coreEventsEvents2['default'].TIME_SYNCHRONIZATION_COMPLETED, {
+            time: time,
+            offset: offset,
+            error: failed ? new _voDashJSError2['default'](_coreErrorsErrors2['default'].TIME_SYNC_FAILED_ERROR_CODE, _coreErrorsErrors2['default'].TIME_SYNC_FAILED_ERROR_MESSAGE) : null
+        });
     }
 
     function calculateTimeOffset(serverTime, deviceTime) {
@@ -38914,7 +38988,7 @@ module.exports = exports['default'];
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
-    value: true
+  value: true
 });
 
 var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
@@ -38930,18 +39004,24 @@ var _coreEventsEventsBase = _dereq_(55);
 var _coreEventsEventsBase2 = _interopRequireDefault(_coreEventsEventsBase);
 
 var MetricsReportingEvents = (function (_EventsBase) {
-    _inherits(MetricsReportingEvents, _EventsBase);
+  _inherits(MetricsReportingEvents, _EventsBase);
 
-    function MetricsReportingEvents() {
-        _classCallCheck(this, MetricsReportingEvents);
+  function MetricsReportingEvents() {
+    _classCallCheck(this, MetricsReportingEvents);
 
-        _get(Object.getPrototypeOf(MetricsReportingEvents.prototype), 'constructor', this).call(this);
+    _get(Object.getPrototypeOf(MetricsReportingEvents.prototype), 'constructor', this).call(this);
 
-        this.METRICS_INITIALISATION_COMPLETE = 'internal_metricsReportingInitialized';
-        this.BECAME_REPORTING_PLAYER = 'internal_becameReportingPlayer';
-    }
+    this.METRICS_INITIALISATION_COMPLETE = 'internal_metricsReportingInitialized';
+    this.BECAME_REPORTING_PLAYER = 'internal_becameReportingPlayer';
 
-    return MetricsReportingEvents;
+    /**
+     * Triggered when CMCD data was generated for a HTTP request
+     * @event MetricsReportingEvents#CMCD_DATA_GENERATED
+     */
+    this.CMCD_DATA_GENERATED = 'cmcdDataGenerated';
+  }
+
+  return MetricsReportingEvents;
 })(_coreEventsEventsBase2['default']);
 
 var metricsReportingEvents = new MetricsReportingEvents();
@@ -41508,6 +41588,10 @@ var _MediaPlayerEvents = _dereq_(101);
 
 var _MediaPlayerEvents2 = _interopRequireDefault(_MediaPlayerEvents);
 
+var _metricsMetricsReportingEvents = _dereq_(126);
+
+var _metricsMetricsReportingEvents2 = _interopRequireDefault(_metricsMetricsReportingEvents);
+
 var _coreFactoryMaker = _dereq_(47);
 
 var _coreFactoryMaker2 = _interopRequireDefault(_coreFactoryMaker);
@@ -41530,24 +41614,17 @@ var _coreUtils = _dereq_(49);
 
 var _coreUtils2 = _interopRequireDefault(_coreUtils);
 
-var _coreVersion = _dereq_(50);
-
-var CMCD_REQUEST_FIELD_NAME = 'Common-Media-Client-Data';
+var CMCD_REQUEST_FIELD_NAME = 'CMCD';
 var CMCD_VERSION = 1;
-var DEFAULT_DEVICE_ID = 'dash.js-v' + (0, _coreVersion.getVersionString)();
-var BUFFER_STATES = {
-    DEFAULT: null,
-    INITIALIZING: 1,
-    SEEKING: 2,
-    RISK: 3,
-    EMPTY: 4
-};
 var OBJECT_TYPES = {
     MANIFEST: 'm',
     AUDIO: 'a',
     VIDEO: 'v',
     INIT: 'i',
-    CAPTION: 'c'
+    CAPTION: 'c',
+    ISOBMFF_TEXT_TRACK: 'tt',
+    ENCRYPTION_KEY: 'k',
+    OTHER: 'o'
 };
 var STREAMING_FORMATS = {
     DASH: 'd',
@@ -41566,7 +41643,10 @@ function CmcdModel() {
         internalData = undefined,
         abrController = undefined,
         dashMetrics = undefined,
-        playbackController = undefined;
+        playbackController = undefined,
+        _isStartup = undefined,
+        _bufferLevelStarved = undefined,
+        _initialMediaRequestsDone = undefined;
 
     var context = this.context;
     var eventBus = (0, _coreEventBus2['default'])(context).getInstance();
@@ -41583,6 +41663,7 @@ function CmcdModel() {
         eventBus.on(_MediaPlayerEvents2['default'].PLAYBACK_RATE_CHANGED, _onPlaybackRateChanged, instance);
         eventBus.on(_MediaPlayerEvents2['default'].MANIFEST_LOADED, _onManifestLoaded, instance);
         eventBus.on(_MediaPlayerEvents2['default'].BUFFER_LEVEL_STATE_CHANGED, _onBufferLevelStateChanged, instance);
+        eventBus.on(_MediaPlayerEvents2['default'].PLAYBACK_SEEKED, _onPlaybackSeeked, instance);
     }
 
     function setConfig(config) {
@@ -41608,14 +41689,11 @@ function CmcdModel() {
             st: null,
             sf: null,
             sid: '' + _coreUtils2['default'].generateUuid(),
-            bs: {
-                audio: BUFFER_STATES.INITIALIZING,
-                video: BUFFER_STATES.INITIALIZING
-            },
-            cid: null,
-            did: '' + DEFAULT_DEVICE_ID
-
+            cid: null
         };
+        _bufferLevelStarved = {};
+        _isStartup = {};
+        _initialMediaRequestsDone = {};
     }
 
     function getQueryParameter(request) {
@@ -41624,6 +41702,12 @@ function CmcdModel() {
                 var cmcdData = _getCmcdData(request);
                 var finalPayloadString = _buildFinalString(cmcdData);
 
+                eventBus.trigger(_metricsMetricsReportingEvents2['default'].CMCD_DATA_GENERATED, {
+                    url: request.url,
+                    mediaType: request.mediaType,
+                    cmcdData: cmcdData,
+                    cmcdString: finalPayloadString
+                });
                 return {
                     key: CMCD_REQUEST_FIELD_NAME,
                     value: finalPayloadString
@@ -41644,9 +41728,12 @@ function CmcdModel() {
                 _setDefaultContentId(request);
                 return _getCmcdDataForMpd(request);
             } else if (request.type === _voMetricsHTTPRequest.HTTPRequest.MEDIA_SEGMENT_TYPE) {
+                _initForMediaType(request.mediaType);
                 return _getCmcdDataForMediaSegment(request);
             } else if (request.type === _voMetricsHTTPRequest.HTTPRequest.INIT_SEGMENT_TYPE) {
                 return _getCmcdDataForInitSegment(request);
+            } else if (request.type === _voMetricsHTTPRequest.HTTPRequest.OTHER_TYPE || request.type === _voMetricsHTTPRequest.HTTPRequest.XLINK_EXPANSION_TYPE) {
+                return _getCmcdDataForOther(request);
             }
 
             return cmcdData;
@@ -41676,7 +41763,9 @@ function CmcdModel() {
         var ot = request.mediaType === 'video' ? '' + OBJECT_TYPES.VIDEO : request.mediaType === 'audio' ? '' + OBJECT_TYPES.AUDIO : request.mediaType === 'fragmentedText' ? '' + OBJECT_TYPES.CAPTION : null;
         var mtp = _getMeasuredThroughputByType(request.mediaType);
         var dl = _getDeadlineByType(request.mediaType);
-        var bs = _getBufferStateByRequest(request);
+        var bl = _getBufferLevelByType(request.mediaType);
+        var tb = _getTopBitrateByType(request.mediaType);
+        var pr = internalData.pr;
 
         if (encodedBitrate) {
             data.br = encodedBitrate;
@@ -41698,17 +41787,60 @@ function CmcdModel() {
             data.dl = dl;
         }
 
-        if (!isNaN(bs) && bs !== null) {
-            data.bs = bs;
+        if (!isNaN(bl)) {
+            data.bl = bl;
+        }
+
+        if (!isNaN(tb)) {
+            data.tb = tb;
+        }
+
+        if (!isNaN(pr) && pr !== 1) {
+            data.pr = pr;
+        }
+
+        if (_bufferLevelStarved[request.mediaType]) {
+            data.bs = true;
+            _bufferLevelStarved[request.mediaType] = false;
+        }
+
+        if (_isStartup[request.mediaType] || !_initialMediaRequestsDone[request.mediaType]) {
+            data.su = true;
+            _isStartup[request.mediaType] = false;
+            _initialMediaRequestsDone[request.mediaType] = true;
         }
 
         return data;
+    }
+
+    function _initForMediaType(mediaType) {
+
+        if (!_initialMediaRequestsDone.hasOwnProperty(mediaType)) {
+            _initialMediaRequestsDone[mediaType] = false;
+        }
+
+        if (!_isStartup.hasOwnProperty(mediaType)) {
+            _isStartup[mediaType] = false;
+        }
+
+        if (!_bufferLevelStarved.hasOwnProperty(mediaType)) {
+            _bufferLevelStarved[mediaType] = false;
+        }
     }
 
     function _getCmcdDataForInitSegment() {
         var data = _getGenericCmcdData();
 
         data.ot = '' + OBJECT_TYPES.INIT;
+        data.su = true;
+
+        return data;
+    }
+
+    function _getCmcdDataForOther() {
+        var data = _getGenericCmcdData();
+
+        data.ot = '' + OBJECT_TYPES.OTHER;
 
         return data;
     }
@@ -41719,11 +41851,9 @@ function CmcdModel() {
         data.v = CMCD_VERSION;
         data.sid = settings.get().streaming.cmcd.sid ? settings.get().streaming.cmcd.sid : internalData.sid;
         data.cid = settings.get().streaming.cmcd.cid ? settings.get().streaming.cmcd.cid : internalData.cid;
-        data.did = settings.get().streaming.cmcd.did ? settings.get().streaming.cmcd.did : internalData.did;
 
-        data.sid = '"' + data.sid + '"';
-        data.cid = '"' + data.cid + '"';
-        data.did = '"' + data.did + '"';
+        data.sid = '' + data.sid;
+        data.cid = '' + data.cid;
 
         if (!isNaN(internalData.pr) && internalData.pr !== 1 && internalData.pr !== null) {
             data.pr = internalData.pr;
@@ -41751,6 +41881,15 @@ function CmcdModel() {
         }
     }
 
+    function _getTopBitrateByType(mediaType) {
+        try {
+            var info = abrController.getTopBitrateInfoFor(mediaType);
+            return info.bitrate;
+        } catch (e) {
+            return null;
+        }
+    }
+
     function _getObjectDurationByRequest(request) {
         try {
             return !isNaN(request.duration) ? Math.round(request.duration * 1000) : null;
@@ -41761,7 +41900,7 @@ function CmcdModel() {
 
     function _getMeasuredThroughputByType(mediaType) {
         try {
-            return Math.round(abrController.getThroughputHistory().getSafeAverageThroughput(mediaType));
+            return parseInt(abrController.getThroughputHistory().getSafeAverageThroughput(mediaType) / 100) * 100;
         } catch (e) {
             return null;
         }
@@ -41773,7 +41912,7 @@ function CmcdModel() {
             var bufferLevel = dashMetrics.getCurrentBufferLevel(mediaType);
 
             if (!isNaN(playbackRate) && !isNaN(bufferLevel)) {
-                return parseInt(bufferLevel / playbackRate * 1000);
+                return parseInt(bufferLevel / playbackRate * 10) * 100;
             }
 
             return null;
@@ -41782,21 +41921,18 @@ function CmcdModel() {
         }
     }
 
-    function _getBufferStateByRequest(request) {
+    function _getBufferLevelByType(mediaType) {
         try {
-            var mediaType = request.mediaType;
-            if (internalData.bs[mediaType] !== null) {
-                return internalData.bs[mediaType];
-            }
-
             var bufferLevel = dashMetrics.getCurrentBufferLevel(mediaType);
-            var duration = request.duration;
-            if (bufferLevel < duration) {
-                return BUFFER_STATES.RISK;
+
+            if (!isNaN(bufferLevel)) {
+                return parseInt(bufferLevel * 10) * 100;
             }
 
-            return BUFFER_STATES.DEFAULT;
-        } catch (e) {}
+            return null;
+        } catch (e) {
+            return null;
+        }
     }
 
     function _onPlaybackRateChanged(data) {
@@ -41819,22 +41955,31 @@ function CmcdModel() {
     function _onBufferLevelStateChanged(data) {
         try {
             if (data.state && data.mediaType) {
-                var state = null;
-                switch (data.state) {
-                    case _MediaPlayerEvents2['default'].BUFFER_LOADED:
-                        state = BUFFER_STATES.DEFAULT;
-                        break;
-                    case _MediaPlayerEvents2['default'].BUFFER_EMPTY:
-                        if (playbackController.isSeeking()) {
-                            state = BUFFER_STATES.SEEKING;
-                        }
-                        state = BUFFER_STATES.EMPTY;
-                        break;
-                    default:
+                if (data.state === _MediaPlayerEvents2['default'].BUFFER_EMPTY) {
+
+                    if (!_bufferLevelStarved[data.mediaType]) {
+                        _bufferLevelStarved[data.mediaType] = true;
+                    }
+                    if (!_isStartup[data.mediaType]) {
+                        _isStartup[data.mediaType] = true;
+                    }
                 }
-                internalData.bs[data.mediaType] = state;
             }
         } catch (e) {}
+    }
+
+    function _onPlaybackSeeked() {
+        for (var key in _bufferLevelStarved) {
+            if (_bufferLevelStarved.hasOwnProperty(key)) {
+                _bufferLevelStarved[key] = true;
+            }
+        }
+
+        for (var key in _isStartup) {
+            if (_isStartup.hasOwnProperty(key)) {
+                _isStartup[key] = true;
+            }
+        }
     }
 
     function _buildFinalString(cmcdData) {
@@ -41845,18 +41990,31 @@ function CmcdModel() {
                         v: null
                     };
                 }
-                var keys = Object.keys(cmcdData);
+                var keys = Object.keys(cmcdData).sort(function (a, b) {
+                    return a > b;
+                });
                 var length = keys.length;
 
-                return {
-                    v: keys.reduce(function (acc, key, index) {
+                var cmcdString = keys.reduce(function (acc, key, index) {
+                    if (key === 'v' && cmcdData[key] === 1) return acc;
+                    if (typeof cmcdData[key] === 'string' && (key !== 'ot' || key !== 'sf' || key !== 'st')) {
+                        var string = cmcdData[key].replace(/"/g, '\"');
+                        acc += key + '="' + string + '"';
+                    } else {
                         acc += key + '=' + cmcdData[key];
-                        if (index < length - 1) {
-                            acc += ',';
-                        }
+                    }
+                    if (index < length - 1) {
+                        acc += ',';
+                    }
 
-                        return acc;
-                    }, '')
+                    return acc;
+                }, '');
+
+                cmcdString = cmcdString.replace(/=true/g, '');
+                cmcdString = encodeURIComponent(cmcdString);
+
+                return {
+                    v: cmcdString
                 };
             })();
 
@@ -41870,6 +42028,7 @@ function CmcdModel() {
         eventBus.off(_MediaPlayerEvents2['default'].PLAYBACK_RATE_CHANGED, _onPlaybackRateChanged, this);
         eventBus.off(_MediaPlayerEvents2['default'].MANIFEST_LOADED, _onManifestLoaded, this);
         eventBus.off(_MediaPlayerEvents2['default'].BUFFER_LEVEL_STATE_CHANGED, _onBufferLevelStateChanged, instance);
+        eventBus.off(_MediaPlayerEvents2['default'].PLAYBACK_SEEKED, _onPlaybackSeeked, instance);
 
         _resetInitialSettings();
     }
@@ -41890,7 +42049,7 @@ CmcdModel.__dashjs_factory_name = 'CmcdModel';
 exports['default'] = _coreFactoryMaker2['default'].getSingletonFactory(CmcdModel);
 module.exports = exports['default'];
 
-},{"101":101,"242":242,"45":45,"46":46,"47":47,"48":48,"49":49,"50":50,"65":65}],150:[function(_dereq_,module,exports){
+},{"101":101,"126":126,"242":242,"45":45,"46":46,"47":47,"48":48,"49":49,"65":65}],150:[function(_dereq_,module,exports){
 /**
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
@@ -42110,9 +42269,7 @@ function FragmentModel(config) {
                 executedRequests.push(request);
                 addSchedulingInfoMetrics(request, FRAGMENT_MODEL_EXECUTED);
                 logger.debug('STREAM_COMPLETED');
-                eventBus.trigger(events.STREAM_COMPLETED, {
-                    request: request
-                });
+                eventBus.trigger(events.STREAM_COMPLETED, { request: request }, { streamId: request.mediaInfo.streamInfo.id, mediaType: request.mediaType });
                 break;
             case _voFragmentRequest2['default'].ACTION_DOWNLOAD:
                 addSchedulingInfoMetrics(request, FRAGMENT_MODEL_LOADING);
@@ -42125,7 +42282,7 @@ function FragmentModel(config) {
     }
 
     function loadCurrentFragment(request) {
-        eventBus.trigger(events.FRAGMENT_LOADING_STARTED, { request: request }, streamInfo.id, type);
+        eventBus.trigger(events.FRAGMENT_LOADING_STARTED, { request: request }, { streamId: streamInfo.id, mediaType: type });
         fragmentLoader.load(request);
     }
 
@@ -42196,7 +42353,7 @@ function FragmentModel(config) {
             response: e.response,
             error: e.error,
             sender: this
-        }, streamInfo.id, type);
+        }, { streamId: streamInfo.id, mediaType: type });
     }
 
     function onLoadingInProgress(e) {
@@ -42207,13 +42364,13 @@ function FragmentModel(config) {
             response: e.response,
             error: e.error,
             sender: this
-        }, streamInfo.id, type);
+        }, { streamId: streamInfo.id, mediaType: type });
     }
 
     function onLoadingAborted(e) {
         if (e.sender !== fragmentLoader) return;
 
-        eventBus.trigger(events.FRAGMENT_LOADING_ABANDONED, { request: e.request }, streamInfo.id, type);
+        eventBus.trigger(events.FRAGMENT_LOADING_ABANDONED, { request: e.request }, { streamId: streamInfo.id, mediaType: type });
     }
 
     function resetInitialSettings() {
@@ -43593,6 +43750,7 @@ function VideoModel() {
         play: play,
         isPaused: isPaused,
         pause: pause,
+        isStalled: isStalled,
         isSeeking: isSeeking,
         getTime: getTime,
         getPlaybackRate: getPlaybackRate,
@@ -44714,7 +44872,7 @@ var CommonEncryption = (function () {
             var retVal = null;
             for (var i = 0; i < cpArray.length; ++i) {
                 var cp = cpArray[i];
-                if (cp.schemeIdUri.toLowerCase() === 'urn:mpeg:dash:mp4protection:2011' && cp.value.toLowerCase() === 'cenc') retVal = cp;
+                if (cp.schemeIdUri.toLowerCase() === 'urn:mpeg:dash:mp4protection:2011' && (cp.value.toLowerCase() === 'cenc' || cp.value.toLowerCase() === 'cbcs')) retVal = cp;
             }
             return retVal;
         }
@@ -45523,12 +45681,18 @@ function ProtectionController(config) {
             try {
                 protectionModel.createKeySession(initDataForKS, protData, getSessionType(keySystem), cdmData);
             } catch (error) {
-                eventBus.trigger(events.KEY_SESSION_CREATED, { data: null, error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_MESSAGE + error.message) });
+                eventBus.trigger(events.KEY_SESSION_CREATED, {
+                    data: null,
+                    error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_MESSAGE + error.message)
+                });
             }
         } else if (initData) {
             protectionModel.createKeySession(initData, protData, getSessionType(keySystem), cdmData);
         } else {
-            eventBus.trigger(events.KEY_SESSION_CREATED, { data: null, error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_MESSAGE + 'Selected key system is ' + (keySystem ? keySystem.systemString : null) + '.  needkey/encrypted event contains no initData corresponding to that key system!') });
+            eventBus.trigger(events.KEY_SESSION_CREATED, {
+                data: null,
+                error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_MESSAGE + 'Selected key system is ' + (keySystem ? keySystem.systemString : null) + '.  needkey/encrypted event contains no initData corresponding to that key system!')
+            });
         }
     }
 
@@ -45764,7 +45928,10 @@ function ProtectionController(config) {
                 if (keySystem === supportedKS[ksIdx].ks) {
                     var _ret = (function () {
 
-                        requestedKeySystems.push({ ks: supportedKS[ksIdx].ks, configs: [getKeySystemConfiguration(keySystem)] });
+                        requestedKeySystems.push({
+                            ks: supportedKS[ksIdx].ks,
+                            configs: [getKeySystemConfiguration(keySystem)]
+                        });
 
                         // Ensure that we would be granted key system access using the key
                         // system and codec information
@@ -45777,6 +45944,15 @@ function ProtectionController(config) {
                             } else {
                                 logger.info('DRM: KeySystem Access Granted');
                                 eventBus.trigger(events.KEY_SYSTEM_SELECTED, { data: event.data });
+                                var protData = getProtData(keySystem);
+                                if (protectionKeyController.isClearKey(keySystem)) {
+                                    // For Clearkey: if parameters for generating init data was provided by the user, use them for generating
+                                    // initData and overwrite possible initData indicated in encrypted event (EME)
+                                    if (protData && protData.hasOwnProperty('clearkeys')) {
+                                        var initData = { kids: Object.keys(protData.clearkeys) };
+                                        supportedKS[ksIdx].initData = new TextEncoder().encode(JSON.stringify(initData));
+                                    }
+                                }
                                 if (supportedKS[ksIdx].sessionId) {
                                     // Load MediaKeySession with sessionId
                                     loadKeySession(supportedKS[ksIdx].sessionId, supportedKS[ksIdx].initData);
@@ -45804,7 +45980,10 @@ function ProtectionController(config) {
 
                 // Add all key systems to our request list since we have yet to select a key system
                 for (var i = 0; i < supportedKS.length; i++) {
-                    requestedKeySystems.push({ ks: supportedKS[i].ks, configs: [getKeySystemConfiguration(supportedKS[i].ks)] });
+                    requestedKeySystems.push({
+                        ks: supportedKS[i].ks,
+                        configs: [getKeySystemConfiguration(supportedKS[i].ks)]
+                    });
                 }
 
                 var keySystemAccess = undefined;
@@ -45814,7 +45993,10 @@ function ProtectionController(config) {
                         keySystem = undefined;
                         eventBus.off(events.INTERNAL_KEY_SYSTEM_SELECTED, onKeySystemSelected, self);
                         if (!fromManifest) {
-                            eventBus.trigger(events.KEY_SYSTEM_SELECTED, { data: null, error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SYSTEM_ACCESS_DENIED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SYSTEM_ACCESS_DENIED_ERROR_MESSAGE + event.error) });
+                            eventBus.trigger(events.KEY_SYSTEM_SELECTED, {
+                                data: null,
+                                error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SYSTEM_ACCESS_DENIED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SYSTEM_ACCESS_DENIED_ERROR_MESSAGE + event.error)
+                            });
                         }
                     } else {
                         keySystemAccess = event.data;
@@ -45840,11 +46022,13 @@ function ProtectionController(config) {
                         for (var i = 0; i < pendingNeedKeyData.length; i++) {
                             for (ksIdx = 0; ksIdx < pendingNeedKeyData[i].length; ksIdx++) {
                                 if (keySystem === pendingNeedKeyData[i][ksIdx].ks) {
-                                    // For Clearkey: if parameters for generating init data was provided by the user, use them for generating
-                                    // initData and overwrite possible initData indicated in encrypted event (EME)
-                                    if (protectionKeyController.isClearKey(keySystem) && protData && protData.hasOwnProperty('clearkeys')) {
-                                        var initData = { kids: Object.keys(protData.clearkeys) };
-                                        pendingNeedKeyData[i][ksIdx].initData = new TextEncoder().encode(JSON.stringify(initData));
+                                    if (protectionKeyController.isClearKey(keySystem)) {
+                                        // For Clearkey: if parameters for generating init data was provided by the user, use them for generating
+                                        // initData and overwrite possible initData indicated in encrypted event (EME)
+                                        if (protData && protData.hasOwnProperty('clearkeys')) {
+                                            var initData = { kids: Object.keys(protData.clearkeys) };
+                                            pendingNeedKeyData[i][ksIdx].initData = new TextEncoder().encode(JSON.stringify(initData));
+                                        }
                                     }
                                     if (pendingNeedKeyData[i][ksIdx].sessionId) {
                                         // Load MediaKeySession with sessionId
@@ -45860,7 +46044,10 @@ function ProtectionController(config) {
                     } else {
                         keySystem = undefined;
                         if (!fromManifest) {
-                            eventBus.trigger(events.KEY_SYSTEM_SELECTED, { data: null, error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SYSTEM_ACCESS_DENIED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SYSTEM_ACCESS_DENIED_ERROR_MESSAGE + 'Error selecting key system! -- ' + event.error) });
+                            eventBus.trigger(events.KEY_SYSTEM_SELECTED, {
+                                data: null,
+                                error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SYSTEM_ACCESS_DENIED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SYSTEM_ACCESS_DENIED_ERROR_MESSAGE + 'Error selecting key system! -- ' + event.error)
+                            });
                         }
                     }
                 };
@@ -45939,9 +46126,15 @@ function ProtectionController(config) {
             // TODO: Deprecated!
             url = protData.laURL;
         } else {
-            url = keySystem.getLicenseServerURLFromInitData(_CommonEncryption2['default'].getPSSHData(sessionToken.initData));
-            if (!url) {
-                url = e.data.laURL;
+            // For clearkey use the url defined in the manifest
+            if (protectionKeyController.isClearKey(keySystem)) {
+                url = keySystem.getLicenseServerUrlFromMediaInfo(mediaInfoArr);
+            } else {
+                var psshData = _CommonEncryption2['default'].getPSSHData(sessionToken.initData);
+                url = keySystem.getLicenseServerURLFromInitData(psshData);
+                if (!url) {
+                    url = e.data.laURL;
+                }
             }
         }
         // Possibly update or override the URL based on the message
@@ -46007,6 +46200,7 @@ function ProtectionController(config) {
             sendLicenseRequestCompleteEvent(eventData, new _voDashJSError2['default'](_errorsProtectionErrors2['default'].MEDIA_KEY_MESSAGE_LICENSER_ERROR_CODE, _errorsProtectionErrors2['default'].MEDIA_KEY_MESSAGE_LICENSER_ERROR_MESSAGE + keySystemString + ' update, XHR error. status is "' + xhr.statusText + '" (' + xhr.status + '), readyState is ' + xhr.readyState));
         };
 
+        //const reqPayload = keySystem.getLicenseRequestFromMessage(message);
         var reqPayload = keySystem.getLicenseRequestFromMessage(message);
         var reqMethod = licenseServerData.getHTTPMethod(messageType);
         var responseType = licenseServerData.getResponseType(keySystemString, messageType);
@@ -46397,13 +46591,14 @@ function ProtectionKeyController() {
         var supportedKS = [];
 
         if (cps) {
+            var cencContentProtection = _CommonEncryption2['default'].findCencContentProtection(cps);
             for (ksIdx = 0; ksIdx < keySystems.length; ++ksIdx) {
                 ks = keySystems[ksIdx];
                 for (cpIdx = 0; cpIdx < cps.length; ++cpIdx) {
                     cp = cps[cpIdx];
                     if (cp.schemeIdUri.toLowerCase() === ks.schemeIdURI) {
                         // Look for DRM-specific ContentProtection
-                        var initData = ks.getInitData(cp);
+                        var initData = ks.getInitData(cp, cencContentProtection);
 
                         supportedKS.push({
                             ks: keySystems[ksIdx],
@@ -46426,7 +46621,7 @@ function ProtectionKeyController() {
      *
      * @param {ArrayBuffer} initData Concatenated PSSH data for all DRMs
      * supported by the content
-     * @param {ProtectionDataSet} protDataSet user specified protection data - license server url etc
+     * @param {ProtectionData} protDataSet user specified protection data - license server url etc
      * supported by the content
      * @returns {Array.<Object>} array of objects indicating which supported key
      * systems were found.  Empty array is returned if no
@@ -46463,7 +46658,7 @@ function ProtectionKeyController() {
      *
      * @param {KeySystem} keySystem the key system
      * associated with this license request
-     * @param {ProtectionDataSet} protData protection data to use for the
+     * @param {ProtectionData} protData protection data to use for the
      * request
      * @param {string} [messageType="license-request"] the message type associated with this
      * request.  Supported message types can be found
@@ -46501,7 +46696,7 @@ function ProtectionKeyController() {
      * Allows application-specific retrieval of ClearKey keys.
      *
      * @param {KeySystem} clearkeyKeySystem They exact ClearKey System to be used
-     * @param {ProtectionDataSet} protData protection data to use for the
+     * @param {ProtectionData} protData protection data to use for the
      * request
      * @param {ArrayBuffer} message the key message from the CDM
      * @return {ClearKeyKeySet|null} the clear keys associated with
@@ -46623,11 +46818,15 @@ function KeySystemClearKey(config) {
     config = config || {};
     var instance = undefined;
     var BASE64 = config.BASE64;
+    var LICENSE_SERVER_MANIFEST_CONFIGURATIONS = {
+        attributes: ['Laurl', 'laurl'],
+        prefixes: ['clearkey', 'dashif']
+    };
 
     /**
      * Returns desired clearkeys (as specified in the CDM message) from protection data
      *
-     * @param {ProtectionDataSet} protectionData the protection data
+     * @param {ProtectionData} protectionData the protection data
      * @param {ArrayBuffer} message the ClearKey CDM message
      * @returns {ClearKeyKeySet} the key set or null if none found
      * @throws {Error} if a keyID specified in the CDM message was not found in the
@@ -46655,20 +46854,89 @@ function KeySystemClearKey(config) {
         return clearkeySet;
     }
 
-    function getInitData(cp) {
-        return _CommonEncryption2['default'].parseInitDataFromContentProtection(cp, BASE64);
+    function getInitData(cp, cencContentProtection) {
+        try {
+            var initData = _CommonEncryption2['default'].parseInitDataFromContentProtection(cp, BASE64);
+
+            if (!initData && cencContentProtection) {
+                var cencDefaultKid = cencDefaultKidToBase64Representation(cencContentProtection['cenc:default_KID']);
+                var data = { kids: [cencDefaultKid] };
+                initData = new TextEncoder().encode(JSON.stringify(data));
+            }
+
+            return initData;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function cencDefaultKidToBase64Representation(cencDefaultKid) {
+        try {
+            var kid = cencDefaultKid.replace(/-/g, '');
+            kid = btoa(kid.match(/\w{2}/g).map(function (a) {
+                return String.fromCharCode(parseInt(a, 16));
+            }).join(''));
+            return kid.replace(/=/g, '');
+        } catch (e) {
+            return null;
+        }
     }
 
     function getRequestHeadersFromMessage() /*message*/{
-        return null;
+        // Set content type to application/json by default
+        return {
+            'Content-Type': 'application/json'
+        };
     }
 
     function getLicenseRequestFromMessage(message) {
-        return new Uint8Array(message);
+        return JSON.parse(String.fromCharCode.apply(null, new Uint8Array(message)));
     }
 
     function getLicenseServerURLFromInitData() /*initData*/{
         return null;
+    }
+
+    function getLicenseServerUrlFromMediaInfo(mediaInfo) {
+        try {
+            if (!mediaInfo || mediaInfo.length === 0) {
+                return null;
+            }
+            var i = 0;
+            var licenseServer = null;
+            while (i < mediaInfo.length && !licenseServer) {
+                var info = mediaInfo[i];
+                if (info && info.contentProtection && info.contentProtection.length > 0) {
+                    var clearkeyProtData = info.contentProtection.filter(function (cp) {
+                        return cp.schemeIdUri && cp.schemeIdUri === schemeIdURI;
+                    });
+                    if (clearkeyProtData && clearkeyProtData.length > 0) {
+                        var j = 0;
+                        while (j < clearkeyProtData.length && !licenseServer) {
+                            var ckData = clearkeyProtData[j];
+                            var k = 0;
+                            while (k < LICENSE_SERVER_MANIFEST_CONFIGURATIONS.attributes.length && !licenseServer) {
+                                var l = 0;
+                                var attribute = LICENSE_SERVER_MANIFEST_CONFIGURATIONS.attributes[k];
+                                while (l < LICENSE_SERVER_MANIFEST_CONFIGURATIONS.prefixes.length && !licenseServer) {
+                                    var prefix = LICENSE_SERVER_MANIFEST_CONFIGURATIONS.prefixes[l];
+                                    if (ckData[attribute] && ckData[attribute].__prefix && ckData[attribute].__prefix === prefix && ckData[attribute].__text) {
+                                        licenseServer = ckData[attribute].__text;
+                                    }
+                                    l += 1;
+                                }
+                                k += 1;
+                            }
+                            j += 1;
+                        }
+                    }
+                }
+                i += 1;
+            }
+            return licenseServer;
+        } catch (e) {
+            return null;
+        }
     }
 
     function getCDMData() {
@@ -46689,6 +46957,7 @@ function KeySystemClearKey(config) {
         getLicenseServerURLFromInitData: getLicenseServerURLFromInitData,
         getCDMData: getCDMData,
         getSessionId: getSessionId,
+        getLicenseServerUrlFromMediaInfo: getLicenseServerUrlFromMediaInfo,
         getClearKeysFromProtectionData: getClearKeysFromProtectionData
     };
 
@@ -48136,14 +48405,17 @@ function ProtectionModel_21Jan2015(config) {
 
         // Generate initial key request.
         // keyids type is used for clearkey when keys are provided directly in the protection data and then request to a license server is not needed
-        var dataType = ks.systemString === _constantsProtectionConstants2['default'].CLEARKEY_KEYSTEM_STRING && protData && protData.clearkeys ? 'keyids' : 'cenc';
+        var dataType = ks.systemString === _constantsProtectionConstants2['default'].CLEARKEY_KEYSTEM_STRING && (initData || protData && protData.clearkeys) ? 'keyids' : 'cenc';
         session.generateRequest(dataType, initData).then(function () {
             logger.debug('DRM: Session created.  SessionID = ' + sessionToken.getSessionID());
             eventBus.trigger(events.KEY_SESSION_CREATED, { data: sessionToken });
         })['catch'](function (error) {
             // TODO: Better error string
             removeSession(sessionToken);
-            eventBus.trigger(events.KEY_SESSION_CREATED, { data: null, error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_MESSAGE + 'Error generating key request -- ' + error.name) });
+            eventBus.trigger(events.KEY_SESSION_CREATED, {
+                data: null,
+                error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_MESSAGE + 'Error generating key request -- ' + error.name)
+            });
         });
     }
 
@@ -48182,11 +48454,17 @@ function ProtectionModel_21Jan2015(config) {
                 eventBus.trigger(events.KEY_SESSION_CREATED, { data: sessionToken });
             } else {
                 removeSession(sessionToken);
-                eventBus.trigger(events.KEY_SESSION_CREATED, { data: null, error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_MESSAGE + 'Could not load session! Invalid Session ID (' + sessionID + ')') });
+                eventBus.trigger(events.KEY_SESSION_CREATED, {
+                    data: null,
+                    error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_MESSAGE + 'Could not load session! Invalid Session ID (' + sessionID + ')')
+                });
             }
         })['catch'](function (error) {
             removeSession(sessionToken);
-            eventBus.trigger(events.KEY_SESSION_CREATED, { data: null, error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_MESSAGE + 'Could not load session (' + sessionID + ')! ' + error.name) });
+            eventBus.trigger(events.KEY_SESSION_CREATED, {
+                data: null,
+                error: new _voDashJSError2['default'](_errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_CODE, _errorsProtectionErrors2['default'].KEY_SESSION_CREATED_ERROR_MESSAGE + 'Could not load session (' + sessionID + ')! ' + error.name)
+            });
         });
     }
 
@@ -48197,7 +48475,10 @@ function ProtectionModel_21Jan2015(config) {
             logger.debug('DRM: Session removed.  SessionID = ' + sessionToken.getSessionID());
             eventBus.trigger(events.KEY_SESSION_REMOVED, { data: sessionToken.getSessionID() });
         }, function (error) {
-            eventBus.trigger(events.KEY_SESSION_REMOVED, { data: null, error: 'Error removing session (' + sessionToken.getSessionID() + '). ' + error.name });
+            eventBus.trigger(events.KEY_SESSION_REMOVED, {
+                data: null,
+                error: 'Error removing session (' + sessionToken.getSessionID() + '). ' + error.name
+            });
         });
     }
 
@@ -48205,7 +48486,10 @@ function ProtectionModel_21Jan2015(config) {
         // Send our request to the key session
         closeKeySessionInternal(sessionToken)['catch'](function (error) {
             removeSession(sessionToken);
-            eventBus.trigger(events.KEY_SESSION_CLOSED, { data: null, error: 'Error closing session (' + sessionToken.getSessionID() + ') ' + error.name });
+            eventBus.trigger(events.KEY_SESSION_CLOSED, {
+                data: null,
+                error: 'Error closing session (' + sessionToken.getSessionID() + ') ' + error.name
+            });
         });
     }
 
@@ -48885,19 +49169,12 @@ function ClearKey() {
 
     var instance = undefined;
 
-    function getServerURLFromMessage(url, message /*, messageType*/) {
-        // Build ClearKey server query string
-        var jsonMsg = JSON.parse(String.fromCharCode.apply(null, new Uint8Array(message)));
-        url += '/?';
-        for (var i = 0; i < jsonMsg.kids.length; i++) {
-            url += jsonMsg.kids[i] + '&';
-        }
-        url = url.substring(0, url.length - 1);
+    function getServerURLFromMessage(url /* message, messageType*/) {
         return url;
     }
 
     function getHTTPMethod() /*messageType*/{
-        return 'GET';
+        return 'POST';
     }
 
     function getResponseType() /*keySystemStr*/{
@@ -52539,9 +52816,7 @@ function NotFragmentedTextBufferController(config) {
         isBufferingCompleted = false;
 
         // // Text data file is contained in initialization segment
-        eventBus.trigger(_coreEventsEvents2['default'].INIT_FRAGMENT_NEEDED, {
-            representationId: e.currentRepresentation.id
-        }, streamInfo.id, type);
+        eventBus.trigger(_coreEventsEvents2['default'].INIT_FRAGMENT_NEEDED, { representationId: e.currentRepresentation.id }, { streamId: streamInfo.id, mediaType: type });
     }
 
     function appendInitSegment(representationId) {
@@ -52557,9 +52832,7 @@ function NotFragmentedTextBufferController(config) {
 
         isBufferingCompleted = true;
 
-        eventBus.trigger(_coreEventsEvents2['default'].STREAM_COMPLETED, {
-            request: e.request
-        });
+        eventBus.trigger(_coreEventsEvents2['default'].STREAM_COMPLETED, { request: e.request }, { streamId: streamInfo.id, mediaType: type });
     }
 
     function getRangeAt() {
@@ -52763,6 +53036,10 @@ function TextBufferController(config) {
         }
     }
 
+    function updateAppendWindow() {
+        _BufferControllerImpl.updateAppendWindow();
+    }
+
     instance = {
         getBufferControllerType: getBufferControllerType,
         initialize: initialize,
@@ -52779,7 +53056,8 @@ function TextBufferController(config) {
         appendInitSegment: appendInitSegment,
         getRangeAt: getRangeAt,
         reset: reset,
-        updateTimestampOffset: updateTimestampOffset
+        updateTimestampOffset: updateTimestampOffset,
+        updateAppendWindow: updateAppendWindow
     };
 
     setup();
@@ -54214,7 +54492,7 @@ function TextTracks() {
                         containerStyle.width = actualVideoWidth + 'px';
                         containerStyle.height = actualVideoHeight + 'px';
                         containerStyle.zIndex = fullscreenAttribute && document[fullscreenAttribute] || displayCCOnTop ? topZIndex : null;
-                        eventBus.trigger(_coreEventsEvents2['default'].CAPTION_CONTAINER_RESIZE, {});
+                        eventBus.trigger(_coreEventsEvents2['default'].CAPTION_CONTAINER_RESIZE);
                     }
                 }
 
@@ -57072,13 +57350,7 @@ function LiveEdgeFinder(config) {
 
     function getLiveEdge(representationInfo) {
         checkConfig();
-        var dvrEnd = representationInfo.DVRWindow ? representationInfo.DVRWindow.end : 0;
-        var liveEdge = dvrEnd;
-        if (representationInfo.useCalculatedLiveEdgeTime) {
-            liveEdge = timelineConverter.getExpectedLiveEdge();
-            timelineConverter.setClientTimeOffset(liveEdge - dvrEnd);
-        }
-        return liveEdge;
+        return representationInfo.DVRWindow ? representationInfo.DVRWindow.end : 0;
     }
 
     function reset() {
@@ -57422,9 +57694,14 @@ function TTMLParser() {
         var metadataHandler = {
 
             onOpenTag: function onOpenTag(ns, name, attrs) {
-                if (name === 'image' && ns === 'http://www.smpte-ra.org/schemas/2052-1/2010/smpte-tt') {
-                    if (!attrs[' imagetype'] || attrs[' imagetype'].value !== 'PNG') {
-                        logger.warn('smpte-tt imagetype != PNG. Discarded');
+                // cope with existing non-compliant content
+                if (attrs[' imagetype'] && !attrs[' imageType']) {
+                    attrs[' imageType'] = attrs[' imagetype'];
+                }
+
+                if (name === 'image' && (ns === 'http://www.smpte-ra.org/schemas/2052-1/2010/smpte-tt' || ns === 'http://www.smpte-ra.org/schemas/2052-1/2013/smpte-tt')) {
+                    if (!attrs[' imageType'] || attrs[' imageType'].value !== 'PNG') {
+                        logger.warn('smpte-tt imageType != PNG. Discarded');
                         return;
                     }
                     currentImageId = attrs['http://www.w3.org/XML/1998/namespace id'].value;

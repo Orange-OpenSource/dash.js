@@ -512,11 +512,40 @@ var Constants = (function () {
       this.BAD_ARGUMENT_ERROR = 'Invalid Arguments';
 
       /**
-       *  @constant {string} MISSING_CONFIG_ERROR Missing ocnfiguration parameters type of error
+       *  @constant {string} MISSING_CONFIG_ERROR Missing configuration parameters type of error
        *  @memberof Constants#
        *  @static
        */
       this.MISSING_CONFIG_ERROR = 'Missing config parameter(s)';
+
+      /**
+       *  @constant {string} TRACK_SWITCH_MODE_ALWAYS_REPLACE used to clear the buffered data (prior to current playback position) after track switch. Default for audio
+       *  @memberof Constants#
+       *  @static
+       */
+      this.TRACK_SWITCH_MODE_ALWAYS_REPLACE = 'alwaysReplace';
+
+      /**
+       *  @constant {string} TRACK_SWITCH_MODE_NEVER_REPLACE used to forbid clearing the buffered data (prior to current playback position) after track switch. Defers to fastSwitchEnabled for placement of new data. Default for video
+       *  @memberof Constants#
+       *  @static
+       */
+      this.TRACK_SWITCH_MODE_NEVER_REPLACE = 'neverReplace';
+
+      /**
+       *  @constant {string} TRACK_SELECTION_MODE_HIGHEST_BITRATE makes the player select the track with a highest bitrate. This mode is a default mode.
+       *  @memberof Constants#
+       *  @static
+       */
+      this.TRACK_SELECTION_MODE_HIGHEST_BITRATE = 'highestBitrate';
+
+      /**
+       *  @constant {string} TRACK_SELECTION_MODE_WIDEST_RANGE this mode makes the player select the track with a widest range of bitrates
+       *  @memberof Constants#
+       *  @static
+       */
+      this.TRACK_SELECTION_MODE_WIDEST_RANGE = 'widestRange';
+
       this.LOCATION = 'Location';
       this.INITIALIZE = 'initialize';
       this.TEXT_SHOWING = 'showing';
@@ -694,7 +723,7 @@ module.exports = exports['default'];
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
-    value: true
+  value: true
 });
 
 var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
@@ -710,18 +739,24 @@ var _coreEventsEventsBase = _dereq_(2);
 var _coreEventsEventsBase2 = _interopRequireDefault(_coreEventsEventsBase);
 
 var MetricsReportingEvents = (function (_EventsBase) {
-    _inherits(MetricsReportingEvents, _EventsBase);
+  _inherits(MetricsReportingEvents, _EventsBase);
 
-    function MetricsReportingEvents() {
-        _classCallCheck(this, MetricsReportingEvents);
+  function MetricsReportingEvents() {
+    _classCallCheck(this, MetricsReportingEvents);
 
-        _get(Object.getPrototypeOf(MetricsReportingEvents.prototype), 'constructor', this).call(this);
+    _get(Object.getPrototypeOf(MetricsReportingEvents.prototype), 'constructor', this).call(this);
 
-        this.METRICS_INITIALISATION_COMPLETE = 'internal_metricsReportingInitialized';
-        this.BECAME_REPORTING_PLAYER = 'internal_becameReportingPlayer';
-    }
+    this.METRICS_INITIALISATION_COMPLETE = 'internal_metricsReportingInitialized';
+    this.BECAME_REPORTING_PLAYER = 'internal_becameReportingPlayer';
 
-    return MetricsReportingEvents;
+    /**
+     * Triggered when CMCD data was generated for a HTTP request
+     * @event MetricsReportingEvents#CMCD_DATA_GENERATED
+     */
+    this.CMCD_DATA_GENERATED = 'cmcdDataGenerated';
+  }
+
+  return MetricsReportingEvents;
 })(_coreEventsEventsBase2['default']);
 
 var metricsReportingEvents = new MetricsReportingEvents();

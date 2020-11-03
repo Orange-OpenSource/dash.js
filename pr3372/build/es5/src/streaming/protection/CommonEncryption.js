@@ -28,16 +28,16 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *//**
-  * @class
-  * @ignore
-  */var CommonEncryption=function(){function CommonEncryption(){_classCallCheck(this,CommonEncryption);}_createClass(CommonEncryption,null,[{key:'findCencContentProtection',/**
+ * @class
+ * @ignore
+ */var CommonEncryption=function(){function CommonEncryption(){_classCallCheck(this,CommonEncryption);}_createClass(CommonEncryption,null,[{key:'findCencContentProtection',/**
      * Find and return the ContentProtection element in the given array
      * that indicates support for MPEG Common Encryption
      *
      * @param {Array} cpArray array of content protection elements
      * @returns {Object|null} the Common Encryption content protection element or
      * null if one was not found
-     */value:function findCencContentProtection(cpArray){var retVal=null;for(var i=0;i<cpArray.length;++i){var cp=cpArray[i];if(cp.schemeIdUri.toLowerCase()==='urn:mpeg:dash:mp4protection:2011'&&cp.value.toLowerCase()==='cenc')retVal=cp;}return retVal;}/**
+     */value:function findCencContentProtection(cpArray){var retVal=null;for(var i=0;i<cpArray.length;++i){var cp=cpArray[i];if(cp.schemeIdUri.toLowerCase()==='urn:mpeg:dash:mp4protection:2011'&&(cp.value.toLowerCase()==='cenc'||cp.value.toLowerCase()==='cbcs'))retVal=cp;}return retVal;}/**
      * Returns just the data portion of a single PSSH
      *
      * @param {ArrayBuffer} pssh - the PSSH
