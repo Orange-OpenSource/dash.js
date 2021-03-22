@@ -426,7 +426,7 @@ function StreamProcessor(config) {
         // Event propagation may have been stopped (see MssHandler)
         if (!e.sender) return;
 
-        if (adapter.getIsTextTrack(mimeType) && !textController.isTextEnabled()) return;
+        if (adapter.getIsTextTrack(representationController.getData()) && !textController.isTextEnabled()) return;
 
         if (bufferController && e.representationId) {
             if (!bufferController.appendInitSegment(e.representationId)) {

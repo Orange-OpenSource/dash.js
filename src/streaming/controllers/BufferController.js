@@ -152,7 +152,7 @@ function BufferController(config) {
                     buffer.updateAppendWindow(streamInfo);
                 }
                 if (typeof buffer.getBuffer().initialize === 'function') {
-                    buffer.getBuffer().initialize(type, streamInfo, mediaInfoArr, fragmentModel);
+                    buffer.getBuffer().initialize(streamInfo, mediaInfoArr, fragmentModel);
                 }
             } catch (e) {
                 logger.fatal('Caught error on create SourceBuffer: ' + e);

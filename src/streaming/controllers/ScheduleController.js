@@ -42,7 +42,6 @@ function ScheduleController(config) {
     config = config || {};
     const context = this.context;
     const eventBus = EventBus(context).getInstance();
-    const adapter = config.adapter;
     const dashMetrics = config.dashMetrics;
     const mediaPlayerModel = config.mediaPlayerModel;
     const fragmentModel = config.fragmentModel;
@@ -51,7 +50,6 @@ function ScheduleController(config) {
     const textController = config.textController;
     const streamInfo = config.streamInfo;
     const type = config.type;
-    const mimeType = config.mimeType;
     const mediaController = config.mediaController;
     const bufferController = config.bufferController;
     const settings = config.settings;
@@ -246,7 +244,7 @@ function ScheduleController(config) {
             threshold: 0
         })[0];
 
-        if (request && replaceRequestArray.indexOf(request) === -1 && !adapter.getIsTextTrack(mimeType)) {
+        if (request && replaceRequestArray.indexOf(request) === -1 && currentRepresentationInfo.mediaInfo.isText) {
             const fastSwitchModeEnabled = settings.get().streaming.fastSwitchEnabled;
             const bufferLevel = bufferController.getBufferLevel();
             const abandonmentState = abrController.getAbandonmentStateFor(type);
@@ -350,7 +348,7 @@ function ScheduleController(config) {
 
         logger.info('OnFragmentLoadingCompleted - Url:', e.request ? e.request.url : 'undefined', e.request.range ? ', Range:' + e.request.range : '');
 
-        if (adapter.getIsTextTrack(mimeType)) {
+        if (e.request.mediaInfo.isText) {
             setFragmentProcessState(false);
         }
 

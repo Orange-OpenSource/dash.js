@@ -1016,7 +1016,7 @@ function DashAdapter() {
             });
         }
 
-        mediaInfo.isText = dashManifestModel.getIsTextTrack(mediaInfo.mimeType);
+        mediaInfo.isText = dashManifestModel.getIsTextTrack(realAdaptation);
         mediaInfo.supplementalProperties = dashManifestModel.getSupplementalPropperties(realAdaptation);
 
         return mediaInfo;

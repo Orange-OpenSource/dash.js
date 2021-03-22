@@ -75,7 +75,8 @@ function TextSourceBuffer() {
         embeddedLastSequenceNumber,
         embeddedCea608FieldParsers,
         embeddedTextHtmlRender,
-        mseTimeOffset;
+        mseTimeOffset,
+        isFragmented;
 
     function setup() {
         logger = Debug(context).getInstance().getLogger(instance);
@@ -98,7 +99,7 @@ function TextSourceBuffer() {
         parser = null;
     }
 
-    function initialize(mimeType, streamInfo, mediaInfoArr, fragmentModel) {
+    function initialize(streamInfo, mediaInfoArr, fragmentModel, fragmented = true) {
         if (!embeddedInitialized) {
             initEmbedded();
         }
@@ -112,12 +113,11 @@ function TextSourceBuffer() {
             boxParser = BoxParser(context).getInstance();
         }
 
-        addMediaInfos(mimeType, streamInfo, mediaInfoArr, fragmentModel);
+        isFragmented = fragmented === true;
+        addMediaInfos(streamInfo, mediaInfoArr, fragmentModel);
     }
 
-    function addMediaInfos(mimeType, streamInfo, mediaInfoArr, fragmentModel) {
-        const isFragmented = !adapter.getIsTextTrack(mimeType);
-
+    function addMediaInfos(streamInfo, mediaInfoArr, fragmentModel) {
         mediaInfos = mediaInfos.concat(mediaInfoArr);
 
         if (isFragmented) {
@@ -292,7 +292,7 @@ function TextSourceBuffer() {
         textTrackInfo.index = mediaInfo.index; // AdaptationSet index in manifest
         textTrackInfo.isTTML = checkTTML();
         textTrackInfo.defaultTrack = getIsDefault(mediaInfo);
-        textTrackInfo.isFragmented = !adapter.getIsTextTrack(mediaInfo.mimeType);
+        textTrackInfo.isFragmented = isFragmented;//!adapter.getIsTextTrack(mediaInfo.mimeType);
         textTrackInfo.isEmbedded = mediaInfo.isEmbedded ? true : false;
         textTrackInfo.kind = getKind();
         textTrackInfo.roles = mediaInfo.roles;
