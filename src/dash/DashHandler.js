@@ -197,7 +197,7 @@ function DashHandler(config) {
 
         // If representation has initialization and segments information, REPRESENTATION_UPDATE_COMPLETED can be triggered immediately
         // otherwise, it means that a request has to be made to get initialization and/or segments informations
-        if (hasInitialization && hasSegments) {
+        if (hasSegments) {
             eventBus.trigger(events.REPRESENTATION_UPDATE_COMPLETED,
                 { representation: voRepresentation },
                 { streamId: streamInfo.id, mediaType: type }

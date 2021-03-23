@@ -139,16 +139,17 @@ function RepresentationController(config) {
     }
 
     function isAllRepresentationsUpdated() {
+        let res = true;
         for (let i = 0, ln = voAvailableRepresentations.length; i < ln; i++) {
             let segmentInfoType = voAvailableRepresentations[i].segmentInfoType;
-            if (voAvailableRepresentations[i].segmentAvailabilityRange === null || !voAvailableRepresentations[i].hasInitialization() ||
-                ((segmentInfoType === dashConstants.SEGMENT_BASE || segmentInfoType === dashConstants.BASE_URL) && !voAvailableRepresentations[i].segments)
-            ) {
-                return false;
+            if (segmentInfoType === dashConstants.SEGMENT_BASE || segmentInfoType === dashConstants.BASE_URL) {
+                res = res && (voAvailableRepresentations[i].segments !== undefined) && (voAvailableRepresentations[i].segments !== null);
+            } else {
+                res = res && (voAvailableRepresentations[i].segmentAvailabilityRange !== null);
             }
         }
 
-        return true;
+        return res;
     }
 
     function setExpectedLiveEdge(liveEdge) {
