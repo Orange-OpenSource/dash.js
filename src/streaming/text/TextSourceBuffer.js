@@ -316,7 +316,7 @@ function TextSourceBuffer() {
             return;
         }
 
-        if (mediaType === Constants.FRAGMENTED_TEXT) {
+        if (mediaInfo.codec.indexOf('application/mp4') !== -1) {
             if (!initializationSegmentReceived && chunk.segmentType === 'InitializationSegment') {
                 initializationSegmentReceived = true;
                 timescale = boxParser.getMediaTimescaleFromMoov(bytes);
@@ -402,7 +402,7 @@ function TextSourceBuffer() {
                     }
                 }
             }
-        } else if (mediaType === Constants.TEXT) {
+        } else if ((mediaInfo.mimeType.indexOf('ttml') !== -1) || (mediaInfo.mimeType.indexOf('vtt') !== -1)) {
             const dataView = new DataView(bytes, 0, bytes.byteLength);
             ccContent = ISOBoxer.Utils.dataViewToString(dataView, Constants.UTF8);
 

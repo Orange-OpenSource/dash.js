@@ -72,6 +72,9 @@ function SourceBufferSink(mediaSource, mediaInfo, onAppendedCallback, oldBuffer)
             if (codec.match(/application\/mp4;\s*codecs="(stpp|wvtt).*"/i)) {
                 throw new Error('not really supported');
             }
+            if (codec.match(/codecs="(vtt).*"/i)) {
+                throw new Error('not really supported');
+            }
             buffer = oldBuffer ? oldBuffer : mediaSource.addSourceBuffer(codec);
             if (buffer.changeType && oldBuffer) {
                 logger.debug('Doing period transition with changeType');
@@ -98,7 +101,7 @@ function SourceBufferSink(mediaSource, mediaInfo, onAppendedCallback, oldBuffer)
             }
         } catch (ex) {
             // Note that in the following, the quotes are open to allow for extra text after stpp and wvtt
-            if ((mediaInfo.isText) || (codec.indexOf('codecs="stpp') !== -1) || (codec.indexOf('codecs="wvtt') !== -1)) {
+            if ((mediaInfo.isText) || (codec.indexOf('codecs="stpp') !== -1) || (codec.indexOf('codecs="wvtt') !== -1) || (codec.indexOf('codecs="vtt') !== -1)) {
                 const textController = TextController(context).getInstance();
                 buffer = textController.getTextSourceBuffer();
             } else {

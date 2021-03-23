@@ -163,7 +163,7 @@ function TextBufferController(config) {
         getRangeAt: getRangeAt,
         reset: reset,
         updateTimestampOffset: updateTimestampOffset,
-        updateAppendWindow
+        updateAppendWindow: updateAppendWindow
     };
 
     setup();
