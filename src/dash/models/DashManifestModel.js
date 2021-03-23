@@ -75,10 +75,10 @@ function DashManifestModel() {
         }
 
         // Check for thumbnail images
-        if (type === Constants.IMAGE && adaptation.Representation_asArray && adaptation.Representation_asArray.length) {
+        if (adaptation.Representation_asArray && adaptation.Representation_asArray.length) {
             const essentialProperties = getEssentialPropertiesForRepresentation(adaptation.Representation_asArray[0]);
             if (essentialProperties && essentialProperties.length > 0 && THUMBNAILS_SCHEME_ID_URIS.indexOf(essentialProperties[0].schemeIdUri) >= 0) {
-                return true;
+                return (type === Constants.IMAGE);
             }
         }
 
