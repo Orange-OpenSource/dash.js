@@ -406,6 +406,11 @@ function MssParser(config) {
                     } else {
                         segment.t = prevSegment.t + prevSegment.d;
                     }
+                } else {
+                    // Patch previous segment duration if overriden by current segment time
+                    if (prevSegment.d !== (segment.t - prevSegment.t)) {
+                        prevSegment.d = segment.t - prevSegment.t;
+                    }
                 }
             }
 
