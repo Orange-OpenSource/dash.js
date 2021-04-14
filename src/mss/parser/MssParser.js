@@ -733,10 +733,12 @@ function MssParser(config) {
                 const liveDelayFragmentCount = settings.get().streaming.liveDelayFragmentCount !== null && !isNaN(settings.get().streaming.liveDelayFragmentCount) ? settings.get().streaming.liveDelayFragmentCount : 4;
                 targetLiveDelay = segmentDuration * liveDelayFragmentCount;
             }
-            let targetDelayCapping = Math.max(manifest.timeShiftBufferDepth - 10/*END_OF_PLAYLIST_PADDING*/, manifest.timeShiftBufferDepth / 2);
+            // Cap live delay to DVR window start + 2 segments safety margin
+            let targetDelayCapping = manifest.timeShiftBufferDepth - (2 * segmentDuration);
             let liveDelay = Math.min(targetDelayCapping, targetLiveDelay);
-            // Consider a margin of one segment in order to avoid Precondition Failed errors (412), for example if audio and video are not correctly synchronized
-            let bufferTime = liveDelay - segmentDuration;
+
+            // Consider a safety margin of 2 segments in order to avoid Precondition Failed errors (412), especially in case audio and video timelines are not aligned
+            let bufferTime = liveDelay - (segmentDuration * 2);
 
             // Store initial buffer settings
             initialBufferSettings = {
