@@ -289,15 +289,15 @@ function Stream(config) {
 
     function getLiveStartTime() {
         if (!streamInfo.manifestInfo.isDynamic) return NaN;
-        // Get live start time of the video stream (1st in array of streams)
-        // or audio if no video stream
+        // Get min live start time of the audio and video streams in case timelines are not aligned
+        let livestartTime = Infinity;
         for (let i = 0; i < streamProcessors.length; i++) {
             if (streamProcessors[i].getType() === Constants.AUDIO ||
                 streamProcessors[i].getType() === Constants.VIDEO) {
-                return streamProcessors[i].getLiveStartTime();
+                livestartTime = Math.min(streamProcessors[i].getLiveStartTime(), livestartTime);
             }
         }
-        return NaN;
+        return (livestartTime !== Infinity) ? livestartTime : NaN;
     }
 
     function getId() {
