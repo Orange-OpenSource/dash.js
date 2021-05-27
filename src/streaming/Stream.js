@@ -273,7 +273,14 @@ function Stream(config) {
             let element = videoModel.getElement();
 
             MEDIA_TYPES.forEach((mediaType) => {
-                if (mediaType !== Constants.VIDEO || (!element || (element && (/^VIDEO$/i).test(element.nodeName)))) {
+                // Initialize media:
+                // - for video only if element is of type video
+                // - for audio only if element is of type audio or video
+                const isVideoElement = (/^VIDEO$/i).test(element.nodeName);
+                const isAudioElement = (/^AUDIO$/i).test(element.nodeName);
+                if ((mediaType === Constants.VIDEO && isVideoElement) ||
+                    (mediaType === Constants.AUDIO && (isVideoElement || isAudioElement)) ||
+                    (mediaType !== Constants.AUDIO && mediaType !== Constants.VIDEO)) {
                     _initializeMediaForType(mediaType, mediaSource);
                 }
             });
