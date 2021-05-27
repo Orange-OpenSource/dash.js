@@ -152,7 +152,7 @@ function VideoModel() {
 
     function setElement(value) {
         //add check of value type
-        if (value === null || value === undefined || (value && (/^(VIDEO|AUDIO)$/i).test(value.nodeName))) {
+        if (value === null || value === undefined || (value && (/^(VIDEO|AUDIO|FAKE)$/i).test(value.nodeName))) {
             element = value;
             // Workaround to force Firefox to fire the canplay event.
             if (element) {
