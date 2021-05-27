@@ -540,7 +540,7 @@ function TextTracks(config) {
 
         if (track && track.renderingType === 'html') {
             checkVideoSize.call(this, track, true);
-            if (window.ResizeObserver) {
+            if (window.ResizeObserver && videoModel.getElement() instanceof Element) {
                 resizeObserver = new window.ResizeObserver(() => {
                     checkVideoSize.call(this, track, true);
                 });
