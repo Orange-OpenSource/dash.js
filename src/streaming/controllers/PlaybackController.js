@@ -388,9 +388,10 @@ function PlaybackController() {
         return startTime;
     }
 
-    function getActualPresentationTime(currentTime) {
+    function getActualPresentationTime(currentTime, representation) {
         const DVRMetrics = dashMetrics.getCurrentDVRInfo();
         const DVRWindow = DVRMetrics ? DVRMetrics.range : null;
+        const segmentDuration = representation ? representation.segmentDuration : 0;
         let actualTime;
 
         if (!DVRWindow) {
@@ -408,8 +409,7 @@ function PlaybackController() {
             // http://w3c.github.io/html/single-page.html#offsets-into-the-media-resource
             // Checking also duration of the DVR makes sense. We detected temporary situations in which currentTime
             // is bad reported by the browser which causes playback to jump to start (315360000 = 1 year)
-            //actualTime = DVRWindow.start;
-            actualTime = DVRWindow.start;
+            actualTime = settings.get().streaming.liveCatchupToDVRStart ? (DVRWindow.start + segmentDuration * 1.5) : (DVRWindow.end - liveDelay);
         } else {
             actualTime = currentTime;
         }
@@ -432,12 +432,12 @@ function PlaybackController() {
         wallclockTimeIntervalId = null;
     }
 
-    function updateCurrentTime() {
+    function updateCurrentTime(representation) {
         if (isPaused() || !isDynamic || videoModel.getReadyState() === 0) return;
         const currentTime = getNormalizedTime();
-        const actualTime = getActualPresentationTime(currentTime);
+        const actualTime = getActualPresentationTime(currentTime, representation);
         const timeChanged = (!isNaN(actualTime) && actualTime !== currentTime);
-        if (timeChanged) {
+        if (timeChanged && !videoModel.isSeeking()) {
             logger.debug(`UpdateCurrentTime: Seek to actual time: ${actualTime} from currentTime: ${currentTime}`);
             seek(actualTime);
         }
@@ -452,7 +452,7 @@ function PlaybackController() {
         if (info === null || streamInfo.id !== info.id) return;
         streamInfo = info;
 
-        updateCurrentTime();
+        updateCurrentTime(e.currentRepresentation);
     }
 
     function onCanPlay() {

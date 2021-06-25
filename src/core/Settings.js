@@ -415,6 +415,7 @@ function Settings() {
             liveCatchUpMaxDrift: 0,
             liveCatchUpPlaybackRate: 0.5,
             liveCatchupLatencyThreshold: NaN,
+            liveCatchupToDVRStart: true,
             lastBitrateCachingInfo: {enabled: true, ttl: 360000},
             lastMediaSettingsCachingInfo: {enabled: true, ttl: 360000},
             cacheLoadThresholds: {video: 50, audio: 5},
