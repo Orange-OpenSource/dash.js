@@ -78,6 +78,9 @@ function MssParser(config) {
         'text': 'application/mp4'
     };
 
+    const DEFAULT_LIVE_DELAY = 20;
+    const SYNCHRO_TOLERANCE = 0.2;
+
     let instance,
         logger,
         initialBufferSettings;
@@ -607,6 +610,8 @@ function MssParser(config) {
             segments,
             timescale,
             segmentDuration,
+            rangeStart,
+            rangeEnd,
             i, j;
 
         // Set manifest node properties
@@ -691,7 +696,15 @@ function MssParser(config) {
 
         adaptations = period.AdaptationSet_asArray;
 
+        rangeStart = -1;
+        rangeEnd = Infinity;
+
         for (i = 0; i < adaptations.length; i += 1) {
+            // Get segments max range start and min range end
+            segments = adaptations[i].SegmentTemplate.SegmentTimeline.S_asArray;
+            rangeStart = Math.max(segments[0].t, rangeStart);
+            rangeEnd = Math.min(segments[segments.length - 1].t + segments[segments.length - 1].d, rangeEnd);
+
             adaptations[i].SegmentTemplate.initialization = '$Bandwidth$';
             // Propagate content protection information into each adaptation
             if (manifest.ContentProtection !== undefined) {
@@ -721,6 +734,23 @@ function MssParser(config) {
             }
         }
 
+        // Patch to avoid PreCondition failed errors (412) on live streams having shifted / out of sync timelines (case of BPK live streams)
+        // Cap video DVR window range to max start and min end times accross all media types
+        // (start live edge is mapped on video stream by default in core streaming layer)
+        if (manifest.type === 'dynamic') {
+            for (i = 0; i < adaptations.length; i += 1) {
+                if (adaptations[i].contentType === 'video') {
+                    segments = adaptations[i].SegmentTemplate.SegmentTimeline.S_asArray;
+                    while ((rangeStart - segments[0].t) > (SYNCHRO_TOLERANCE * timescale)) {
+                        segments.shift();
+                    }
+                    while ((segments[segments.length - 1].t + segments[segments.length - 1].d - rangeEnd) > (SYNCHRO_TOLERANCE * timescale)) {
+                        segments.pop();
+                    }
+                }
+            }
+        }
+
         // Cap minBufferTime to timeShiftBufferDepth
         manifest.minBufferTime = Math.min(manifest.minBufferTime, (manifest.timeShiftBufferDepth ? manifest.timeShiftBufferDepth : Infinity));
 
@@ -730,8 +760,12 @@ function MssParser(config) {
         if (manifest.type === 'dynamic') {
             let targetLiveDelay = mediaPlayerModel.getLiveDelay();
             if (!targetLiveDelay) {
-                const liveDelayFragmentCount = settings.get().streaming.liveDelayFragmentCount !== null && !isNaN(settings.get().streaming.liveDelayFragmentCount) ? settings.get().streaming.liveDelayFragmentCount : 4;
-                targetLiveDelay = segmentDuration * liveDelayFragmentCount;
+                const liveDelayFragmentCount = settings.get().streaming.delay.liveDelayFragmentCount;
+                if (liveDelayFragmentCount !== null && !isNaN(liveDelayFragmentCount)) {
+                    targetLiveDelay = segmentDuration * liveDelayFragmentCount;
+                } else {
+                    targetLiveDelay = DEFAULT_LIVE_DELAY;
+                }
             }
             // Cap live delay to DVR window start + 2 segments safety margin
             let targetDelayCapping = manifest.timeShiftBufferDepth - (2 * segmentDuration);
