@@ -630,7 +630,7 @@ function Stream(config) {
             return;
         }
 
-        if (protectionController) {
+        if (protectionController && !protectionController.isInitialized()) {
             // Need to check if streamProcessors exists because streamProcessors
             // could be cleared in case an error is detected while initializing DRM keysystem
             for (let i = 0; i < ln && streamProcessors[i]; i++) {
@@ -774,7 +774,9 @@ function Stream(config) {
             // Check if AdaptationSet has not been removed in MPD update
             if (mediaInfo) {
                 abrController.updateTopQualityIndex(mediaInfo);
-                streamProcessor.addMediaInfo(mediaInfo, true);
+                // Dont' need to add MediaInfo at manifest update
+                streamProcessor.selectMediaInfo(mediaInfo);
+                // streamProcessor.addMediaInfo(mediaInfo, true);
             }
         }
 

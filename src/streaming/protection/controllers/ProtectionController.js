@@ -70,6 +70,7 @@ function ProtectionController(config) {
 
     let instance,
         logger,
+        initialized,
         pendingNeedKeyData,
         mediaInfoArr,
         protDataSet,
@@ -79,6 +80,7 @@ function ProtectionController(config) {
 
     function setup() {
         logger = debug.getLogger(instance);
+        initialized = false;
         pendingNeedKeyData = [];
         mediaInfoArr = [];
         sessionType = 'temporary';
@@ -89,6 +91,10 @@ function ProtectionController(config) {
         if (!eventBus || !eventBus.hasOwnProperty('on') || !protectionKeyController || !protectionKeyController.hasOwnProperty('getSupportedKeySystemsFromContentProtection')) {
             throw new Error('Missing config parameter(s)');
         }
+    }
+
+    function isInitialized() {
+        return initialized;
     }
 
     /**
@@ -125,6 +131,8 @@ function ProtectionController(config) {
         if (supportedKS && supportedKS.length > 0) {
             selectKeySystem(supportedKS, true);
         }
+
+        initialized = true;
     }
 
     /**
@@ -326,6 +334,8 @@ function ProtectionController(config) {
      * @instance
      */
     function stop() {
+        mediaInfoArr = [];
+        initialized = false;
         if (protectionModel) {
             protectionModel.stop();
         }
@@ -818,6 +828,7 @@ function ProtectionController(config) {
     }
 
     instance = {
+        isInitialized: isInitialized,
         initializeForMedia: initializeForMedia,
         createKeySession: createKeySession,
         loadKeySession: loadKeySession,
