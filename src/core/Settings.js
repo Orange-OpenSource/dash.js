@@ -316,6 +316,7 @@ import {HTTPRequest} from '../streaming/vo/metrics/HTTPRequest';
  * maximumLiveDelay = targetDelay + liveCatchupMinDrift
  *
  * Note: Catch-up mechanism is only applied when playing low latency live streams.
+ * @property {number} [liveCatchupToDVRStart=false]
  * @property {module:Settings~CachingInfoSettings} [lastBitrateCachingInfo={enabled: true, ttl: 360000}]
  * Set to false if you would like to disable the last known bit rate from being stored during playback and used
  * to set the initial bit rate for subsequent playback within the expiration window.
@@ -415,7 +416,7 @@ function Settings() {
             liveCatchUpMaxDrift: 0,
             liveCatchUpPlaybackRate: 0.5,
             liveCatchupLatencyThreshold: NaN,
-            liveCatchupToDVRStart: true,
+            liveCatchupToDVRStart: false,
             lastBitrateCachingInfo: {enabled: true, ttl: 360000},
             lastMediaSettingsCachingInfo: {enabled: true, ttl: 360000},
             cacheLoadThresholds: {video: 50, audio: 5},
