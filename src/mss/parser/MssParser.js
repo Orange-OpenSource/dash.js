@@ -760,7 +760,7 @@ function MssParser(config) {
         if (manifest.type === 'dynamic') {
             let targetLiveDelay = mediaPlayerModel.getLiveDelay();
             if (!targetLiveDelay) {
-                const liveDelayFragmentCount = settings.get().streaming.delay.liveDelayFragmentCount;
+                const liveDelayFragmentCount = settings.get().streaming.liveDelayFragmentCount;
                 if (liveDelayFragmentCount !== null && !isNaN(liveDelayFragmentCount)) {
                     targetLiveDelay = segmentDuration * liveDelayFragmentCount;
                 } else {
